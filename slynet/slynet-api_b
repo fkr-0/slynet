@@ -1,0 +1,146 @@
+# This file defines the core SLYNET API.
+# It uses stub functions (slynet-defclass, slynet-definterface, slynet-defimplementation)
+# to set up the API structure, relying on 'eval' to perform definitions.
+# This approach is chosen for robustness against linter issues with complex macros.
+
+# Registry for interface definitions (for potential introspection)
+(def interfaces-registry @"{}")
+
+(defn slynet-defclass
+  "Stub: Defines the name symbol to its keyword equivalent.
+  Example: (slynet-defclass 'Backend) results in (def Backend :Backend)"
+  [name-as-symbol]
+  (eval `(def ~(symbol name-as-symbol) ~(keyword (string name-as-symbol))))
+  name-as-symbol) # Return the name symbol
+
+(defn slynet-definterface
+  "Stub: Defines an interface function.
+  If ?default-body-forms-list is provided, it's used as the function body.
+  Otherwise, the function will error when called.
+  Manages interfaces-registry. Returns the interface name symbol."
+  [iface-name-as-symbol args-list docstring ?default-body-forms-list]
+  (put interfaces-registry iface-name-as-symbol {:args args-list :doc docstring :type :interface})
+  (let [body-to-splice (if (nil? default-body-forms-list)
+                       # If no default body, define an erroring function
+                       `((error (string "Interface stub '" '~iface-name-as-symbol "' called with no implementation or default body.")))
+                       # Else, use the provided default body
+                       default-body-forms-list)] # default-body-forms-list is expected to be a list of forms
+    (eval `(defn ~(symbol iface-name-as-symbol) ~args-list # args-list is like [param1 param2]
+             ~@body-to-splice)))
+  iface-name-as-symbol) # Return the name symbol
+
+(defn slynet-defimplementation
+  "Stub: Redefines an interface function with a concrete implementation.
+  Returns the interface name symbol."
+  [iface-name-as-symbol args-list body-forms-list] # args-list is like [param1 type1], body-forms-list is a list of forms
+  (put interfaces-registry iface-name-as-symbol {:args args-list :type :implementation :impl-for iface-name-as-symbol}) # Could be more detailed
+  (let [body-to-splice (if (or (nil? body-forms-list) (empty? body-forms-list))
+                       `((error (string "Implementation stub '" '~iface-name-as-symbol "' called with an empty body.")))
+                       body-forms-list)]
+     (eval `(defn ~(symbol iface-name-as-symbol) ~args-list # args-list is like [self Backend]
+              ~@body-to-splice)))
+  iface-name-as-symbol) # Return the name symbol
+
+# --- Define 'classes' (as keywords) ---
+(slynet-defclass 'Backend) # Results in (def Backend :Backend)
+(slynet-defclass 'RPC)     # Results in (def RPC :RPC)
+
+# --- Core API Functions defined using the stubs ---
+# These calls will use eval to defn the actual functions.
+
+# initialize-backend
+(slynet-definterface
+  'initialize-backend
+  ['backend] # Arguments for the interface, from impl_spec: - backend: "Backend instance"
+  "Initialize the backend with logging."
+  # No default body, so it will be an erroring stub initially
+  )
+
+(slynet-defimplementation
+  'initialize-backend
+  ['backend] # Arguments for the implementation
+  # Body forms:
+  '((print (string/format "SLYNET: Initializing backend: %q" backend))
+    "Backend initialized successfully.")) # Return confirmation message
+
+# initialize-rpc
+(slynet-definterface
+  'initialize-rpc
+  ['rpc] # Arguments for the interface, from impl_spec: - rpc: "RPC instance"
+  "Initialize the RPC layer with logging."
+  # No default body
+  )
+
+(slynet-defimplementation
+  'initialize-rpc
+  ['rpc] # Arguments for the implementation
+  # Body forms:
+  '((print (string/format "SLYNET: Initializing RPC layer: %q" rpc))
+    "RPC layer initialized successfully.")) # Return confirmation message
+
+# read-message
+(slynet-definterface
+  'read-message
+  ['stream 'package] # Arguments from impl_spec (omitting backend for now, SLYNK has it as method on connection)
+                     # For now, let's assume stream and package are primary.
+                     # spec: - stream: "Input stream", - package: "Package context"
+  "Read a message from the stream."
+  # No default body
+  )
+
+(slynet-defimplementation
+  'read-message
+  ['stream 'package] # Matching interface arguments for this stub
+  # Body forms:
+  '((print (string/format "SLYNET: read-message called with stream %q, package %q (STUB)" stream package))
+    (comment "TODO: Implement actual message reading and parsing from stream")
+    {:type :stub-message :content "Message read from stream (stub)" :package package})) # Return parsed message (stub)
+
+# write-message
+(slynet-definterface
+  'write-message
+  ['message 'package 'stream] # Arguments from impl_spec
+                               # - message: "Message to write"
+                               # - package: "Package context"
+                               # - stream: "Output stream"
+  "Write a message to the stream."
+  # No default body
+  )
+
+(slynet-defimplementation
+  'write-message
+  ['message 'package 'stream] # Matching interface arguments
+  # Body forms:
+  '((print (string/format "SLYNET: write-message called with message %q, package %q, stream %q (STUB)" message package stream))
+    (comment "TODO: Implement actual message writing to stream")
+    nil)) # Return None (nil)
+
+# Import the new SLYNK implementation
+(import ./slynet/slynk_janet/rpc)
+(import ./slynet/slynk_janet/init)
+(import ./slynet/slynk_janet/backend)
+
+# Re-export the new RPC system
+(def slynet-rpc-interfaces-registry rpc/slynet-rpc-interfaces-registry)
+(def slynet-rpc-implementations-registry rpc/slynet-rpc-implementations-registry)
+(def slynet-definterface rpc/slynet-definterface)
+(def slynet-defimplementation rpc/slynet-defimplementation)
+
+# Re-export initialization functions
+(def initialize-backend init/initialize-backend)
+(def initialize-rpc init/initialize-rpc)
+
+# Re-export RPC utilities
+(def rpc-dispatch rpc/dispatch)
+(def list-rpc-interfaces rpc/list-interfaces)
+(def list-rpc-implementations rpc/list-implementations)
+(def validate-rpc-endpoint rpc/validate-rpc)
+
+# Re-export SLYNK functionality
+(def start slynk/start-slynk)
+(def create-server slynk/create-server)
+(def version slynk/version)
+
+# Note: The 'definterface' and 'defimplementation' from impl_spec.yml are now the
+# 'slynet-definterface' and 'slynet-defimplementation' functions themselves.
+# Their purpose is to define other functions, so they are meta-level.

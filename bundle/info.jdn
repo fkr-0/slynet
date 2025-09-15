@@ -1,0 +1,5 @@
+@{:dependencies @[]
+  :description "sly trans "
+  :jpm-dependencies @[]
+  :name "slynet"
+  :version "0.0.0"}
