@@ -4,16 +4,12 @@
 
 #
 # Configuration
-# == slynet/slynk_janet/rpc_core.janet ==
+# == slynet/rpc_core.janet ==
 # Minimal runtime registrar; safe to call from macros' emitted code.
-(import ./interfaces :as i)
 (import ./print-for-emacs)
 (import ./backend :as backend)
 
 # Use backend's register-implementation for all runtime registration
-(def slynet-register-impl-rt! backend/register-implementation)
-(def *slynet-rpc-implementations-registry* backend/*implementations*)
-(def *slynet-rpc-interfaces-registry* @{})
 
 
 (def *translating-swank-to-slynk* true)
@@ -482,8 +478,13 @@
   old)
 
 (defn send-to-remote [remote-id message]
+  # (print "send-to-remote: remote-id=" remote-id " message=" message)
   (def conn (if _resolve-conn (_resolve-conn remote-id) nil))
+  # (print "send-to-remote: conn=" conn " message=" message "cond=" (and conn _send-handler))
+  # (pp message)
+  # (pp table)
   (when (and conn _send-handler)
+    # (print "Invoking send handler...")
     (_send-handler conn message)
     true))
 
@@ -498,39 +499,6 @@
 # Protocol constants
 (def *protocol-version* "2021-04-01")
 (def *protocol-features* @[:encoding-length-in-bytes])
-(def- slynet-rpc-interfaces-dyn-key :slynet.rpc.interfaces)
-(def- slynet-rpc-implementations-dyn-key :slynet.rpc.implementations)
-
-# Accessors for runtime code (safe even if not initialized)
-(defn slynet-rpc-interfaces [] (or (dyn slynet-rpc-interfaces-dyn-key) @{}))
-(defn slynet-rpc-implementations [] (or (dyn slynet-rpc-implementations-dyn-key) @{}))
-
-# Sync function to publish the compile-time registries into the dynamic mirrors
-(defn slynet-sync-rpc-registries! []
-  (setdyn slynet-rpc-interfaces-dyn-key (table/clone *slynet-rpc-interfaces-registry*))
-  (setdyn slynet-rpc-implementations-dyn-key (table/clone *slynet-rpc-implementations-registry*))
-  true)
-
-# Ensure commonly-used constructors and helpers are exported (redundant if in export-api)
-
-## 3) Runtime helpers
-(defn slynet-register-interface-rt! [nm arglist-spec doc]
-  (put *slynet-rpc-interfaces-registry* nm
-       @{:name nm :arglist-spec arglist-spec :doc doc})
-  true)
-
-# Register interface via regular function (no macro)
-(defn slynet-definterface [rpc-name arglist-spec docstring]
-  (unless (symbol? rpc-name)
-    (error (string "rpc-name must be symbol, got " (type rpc-name))))
-  (unless (or (tuple? arglist-spec) (array? arglist-spec) (keyword? arglist-spec))
-    (error "arglist-spec must be tuple, array, or keyword"))
-  (unless (string? docstring)
-    (error "docstring must be string"))
-  (slynet-register-interface-rt! rpc-name arglist-spec docstring)
-  true)
-
-(i/define-core-interfaces slynet-definterface)
 # Export public API
 (def export-api
   @{:read-message read-message
@@ -544,7 +512,6 @@
     :set-conn-resolver set-conn-resolver
     :send-handler _send-handler
     :conn-resolver _resolve-conn
-    :slynet-definterface slynet-definterface
     :*translating-swank-to-slynk* *translating-swank-to-slynk*
     :*wire-protocol-version* *wire-protocol-version*
     :*protocol-features* *protocol-features*})
@@ -559,9 +526,9 @@ SLYNET RPC (Remote Procedure Call) endpoints.")
 # Using defdyn to allow them to be reset/re-initialized by init.janet,
 # and to be accessible across modules that load/import this one.
 
-# == slynet/slynk_janet/rpc.janet ==
+# == slynet/rpc.janet ==
 # Compile-time registries (macros can mutate these during expansion)
-# == slynet/slynk_janet/rpc.janet ==
+# == slynet/rpc.janet ==
 # 1) Compile-time registries (macros can mutate these during expansion)
 # Already defined above near the top of this file.
 
@@ -575,77 +542,23 @@ SLYNET RPC (Remote Procedure Call) endpoints.")
 # == end/rpc.janet ==
 # RPC utility functions
 
-# == slynet/slynk_janet/rpc_macros.janet ==
+# == slynet/rpc_macros.janet ==
 # compile-time registries must be defined/required BEFORE importing this file:
 # (def *slynet-rpc-implementations-registry* @{})
 
 # Runtime registrar used in expansion (no module leaks)
 
 
-# == slynet/slynk_janet/contrib/slynet-arglists.janet ==
+# == slynet/contrib/slynet-arglists.janet ==
 # Replace your macro with this version
 
-# == slynet/slynk_janet/contrib/slynet-arglists.janet ==
+# == slynet/contrib/slynet-arglists.janet ==
 # Replace your macro with this version (no `bound?`, no compile-time registry writes)
 
-# == slynet/slynk_janet/contrib/slynet-arglists.janet ==
+# == slynet/contrib/slynet-arglists.janet ==
 # Replace your slynet-defimplementation with this version (no hard ref to registrar)
 
-(defmacro slynet-defimplementation
-  "Define an RPC function and (optionally) register it at runtime.
-   Usage: (slynet-defimplementation name [args] \"doc?\" body...)"
-  [rpc-name args & body]
-  (unless (symbol? rpc-name)
-    (error "slynet-defimplementation: rpc-name must be a symbol"))
-  (unless (tuple? args)
-    (error (string "slynet-defimplementation: args must be a tuple, but got " (type args))))
-
-  # optional docstring
-  (var doc "")
-  (var forms body)
-  (when (and (> (length forms) 0) (string? (forms 0)))
-    (set doc (forms 0))
-    (set forms (tuple/slice forms 1)))
-
-  ~(do
-     (def ,rpc-name nil) # forward binding
-     (defn ,rpc-name ,args
-       ,;forms)
-     (try
-       ((eval 'slynet-register-impl-rt!) ',rpc-name ,rpc-name ,doc)
-       ([_ fib] nil))))
-# == end/slynet-arglists.janet ==
-
-# == end/slynet-arglists.janet ==
-
-# == end/slynet-arglists.janet ==
-
-# == end/rpc_macros.janet ==
-
-
-
-(defn get-interface
-  "Get the interface metadata for an RPC endpoint.
-  Returns nil if the interface doesn't exist."
-  [rpc-name]
-  (get (dyn *slynet-rpc-interfaces-registry*) rpc-name))
-
-(defn get-implementation
-  "Get the implementation function for an RPC endpoint.
-  Returns nil if the implementation doesn't exist."
-  [rpc-name]
-  (get (dyn *slynet-rpc-implementations-registry*) rpc-name))
-
-(defn list-interfaces
-  "List all registered RPC interfaces."
-  []
-  (keys *slynet-rpc-interfaces-registry*))
-
-(defn list-implementations
-  "List all registered RPC implementations."
-  []
-  (keys (dyn *slynet-rpc-implementations-registry*)))
-
+(import ./infrastructure :as inf)
 (defn dispatch
   "Dispatch an RPC call to the appropriate implementation.
 
@@ -655,8 +568,8 @@ SLYNET RPC (Remote Procedure Call) endpoints.")
   Throws an error if the RPC endpoint doesn't exist or if there's
   a mismatch between the provided arguments and the expected signature."
   [rpc-name args]
-  (def interface (get-interface rpc-name))
-  (def implementation (get-implementation rpc-name))
+  (def interface (inf/get-interface rpc-name))
+  (def implementation (inf/get-implementation rpc-name))
 
   # Check if the RPC endpoint exists
   (unless interface
@@ -679,8 +592,8 @@ SLYNET RPC (Remote Procedure Call) endpoints.")
   Returns a tuple of [valid reason] where valid is a boolean
   and reason is a string explaining any validation failures."
   [rpc-name]
-  (def interface (get-interface rpc-name))
-  (def implementation (get-implementation rpc-name))
+  (def interface (inf/get-interface rpc-name))
+  (def implementation (inf/get-implementation rpc-name))
 
   (cond
     (nil? interface) [false (string "Missing interface declaration for " rpc-name)]
@@ -689,12 +602,6 @@ SLYNET RPC (Remote Procedure Call) endpoints.")
     [true "Valid"]))
 
 # Update export API to include the new RPC functionality
-(put export-api :slynet-rpc-interfaces-registry *slynet-rpc-interfaces-registry*)
-(put export-api :slynet-rpc-implementations-registry *slynet-rpc-implementations-registry*)
-(put export-api :get-interface get-interface)
-(put export-api :get-implementation get-implementation)
-(put export-api :list-interfaces list-interfaces)
-(put export-api :list-implementations list-implementations)
 (put export-api :dispatch dispatch)
 (put export-api :validate-rpc validate-rpc)
 
@@ -738,9 +645,6 @@ SLYNET RPC (Remote Procedure Call) endpoints.")
 
 # Update export API with the new functions
 (put export-api :parse-sexp parse-sexp)
-(put export-api :slynet-register-impl-rt! slynet-register-impl-rt!)
-(put export-api :slynet-rpc-interfaces-registry *slynet-rpc-interfaces-registry*)
-(put export-api :slynet-sync-rpc-registries! slynet-sync-rpc-registries!)
 
 (put export-api :process-incoming-message process-incoming-message)
 (put export-api :process-outgoing-message process-outgoing-message)

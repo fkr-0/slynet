@@ -1,12 +1,14 @@
 (print "Loading backend.janet...")
 
+(import ./types)
+(import ./infrastructure :as inf)
+
 (defn eval-in-context [form ctx]
   (eval form))
 # SLYNK Backend Interface for Janet
 # Translates the Common Lisp slynk-backend.lisp to Janet
 
 
-(import ./types)
 ## (import ./gray)
 
 (defn test-cd [dir]
@@ -24,55 +26,6 @@
 # Maximum level for nested data structure printing
 (def *max-print-level* 10)
 
-#
-# Registry for interfaces and implementations
-#
-
-# Registry for interface functions - ordered list of defined interfaces
-(def *interface-functions* @[])
-
-# List of unimplemented interfaces - updated during runtime
-# (def *unimplemented-interfaces* )
-
-(var *unimplemented-interfaces* @[])
-# Implementation registry - maps interface names to their implementations
-(def *implementations* @{})
-(defn make-backend-error
-  "Create a structured backend error."
-  [message details]
-  @{:type :slynk-backend-error
-    :message message
-    :details details})
-
-(defn make-implementation-error
-  "Create an error for missing or invalid implementations."
-  [interface-name reason]
-  @{:type :slynk-implementation-error
-    :interface interface-name
-    :reason reason
-    :message (string "Implementation error for " interface-name ": " reason)})
-
-
-(defn register-implementation
-  "Register function F as implementation for interface NAME (a symbol or string)."
-  [name f]
-  (put-in *implementations* [(if (symbol? name) name (symbol name)) :implementation] f)
-  f)
-
-(defn run-implementation
-  "Run the implementation for interface NAME with ARGS.
-   Raises an error if no implementation is registered."
-  [name & args]
-  (def s (if (symbol? name) name (symbol name)))
-  (def impl (get-in *implementations* [s :implementation]))
-  (if impl
-    (try
-      (apply impl args)
-      ([err fib]
-        (if *debug-slynk-backend*
-          (error err)
-          (error (make-backend-error (string "Error in " s) err)))))
-    (error (make-implementation-error s "No implementation provided"))))
 
 # Custom error types for the backend
 # ---------- small helpers ----------
@@ -107,7 +60,7 @@
        ,(if (empty? else) nil ~(do ,else)))))
 
 # ---------- interface & implementation machinery ----------
-# == slynet/slynk_janet/backend.janet ==
+# == slynet/backend.janet ==
 # PATCH 2/4 — fix interface machinery
 
 # ... keep earlier code ...
@@ -162,7 +115,7 @@
 #   ~(put-in *implementations* [',s :implementation]
 #            (fn ,arglist ,;body)))
 
-# == slynet/slynk_janet/backend.janet ==
+# == slynet/backend.janet ==
 # add to your backend module
 
 # --- Internals ---------------------------------------------------------------
@@ -340,12 +293,6 @@
     ([err fib]
       "[Error printing value]")))
 
-(defn warn-unimplemented-interfaces
-  "Warn the user about unimplemented backend features."
-  []
-  (when (not (empty? *unimplemented-interfaces*))
-    (eprintf "Warning: These backend interfaces are not implemented: %j\n"
-             *unimplemented-interfaces*)))
 
 # --- Core Backend Interfaces ---
 
@@ -354,7 +301,8 @@
 (defn gray-package-name []
   "Return a module name that contains the Gray stream symbols."
   nil)
-(register-implementation 'gray-package-name gray-package-name)
+
+(inf/defimpl 'gray-package-name gray-package-name)
 
 
 # UTF-8 helpers
@@ -516,29 +464,29 @@ Example:
 (defn stream-line-column [stream]
   "Return the column number at STREAM's position."
   0)
-(register-implementation 'stream-line-column stream-line-column)
+(inf/defimpl 'stream-line-column stream-line-column)
 
 (defn stream-flush-output [stream]
   "Flush output on STREAM."
   nil)
-(register-implementation 'stream-flush-output stream-flush-output)
+(inf/defimpl 'stream-flush-output stream-flush-output)
 
 (defn make-output-stream [write-string]
   "Return a new character output stream that calls WRITE-STRING.
    WRITE-STRING is called with a string and character position."
   (error "Not implemented"))
-(register-implementation 'make-output-stream make-output-stream)
+(inf/defimpl 'make-output-stream make-output-stream)
 
 (defn make-input-stream [read-string]
   "Return a new character input stream that calls READ-STRING.
    READ-STRING is called with a character count and returns a string."
   (error "Not implemented"))
-(register-implementation 'make-input-stream make-input-stream)
+(inf/defimpl 'make-input-stream make-input-stream)
 
 (defn make-fd-stream [fd external-format]
   "Create a character stream from a file descriptor."
   (error "Not implemented"))
-(register-implementation 'make-fd-stream make-fd-stream)
+(inf/defimpl 'make-fd-stream make-fd-stream)
 
 # (definterface getpid
 #   []
@@ -548,12 +496,12 @@ Example:
 (defn default-directory []
   "Return the current default pathname-directory."
   (os/cwd))
-(register-implementation 'default-directory default-directory)
+(inf/defimpl 'default-directory default-directory)
 
 (defn set-default-directory [directory]
   "Set the current default pathname-directory."
   (os/cd directory))
-(register-implementation 'set-default-directory set-default-directory)
+(inf/defimpl 'set-default-directory set-default-directory)
 
 # --- REPL and Reader Interfaces ---
 
@@ -561,32 +509,32 @@ Example:
   [opt io-input io-output &options]
   "Create a new REPL, optionally with I/O streams."
   (error "Not implemented"))
-(register-implementation 'create-repl create-repl)
+(inf/defimpl 'create-repl create-repl)
 
 (defn eval-in-context
   [form context]
   "Evaluate FORM in CONTEXT."
   (eval form))
-(register-implementation 'eval-in-context eval-in-context)
+(inf/defimpl 'eval-in-context eval-in-context)
 
 (defn call-with-compilation-hooks [func]
   "Call FUNC but intercept compiler conditions."
   (func))
-(register-implementation 'call-with-compilation-hooks call-with-compilation-hooks)
+(inf/defimpl 'call-with-compilation-hooks call-with-compilation-hooks)
 
 (defn compile-string [string filename line column]
   "Compile STRING as if it appeared in a file."
   (compile string))
-(register-implementation 'compile-string compile-string)
+(inf/defimpl 'compile-string compile-string)
 
 (defn compile-file [filename output-file load]
   "Compile FILENAME to OUTPUT-FILE and load if LOAD is true."
   (error "Not implemented"))
-(register-implementation 'compile-file compile-file)
+(inf/defimpl 'compile-file compile-file)
 
 # --- Thread and concurrency interfaces ---
 
-# == slynet/slynk_janet/backend.janet ==
+# == slynet/backend.janet ==
 # ... your existing code & fixed definterface/defimplementation macros stay ...
 
 # IMPORT the primitives (no gray here!)
@@ -595,12 +543,12 @@ Example:
 (defn make-lock [name]
   "Create a lock with NAME."
   (prim/make-lock name))
-(register-implementation 'make-lock make-lock)
+(inf/defimpl 'make-lock make-lock)
 
 (defn with-lock [lock thunk]
   "Invoke (thunk) while holding LOCK."
   (prim/with-lock lock thunk))
-(register-implementation 'with-lock with-lock)
+(inf/defimpl 'with-lock with-lock)
 
 # Optional: ergonomic macro re-exposed here (expands to primitives version)
 (defmacro with-lock/do [lock & body]
@@ -615,22 +563,22 @@ Example:
 (defn make-output-stream [write-string]
   "Return an output stream that calls WRITE-STRING."
   (error "Not implemented"))
-(register-implementation 'make-output-stream make-output-stream)
+(inf/defimpl 'make-output-stream make-output-stream)
 
 (defn make-input-stream [read-string]
   "Return an input stream that calls READ-STRING."
   (error "Not implemented"))
-(register-implementation 'make-input-stream make-input-stream)
+(inf/defimpl 'make-input-stream make-input-stream)
 
 (defn stream-flush-output [stream]
   "Flush output on STREAM."
   (error "Not implemented"))
-(register-implementation 'stream-flush-output stream-flush-output)
+(inf/defimpl 'stream-flush-output stream-flush-output)
 
 (defn stream-line-column [stream]
   "Return column at STREAM position."
   0)
-(register-implementation 'stream-line-column stream-line-column)
+(inf/defimpl 'stream-line-column stream-line-column)
 
 # ... rest of backend; keep export-api AT END, after all defs ...
 # == end/backend.janet ==
@@ -638,18 +586,18 @@ Example:
 (defn make-thread [name function &args]
   "Create a new thread with NAME that runs FUNCTION with ARGS."
   (error "Not implemented"))
-(register-implementation 'make-thread make-thread)
+(inf/defimpl 'make-thread make-thread)
 
 # --- Source location interfaces ---
 
 (defn find-source-location [symbol]
   "Return the source location of SYMBOL as (path line column) or nil."
   nil)
-(register-implementation 'find-source-location find-source-location)
+(inf/defimpl 'find-source-location find-source-location)
 
 # --- Actual implementations for Janet ---
 
-# == slynet/slynk_janet/backend.janet ==
+# == slynet/backend.janet ==
 # PATCH A — lock backend: use ev/lock; drop the nonexistent ev/mutex
 
 # BEFORE (causing error):
@@ -659,20 +607,20 @@ Example:
 #     :mutex (ev/mutex)})
 
 # AFTER:
-# == slynet/slynk_janet/backend.janet ==
+# == slynet/backend.janet ==
 # PATCH F — ensure make-lock uses ev/lock and stores :lock
 
 (defn getpid []
   (os/getpid))
-(register-implementation 'getpid getpid)
+(inf/defimpl 'getpid getpid)
 
 (defn default-directory []
   (os/cwd))
-(register-implementation 'default-directory default-directory)
+(inf/defimpl 'default-directory default-directory)
 
 (defn set-default-directory [directory]
   (os/cd directory))
-(register-implementation 'set-default-directory set-default-directory)
+(inf/defimpl 'set-default-directory set-default-directory)
 
 # (defimplementation make-output-stream [write-string]
 #   (gray/sly-output-stream write-string))
@@ -691,7 +639,7 @@ Example:
   # This is a challenging task in Janet without additional tooling
   # For now, return nil indicating unknown location
   nil)
-(register-implementation 'find-source-location find-source-location)
+(inf/defimpl 'find-source-location find-source-location)
 
 # Additional essential backend implementations
 
@@ -708,7 +656,7 @@ Example:
         :value (if (not= value :undefined) (string/format "%j" value) "undefined")
         :documentation (or (try (doc s) ([_ fib] nil)) "No documentation available")})
     ([err fib] @{:error (string "Error getting symbol info: " err)})))
-(register-implementation 'symbol-info symbol-info)
+(inf/defimpl 'symbol-info symbol-info)
 
 (defn eval-for-emacs
   [string buffer-package id]
@@ -721,7 +669,7 @@ Example:
       [:ok result])
     ([err fib]
       [:abort (string "Evaluation error: " err)])))
-(register-implementation 'eval-for-emacs eval-for-emacs)
+(inf/defimpl 'eval-for-emacs eval-for-emacs)
 
 (defn eval-in-context
   [form context id]
@@ -733,8 +681,8 @@ Example:
 
     ([err fib]
       [:abort (string "Evaluation error: " err)])))
-(register-implementation 'eval-in-context eval-in-context)
-(register-implementation 'symbol-info symbol-info)
+(inf/defimpl 'eval-in-context eval-in-context)
+(inf/defimpl 'symbol-info symbol-info)
 
 (defn system-info
   "Return basic system/environment info for diagnostics."
@@ -748,7 +696,7 @@ Example:
       :env env
       :janet-version (string janet/version)}))
 
-(register-implementation 'system-info system-info)
+(inf/defimpl 'system-info system-info)
 
 (defn list-modules
   "Return a list of loaded module names."
@@ -762,7 +710,7 @@ Example:
       modules)
     ([err fib] [:error (string "Error listing modules: " err)])))
 
-(register-implementation 'list-modules list-modules)
+(inf/defimpl 'list-modules list-modules)
 # --- Further backend stubs ---
 
 (defn list-directory
@@ -772,7 +720,7 @@ Example:
     (os/dir path)
     ([err fib] [:error (string "Error listing directory: " err)])))
 
-(register-implementation 'list-directory list-directory)
+(inf/defimpl 'list-directory list-directory)
 
 (defn file-exists?
   "Return true if PATH exists and is a file."
@@ -781,7 +729,7 @@ Example:
     (os/stat path)
     ([err fib] false)))
 
-(register-implementation 'file-exists? file-exists?)
+(inf/defimpl 'file-exists? file-exists?)
 
 (defn directory-exists?
   "Return true if PATH exists and is a directory."
@@ -790,7 +738,7 @@ Example:
     (os/stat path)
     ([err fib] false)))
 
-(register-implementation 'directory-exists? directory-exists?)
+(inf/defimpl 'directory-exists? directory-exists?)
 
 (defn read-file
   "Read the contents of PATH as a string."
@@ -799,7 +747,7 @@ Example:
     (file/lines path)
     ([err fib] [:error (string "Error reading file: " err)])))
 
-(register-implementation 'read-file read-file)
+(inf/defimpl 'read-file read-file)
 
 (defn write-file
   "Write STRING to PATH. Returns true on success."
@@ -808,7 +756,7 @@ Example:
     (do (file/write path string) true)
     ([err fib] [:error (string "Error writing file: " err)])))
 
-(register-implementation 'write-file write-file)
+(inf/defimpl 'write-file write-file)
 # [:ok result])
 
 # --- Thread and concurrency interfaces ---
@@ -822,17 +770,17 @@ Example:
     :env (table/clone (fiber/getenv (fiber/current)))
     :history @[]
     :options create-options})
-(register-implementation 'create-repl create-repl)
+(inf/defimpl 'create-repl create-repl)
 
 (defn current-thread-id []
   "Return the ID of the current thread."
   (identity (fiber/current)))
-(register-implementation 'current-thread-id current-thread-id)
+(inf/defimpl 'current-thread-id current-thread-id)
 
 (defn thread-name [thread]
   "Return the name of THREAD."
   (string "Janet-Thread-" thread))
-(register-implementation 'thread-name thread-name)
+(inf/defimpl 'thread-name thread-name)
 
 (defn interactive-eval [string]
   "Evaluate STRING interactively."
@@ -842,7 +790,7 @@ Example:
       [:ok result])
     ([err fib]
       [:abort (string "Interactive evaluation error: " err)])))
-(register-implementation 'interactive-eval interactive-eval)
+(inf/defimpl 'interactive-eval interactive-eval)
 
 # (defn interactive-eval
 #   [string]
@@ -872,7 +820,7 @@ Example:
         :documentation (or (try (doc sym) ([_ fib] nil)) "No documentation available")})
     ([err fib]
       @{:error (string "Error describing symbol: " err)})))
-(register-implementation 'describe-symbol describe-symbol)
+(inf/defimpl 'describe-symbol describe-symbol)
 
 # (defimplementation describe-symbol
 #   [symbol-name]
@@ -939,7 +887,7 @@ Example:
         [:error (string function-name " is not a function")]))
     ([err fib]
       [:error (string "Error getting arglist: " err)])))
-(register-implementation 'arglist arglist)
+(inf/defimpl 'arglist arglist)
 
 # (defimplementation arglist
 #   [function-name]
@@ -979,7 +927,7 @@ Example:
       locals)
     ([err fib]
       [:error (string "Error getting frame locals: " err)])))
-(register-implementation 'frame-locals frame-locals)
+(inf/defimpl 'frame-locals frame-locals)
 
 # (defimplementation frame-locals
 #   [index]
@@ -1003,7 +951,7 @@ Example:
 #       [:error (string "Error getting frame locals: " err)])))
 
 # Create a function that implements various interfaces
-# == slynet/slynk_janet/backend.janet ==
+# == slynet/backend.janet ==
 # PATCH E — remove varargs function `fn [& args]`; keep a simple map loader
 
 # BEFORE:
@@ -1015,14 +963,14 @@ Example:
 #       (defimplementation (key) (fn [& args] (apply impl args))))))
 
 # AFTER (no varargs at runtime; just register exact fns you pass in):
-(defn create-backend-implementation
-  "Register exact implementations from a map: {sym -> function}."
-  [impl-map]
-  (each k (keys impl-map)
-    (when-let [impl (get impl-map k)]
-      (put-in *implementations* [k :implementation] impl))))
+# (defn create-backend-implementation
+#   "Register exact implementations from a map: {sym -> function}."
+#   [impl-map]
+#   (each k (keys impl-map)
+#     (when-let [impl (get impl-map k)]
+#       (put-in *implementations* [k :implementation] impl))))
 # == end/backend.janet ==
-# == slynet/slynk_janet/backend.janet ==
+# == slynet/backend.janet ==
 # PATCH D — optional user-facing convenience macro (ok to keep or skip)
 
 
@@ -1035,43 +983,32 @@ Example:
   (default options @{})
 
   # Reset warning tracker
-  (set *unimplemented-interfaces* (filter |(not (get *implementations* $)) *interface-functions*))
+  (let [unimplemented-interfaces inf/list-unimplemented-interfaces]
 
-  # Warn about missing implementations (unless suppressed)
-  (unless (options :suppress-warnings)
-    (warn-unimplemented-interfaces))
+    # Warn about missing implementations (unless suppressed)
+    (unless (or (= 0 (length unimplemented-interfaces)) (options :suppress-warnings))
+      (eprintf "Warning: The following backend interfaces are unimplemented:")
+      (each iface unimplemented-interfaces
+        (eprintf "  - %s" (string iface)))
+      (eprintf "Some features may not work correctly without these implementations.")))
 
   # Report initialization
-  (unless (options :quiet)
-    (eprintf "Backend initialized with %d implemented interfaces (of %d total)."
-             (- (length *interface-functions*) (length *unimplemented-interfaces*))
-             (length *interface-functions*)))
+  # (unless (options :quiet)
+  #   (eprintf "Backend initialized with %d implemented interfaces (of %d total)."
+  #            (- (length *interface-functions*) (length *unimplemented-interfaces*))
+  #            (length *interface-functions*)))
 
   true)
-(defn pp-interface-implementations
-  "Pretty-print the current interface implementations."
-  []
-  (each fn-name *interface-functions*
-    (def impl (get-in *implementations* [fn-name :implementation]))
-    (if impl
-      (eprintf "%-30s : implemented\n" (string fn-name))
-      (eprintf "%-30s : NOT implemented\n" (string fn-name)))))
+
 # Export public API
 (def export-api
   @{:*debug-slynk-backend* *debug-slynk-backend*
     :*max-print-length* *max-print-length*
-    :*interface-functions* *interface-functions*
-    :*unimplemented-interfaces* *unimplemented-interfaces*
     :system-info system-info
     :symbol-info symbol-info
     :documentation documentation
     :list-modules list-modules
-    :pp-interface-implementations pp-interface-implementations
-    :make-backend-error make-backend-error
-    :make-implementation-error make-implementation-error
-    :warn-unimplemented-interfaces warn-unimplemented-interfaces
     :initialize initialize
-    :create-backend-implementation create-backend-implementation
     :utf8-decode utf8-decode
     :utf8-decode-aux utf8-decode-aux
     :string-to-utf8 string-to-utf8
@@ -1095,8 +1032,6 @@ Example:
     :interactive-eval 'interactive-eval
     :describe-symbol 'describe-symbol
     :list-all-modules list-all-modules
-    :register-implementation register-implementation
     :arglist 'arglist
-    :run-implementation run-implementation
     :>> >>
     :frame-locals 'frame-locals})

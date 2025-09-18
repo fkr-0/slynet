@@ -1,4 +1,4 @@
-# == slynet/slynk_janet/print-for-emacs.janet ==
+# == slynet/print-for-emacs.janet ==
 # Sturdy Elisp-readable printer for SLY/Emacs interop.
 
 # Tunables --------------------------------------------------------------

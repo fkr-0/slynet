@@ -1,7 +1,7 @@
-# slynet/slynk_janet/contrib/slynet-arglists.janet
+# slynet/contrib/slynet-arglists.janet
 # Adapted from slynk-arglists.lisp
 # Provides enhanced arglist functionality for Janet functions
-# == slynet/slynk_janet/contrib/slynet-arglists.janet ==
+# == slynet/contrib/slynet-arglists.janet ==
 # PATCH — add a tiny stub so (declare-source ...) compiles.
 # If later you want to track file/line origins, replace this with a registry.
 
@@ -16,6 +16,7 @@
 (import ../slynk :as slyk)
 (import ../rpc :as slyk-rpc)
 (import ../backend :as slyk-backend)
+(import ../infrastructure :as inf)
 
 # Module state
 (var debug-arglist-cache false)
@@ -26,7 +27,7 @@
 (var cache-size 0)
 (var cache-limit 700)
 
-# RPC Interface definitions are now in slynet/slynk_janet/interfaces.janet
+# RPC Interface definitions are now in slynet/interfaces.janet
 
 # Implementation
 (defn- record-cache-access [symbol]
@@ -95,7 +96,7 @@
     (trim-cache))
   symbol)
 
-(slyk-backend/register-implementation
+(inf/defimpl
   'slynet-arglists/update-arglist
   slynet-arglists/update-arglist)
 
@@ -108,7 +109,7 @@
   (set cache-size 0)
   true)
 
-(slyk-backend/register-implementation
+(inf/defimpl
   'slynet-arglists/clear-arglists-cache
   slynet-arglists/clear-arglists-cache)
 
@@ -138,7 +139,7 @@
           (record-cache-access symbol)
           (trim-cache))
         computed))))
-(slyk-backend/register-implementation
+(inf/defimpl
   'slynet-arglists/get-arglist-from-cache
   slynet-arglists/get-arglist-from-cache)
 
@@ -149,7 +150,7 @@
     (string/format "%s: %j" symbol arglist)
     (string "No arglist available for " symbol)))
 
-(slyk-backend/register-implementation
+(inf/defimpl
   'slynet-arglists/show-arglist
   slynet-arglists/show-arglist)
 

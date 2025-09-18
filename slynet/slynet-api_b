@@ -116,9 +116,9 @@
     nil)) # Return None (nil)
 
 # Import the new SLYNK implementation
-(import ./slynet/slynk_janet/rpc)
-(import ./slynet/slynk_janet/init)
-(import ./slynet/slynk_janet/backend)
+(import ./slynet/rpc)
+(import ./slynet/init)
+(import ./slynet/backend)
 
 # Re-export the new RPC system
 (def slynet-rpc-interfaces-registry rpc/slynet-rpc-interfaces-registry)

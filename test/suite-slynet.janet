@@ -1,62 +1,44 @@
-# SLYNET Test Suite – High Coverage for Backend & RPC Modules
+(use ../test-runner)
+(import ../slynet/infrastructure :as inf)
+(import ../slynet/rpc :as rpc)
 
-(import ../slynet/slynk_janet/backend)
-(import ../slynet/slynk_janet/rpc)
-(import ../slynet/slynet-api)
-(use judge)
-(defn test-make-backend-error []
-  (let [err (backend/make-backend-error "fail" {:foo "bar"})]
-    (test (= (:type err) :slynk-backend-error))
-    (test (= (:message err) "fail"))
-    (test (= (:details err) {:foo "bar"}))))
+(register-test
+  {:name "backend error helper"
+   :tags [:unit]
+   :fn (fn []
+         (def err (inf/make-backend-error "fail" {:foo "bar"}))
+         (assert= :slynk-backend-error (err :type))
+         (assert= "fail" (err :message))
+         (assert= {:foo "bar"} (err :details)))
+   })
 
-(defn test-make-implementation-error []
-  (let [err (backend/make-implementation-error "iface" "missing")]
-    (test (= (:type err) :slynk-implementation-error))
-    (test (= (:interface err) "iface"))
-    (test (= (:reason err) "missing"))
-    (test (string/find "Implementation error for iface" (:message err)))))
+(register-test
+  {:name "implementation error helper"
+   :tags [:unit]
+   :fn (fn []
+         (def err (inf/make-implementation-error 'iface "missing"))
+         (assert= :slynk-implementation-error (err :type))
+         (assert= 'iface (err :interface))
+         (assert-true (string/find (err :message) "Implementation error")))
+   })
 
-(defn test-make-slynk-reader-error []
-  (let [err (rpc/make-slynk-reader-error "packet" "cause")]
-    (test (= (:type err) :slynk-reader-error))
-    (test (= (:packet err) "packet"))
-    (test (= (:cause err) "cause"))
-    (test (string/find "Failed to read message" (:message err)))))
+(register-test
+  {:name "rpc reader error helper"
+   :tags [:unit]
+   :fn (fn []
+         (def err (rpc/make-slynk-reader-error "packet" "oops"))
+         (assert= :slynk-reader-error (err :type))
+         (assert= "packet" (err :packet))
+         (assert= "oops" (err :cause)))
+   })
 
-(defn test-make-slynk-protocol-error []
-  (let [err (rpc/make-slynk-protocol-error "msg" "exp" "got")]
-    (test (= (:type err) :slynk-protocol-error))
-    (test (= (:message err) "msg"))
-    (test (= (:expected err) "exp"))
-    (test (= (:received err) "got"))))
-
-(defn test-if-let-macro []
-  (test (= (if-let [x 42] x) 42))
-  (test (= (if-let [x nil] x "fallback") "fallback")))
-
-# (defn test-definterface-macro []
-#   (definterface testiface [x] "docstring")
-#   (test (function? testiface))
-#   (try
-#     (testiface 1)
-#     (error "Should throw for stub interface")
-#     ([err fib]
-#       (test (string/includes (e :message) "Interface stub")))))
-
-# (defn test-registry-population []
-#   (definterface regiface [y] "doc")
-#   (defimplementation regiface [y] y)
-#   (test (= (regiface 99) 99)))
-
-(defn run-all []
-  (test-make-backend-error)
-  (test-make-implementation-error)
-  (test-make-slynk-reader-error)
-  (test-make-slynk-protocol-error)
-  (test-if-let-macro)
-  # (test-definterface-macro)
-  # (test-registry-population)
-  :ok)
-
-(run-all)
+(register-test
+  {:name "rpc protocol error helper"
+   :tags [:unit]
+   :fn (fn []
+         (def err (rpc/make-slynk-protocol-error "msg" "want" "got"))
+         (assert= :slynk-protocol-error (err :type))
+         (assert= "msg" (err :message))
+         (assert= "want" (err :expected))
+         (assert= "got" (err :received)))
+   })

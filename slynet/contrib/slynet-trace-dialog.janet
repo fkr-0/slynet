@@ -1,4 +1,4 @@
-# slynet/slynk_janet/contrib/slynet-trace-dialog.janet
+# slynet/contrib/slynet-trace-dialog.janet
 # Adapted from slynk-trace-dialog.lisp
 # Provides a trace dialog interface for Janet functions
 
@@ -15,6 +15,59 @@
 (def show-trace-output-in-repl false) # Whether to show traces in REPL as well
 (var current-trace-id 0) # Counter for unique trace IDs
 (var current-trace-depth 0) # Track nesting depth of traced calls
+(definterface trace-format (trace)
+  "Format a trace.")
+
+(definterface trace-or-lose (id)
+  "Trace a part or lose.")
+
+(definterface report-partial-tree (id)
+  "Report a partial trace tree.")
+
+(definterface report-specs (id)
+  "Report trace specs.")
+
+(definterface report-total (id)
+  "Report total trace time.")
+
+(definterface clear-trace-tree ()
+  "Clear the trace tree.")
+
+(definterface trace-part-or-lose (id)
+  "Trace a part or lose.")
+
+(definterface trace-arguments-or-lose (id)
+  "Trace arguments or lose.")
+
+(definterface inspect-trace-part (id)
+  "Inspect a trace part.")
+
+(definterface pprint-trace-part (id)
+  "Pretty-print a trace part.")
+
+(definterface describe-trace-part (id)
+  "Describe a trace part.")
+
+(definterface inspect-trace (id)
+  "Inspect a trace.")
+
+(definterface trace-location (id)
+  "Get the location of a trace.")
+
+(definterface dialog-trace (spec)
+  "Trace a function via dialog.")
+
+(definterface dialog-untrace (spec)
+  "Untrace a function via dialog.")
+
+(definterface dialog-toggle-trace (spec)
+  "Toggle tracing for a function via dialog.")
+
+(definterface dialog-traced-p (spec)
+  "Check if a function is traced via dialog.")
+
+(definterface dialog-untrace-all ()
+  "Untrace all functions via dialog.")
 
 # Trace entry structure
 # {:id unique-id
@@ -25,7 +78,7 @@
 #  :result return-value-or-error
 #  :duration time-elapsed}
 
-# RPC Interface definitions are now in slynet/slynk_janet/interfaces.janet
+# RPC Interface definitions are now in slynet/interfaces.janet
 
 # Implementation helpers
 (defn- make-trace-wrapper

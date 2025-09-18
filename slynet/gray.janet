@@ -1,9 +1,10 @@
-# == slynet/slynk_janet/gray.janet ==
+# == slynet/gray.janet ==
 # SLYNK Gray Stream Support for Janet
 # Translated from slynk-gray.lisp — provides stream handling for redirected I/O
 
 (import ./backend :as b)
 (import ./primitives :as prim)
+(import ./infrastructure :as inf)
 ## Light helper import to parse forms for MREPL helpers
 (import ./rpc :as rpc)
 
@@ -167,17 +168,18 @@
 
 # --- Register with backend (no import loop since backend never imports us) ---
 
-(b/register-implementation "make-output-stream" (fn [write-string]
-                                                  (sly-output-stream write-string)))
+(inf/defimpl "make-output-stream" (fn [write-string]
+                                    (sly-output-stream write-string)))
 
-(b/register-implementation "make-input-stream" (fn [read-string]
-                                                 (sly-input-stream read-string)))
+(inf/defimpl "make-input-stream" (fn [read-string]
+                                   (sly-input-stream read-string)))
 
-(b/register-implementation "stream-flush-output" (fn [stream]
-                                                   (stream-finish-output stream)))
+(inf/defimpl "stream-flush-output" (fn [stream]
+                                     (stream-finish-output stream)))
 
-(b/register-implementation "stream-line-column" (fn [stream]
-                                                  (stream-line-column stream)))
+(inf/defimpl "stream-line-column" (fn [stream]
+                                    (stream-line-column stream)))
+
 
 # Optional local exports (not strictly needed)
 (def export-api

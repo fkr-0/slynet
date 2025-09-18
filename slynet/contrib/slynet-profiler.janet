@@ -1,4 +1,4 @@
-# slynet/slynk_janet/contrib/slynet-profiler.janet
+# slynet/contrib/slynet-profiler.janet
 # Adapted from slynk-profiler.lisp
 # Provides a basic profiling interface for Janet functions
 
@@ -24,7 +24,27 @@
 #  :min-time min-time
 #  :max-time max-time}
 
-# RPC Interface definitions are now in slynet/slynk_janet/interfaces.janet
+# RPC Interface definitions are now in slynet/interfaces.janet
+(definterface time-spec (spec)
+  "Time a spec.")
+
+(definterface untime-spec (spec)
+  "Untime a spec.")
+
+(definterface toggle-timing (spec)
+  "Toggle timing for a spec.")
+
+(definterface timed-spec-p (spec)
+  "Check if a spec is timed.")
+
+(definterface untime-all ()
+  "Untime all specs.")
+
+(definterface report-latest-timings ()
+  "Report the latest timings.")
+
+(definterface clear-timing-tree ()
+  "Clear the timing tree.")
 
 # Implementation helpers
 (defn- make-profile-wrapper

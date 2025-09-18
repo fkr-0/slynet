@@ -1,4 +1,4 @@
-# slynet/slynk_janet/contrib/slynet-apropos.janet
+# slynet/contrib/slynet-apropos.janet
 # Adapted from slynk-apropos.lisp
 # Provides symbol search functionality for Janet
 
@@ -7,11 +7,12 @@
 (import ../slynk :as slyk)
 (import ../rpc :as slyk-rpc)
 (import ../backend :as slyk-backend)
+(import ../infrastructure :as inf)
 
 # Module constants
 (def *max-apropos-matches* 500) # Default limit on results returned
 
-# RPC Interface definitions are now in slynet/slynk_janet/interfaces.janet
+# RPC Interface definitions are now in slynet/interfaces.janet
 
 # (defn list-all-modules []
 #   "List all currently loaded modules."
@@ -153,15 +154,15 @@
 
   result)
 
-(slyk-backend/register-implementation
+(inf/defimpl
   'slynet-apropos/search-symbols
   search-symbols)
 
-(slyk-backend/register-implementation
+(inf/defimpl
   'slynet-apropos/list-all-symbols
   list-all-symbols)
 
-(slyk-backend/register-implementation
+(inf/defimpl
   'slynet-apropos/describe-symbol-for-emacs
   describe-symbol-for-emacs)
 

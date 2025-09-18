@@ -1,4 +1,4 @@
-# slynet/slynk_janet/contrib/slynet-stickers.janet
+# slynet/contrib/slynet-stickers.janet
 # Adapted from slynk-stickers.lisp
 # Provides code annotation and instrumentation capabilities (stickers)
 
@@ -25,7 +25,36 @@
   active # Whether the sticker is active
 )
 
-# RPC Interface definitions are now in slynet/slynk_janet/interfaces.janet
+# RPC Interface definitions are now in slynet/interfaces.janet
+(definterface compile-for-stickers (form)
+  "Compile a form for stickers.")
+
+(definterface kill-stickers (ids)
+  "Kill stickers.")
+
+(definterface toggle-break-on-stickers ()
+  "Toggle breaking on stickers.")
+
+(definterface total-recordings ()
+  "Return the total number of recordings.")
+
+(definterface search-for-recording (query)
+  "Search for a recording.")
+
+(definterface fetch (id)
+  "Fetch a recording.")
+
+(definterface forget (id)
+  "Forget a recording.")
+
+(definterface find-recording-or-lose (id)
+  "Find a recording or lose.")
+
+(definterface inspect-sticker (id)
+  "Inspect a sticker.")
+
+(definterface inspect-sticker-recording (id)
+  "Inspect a sticker recording.")
 
 # Implementation
 (defn- next-id []

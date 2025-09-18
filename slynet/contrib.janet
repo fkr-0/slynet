@@ -1,6 +1,17 @@
-# slynet/slynk_janet/contrib.janet
+# slynet/contrib.janet
 # SLYNET Contrib Module Manager
 # Registers and initializes all contrib modules
+# probably the def list of contribs
+# slynk/slynk.asd:20:(defsystem :slynk
+# slynk/slynk.asd:87:(defsystem :slynk/arglists
+# slynk/slynk.asd:91:(defsystem :slynk/fancy-inspector
+# slynk/slynk.asd:95:(defsystem :slynk/package-fu
+# slynk/slynk.asd:99:(defsystem :slynk/mrepl
+# slynk/slynk.asd:103:(defsystem :slynk/trace-dialog
+# slynk/slynk.asd:107:(defsystem :slynk/profiler
+# slynk/slynk.asd:111:(defsystem :slynk/stickers
+# slynk/slynk.asd:115:(defsystem :slynk/indentation
+# slynk/slynk.asd:119:(defsystem :slynk/retro
 
 (print "Loading SLYNET Contrib Module Manager...\n")
 (import ./contrib/slynet-arglists :as arglists)

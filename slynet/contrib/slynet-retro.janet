@@ -1,4 +1,4 @@
-# slynet/slynk_janet/contrib/slynet-retro.janet
+# slynet/contrib/slynet-retro.janet
 # Adapted from slynk-retro.lisp
 # Provides backward compatibility layers for older versions of SLY
 
@@ -13,7 +13,7 @@
 # Module state
 (var *compatibility-mode* false)
 
-# RPC Interface definitions are now in slynet/slynk_janet/interfaces.janet
+# RPC Interface definitions are now in slynet/interfaces.janet
 
 # Implementation
 (defn enable-compatibility-mode []

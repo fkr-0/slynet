@@ -1,5 +1,7 @@
 # SLYNET Translation Gaps and Missing Features vs SLYNK
 
+> ⚠️  This backlog is kept for historical context. The authoritative roadmap now lives in `TASKS.md`.
+
 This document tracks the current gaps and missing features in the Janet SLYNET port compared to the original SLYNK (Common Lisp) backend.
 
 ---

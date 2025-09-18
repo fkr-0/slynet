@@ -1,4 +1,4 @@
-# slynet/slynk_janet/contrib/slynet-indentation.janet
+# slynet/contrib/slynet-indentation.janet
 # Adapted from slynk-indentation.lisp
 # Provides indentation rules for Janet code in Emacs
 
@@ -7,6 +7,7 @@
 (import ../slynk :as slyk)
 (import ../rpc :as slyk-rpc)
 (import ../backend :as slyk-backend)
+(import ../infrastructure :as inf)
 
 
 (def slynet-indentation/load-default-rules nil)
@@ -51,7 +52,7 @@
     'import [0]
     'use [0]})
 
-# RPC Interface definitions are now in slynet/slynk_janet/interfaces.janet
+# RPC Interface definitions are now in slynet/interfaces.janet
 
 # Implementation
 (defn- valid-indentation-spec? [spec]
@@ -72,7 +73,7 @@
       [true (string "Updated indentation rule for " symbol)])
     [false "Invalid symbol or indentation spec"]))
 
-(slyk-backend/register-implementation
+(inf/defimpl
   'slynet-indentation/update-indentation-rule
   slynet-indentation/update-indentation-rule)
 
@@ -84,7 +85,7 @@
         nil)
     nil))
 
-(slyk-backend/register-implementation
+(inf/defimpl
   'slynet-indentation/get-indentation-rule
   slynet-indentation/get-indentation-rule)
 
@@ -102,7 +103,7 @@
 
   rules)
 
-(slyk-backend/register-implementation
+(inf/defimpl
   'slynet-indentation/update-indentation-rule
   slynet-indentation/update-indentation-rule)
 
@@ -112,7 +113,7 @@
   (length *indentation-rules*))
 
 
-(slyk-backend/register-implementation
+(inf/defimpl
   'slynet-indentation/load-default-rules
   slynet-indentation/load-default-rules)
 # Auto-detection of indentation rules

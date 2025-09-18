@@ -129,8 +129,8 @@
 
 (defn eval-for-emacs [form buffer-package id]
   # Evaluate a form for Emacs
-  (print "Evaluating form for Emacs: ")
-  (pp form)
+  (print (string/format "Evaluating form for Emacs: %p" form))
+
   (try
     (do
       (def result (eval form))
@@ -239,11 +239,11 @@ Usage: (with-file f \"log.txt\" true (file/write f \"message\"))"
                      (log-to-file "slynk-server.log" (apply string msg))))
 # in slynk.janet
 (defn process-emacs-rex [connection form package thread id]
-  (print "processing emacs rex")
+  # (print "processing emacs rex")
   (def eval-fiber
     (ev/spawn
       (try
-        (do (print "Running async")
+        (do # (print "Running async")
           (let [res (eval-for-emacs form package id)]
             (match res
               [:ok v]

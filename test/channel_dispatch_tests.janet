@@ -1,39 +1,27 @@
-(import ../slynet/slynk_janet/slynk :prefix "slynk/")
-(import ../slynet/slynk_janet/rpc :prefix "rpc/")
-(use judge)
+(use ../test-runner)
+(import ../slynet/slynk :as slynk)
+(import ../slynet/rpc :as rpc)
 
-# Simple smoke test for channel dispatch via slynk/process-channel-send
-
-(def handled @{:process 0 :inspect 0 :teardown 0 :clear 0 :arg nil})
-
-(def channel-obj
-  @{:mrepl-channel-process (fn [arg]
-                             (put handled :process (+ 1 (handled :process)))
-                             (put handled :arg arg))
-    :mrepl-channel-inspect-object (fn [a b]
-                                    (put handled :inspect (+ 1 (handled :inspect))))
-    :mrepl-channel-teardown (fn [] (put handled :teardown (+ 1 (handled :teardown))))
-    :mrepl-channel-clear-history (fn [] (put handled :clear (+ 1 (handled :clear))))})
-
-(defn run-channel-tests []
-  (def cid (rpc/register-channel-object channel-obj))
-
-  # :process
-  (slynk/process-channel-send nil cid [:process "(print :ok)"])
-  (test (= (handled :process) 1))
-  (test (= (handled :arg) "(print :ok)"))
-
-  # :inspect-object
-  (slynk/process-channel-send nil cid [:inspect-object 0 0])
-  (test (= (handled :inspect) 1))
-
-  # :clear-history
-  (slynk/process-channel-send nil cid [:clear-history])
-  (test (= (handled :clear) 1))
-
-  # :teardown
-  (slynk/process-channel-send nil cid [:teardown])
-  (test (= (handled :teardown) 1))
-  true)
-
-(run-channel-tests)
+(register-test
+  {:name "process-channel-send dispatches actions"
+   :tags [:unit :server]
+   :fn (fn []
+         (def handled @{:process 0 :inspect 0 :teardown 0 :clear 0 :arg nil})
+         (def channel
+           @{:mrepl-channel-process (fn [arg]
+                                      (put handled :process (+ 1 (handled :process)))
+                                      (put handled :arg arg))
+             :mrepl-channel-inspect-object (fn [_ _]
+                                             (put handled :inspect (+ 1 (handled :inspect))))
+             :mrepl-channel-teardown (fn [] (put handled :teardown (+ 1 (handled :teardown))))
+             :mrepl-channel-clear-history (fn [] (put handled :clear (+ 1 (handled :clear))))})
+         (def cid (rpc/register-channel-object channel))
+         (slynk/process-channel-send nil cid [:process "(print :ok)"])
+         (assert= 1 (handled :process))
+         (assert= "(print :ok)" (handled :arg))
+         (slynk/process-channel-send nil cid [:inspect-object 0 0])
+         (assert= 1 (handled :inspect))
+         (slynk/process-channel-send nil cid [:clear-history])
+         (assert= 1 (handled :clear))
+         (slynk/process-channel-send nil cid [:teardown])
+         (assert= 1 (handled :teardown)))})

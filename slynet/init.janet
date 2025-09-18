@@ -5,6 +5,7 @@
 # Import all submodules
 (import ./backend)
 (import ./rpc)
+(import ./infrastructure :as inf)
 (import ./slynk)
 (import ./gray)
 (import ./completion)
@@ -25,7 +26,7 @@
 # User configuration
 (def *user-init-file* "~/.slynk.janet")
 (var *loaded-user-init-file* false)
-(def *load-path* @["./" "./slynet/slynk_janet/" "./slynet/" "./slynk_janet/"])
+(def *load-path* @["./" "./slynet/" "./slynet/" "./"])
 (var *slynk-hooks* @{:init @[]})
 
 # Core functions
@@ -33,7 +34,7 @@
   "Load a SLYNK module by name."
   [name]
   (def module-name (string name))
-  (def full-name (string (os/cwd) "/slynet/slynk_janet/" module-name ".janet"))
+  (def full-name (string (os/cwd) "/slynet/" module-name ".janet"))
 
   # Try to load the module
   (try
@@ -64,24 +65,24 @@
   [&opt options]
   (default options @{})
 
-  # Get access to the dynamic registries
-  (def interfaces rpc/*slynet-rpc-interfaces-registry*)
-  (def implementations rpc/*slynet-rpc-implementations-registry*)
+  # Get access to the registries managed by infrastructure
+  (def interfaces inf/*slynet-rpc-interfaces-registry*)
+  (def implementations inf/*slynet-rpc-implementations-registry*)
+
   # Reset registries if requested
   (when (options :reset-registries)
-    (eprintf "Resetting RPC registries...")
-    (table/clear interfaces)
-    (table/clear implementations))
+    (eprintf "Resetting RPC registries...\n")
+    (inf/reset-interfaces)
+    (inf/reset-implementations))
 
   # Validate that all interfaces have implementations
   (var all-implementations-found true)
 
-  (print (pp (dyn rpc/*slynet-rpc-interfaces-registry*)))
   # Validate the registry tables exist
   (unless (and (table? interfaces) (table? implementations))
-    (eprintf "Error: SLYNET RPC registries are not properly initialized (not tables). Backend initialization might have failed or rpc.janet not loaded.")
+    (eprintf "Error: SLYNET RPC registries are not properly initialized (not tables). Backend initialization might have failed or rpc.janet not loaded.\n")
     (set all-implementations-found false)
-    (break "RPC registries not tables")) # Severe enough to halt if this happens
+    (return false))
 
   # Check for interfaces without implementations
   (eachp [rpc-name interface-meta] interfaces

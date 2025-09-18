@@ -1,4 +1,4 @@
-# == slynet/slynk_janet/macros.janet ==
+# == slynet/macros.janet ==
 # Safer defdyn replacement that won’t treat table value as metadata.
 
 # Side doc registry (dynamic, optional)

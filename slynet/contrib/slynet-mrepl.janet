@@ -5,6 +5,7 @@
 (import ../gray :as slyk-gray)
 (import ../completion :as slyk-completion)
 (import ../slynk :as slyk)
+(import ../infrastructure :as inf)
 (defmacro try-catch-finally
   "A macro for try-catch-finally behavior in Janet.
    macro
@@ -45,7 +46,7 @@ Example:
 (def use-dedicated-output-stream nil) # (slyk/started-from-emacs?))
 (def dedicated-output-port
   (if use-dedicated-output-stream
-    (slyk-backend/run-implementation 'make-output-stream (fn [string] (slyk/send-to-emacs [:write-string string])))
+    (inf/run-implementation 'make-output-stream (fn [string] (slyk/send-to-emacs [:write-string string])))
     nil))
 (def dedicated-output-buffering (if (= slyk/*communication-style* :spawn) :line nil))
 (def globally-redirect-io (slyk/started-from-emacs?))
@@ -292,6 +293,32 @@ Example:
                                  (mrepl-send-prompt mrepl)))
 
 # SLYFUN definitions (functions exposed via RPC, not directly tied to an mrepl instance)
+# (definterface create-mrepl ()
+#   "Create an MREPL.")
+
+# (definterface globally-save-object (symbol value)
+#   "Globally save an object.")
+
+# (definterface eval-for-mrepl (form)
+#   "Evaluate a form for MREPL.")
+
+# (definterface inspect-entry (index)
+#   "Inspect an MREPL entry.")
+
+# (definterface describe-entry (index)
+#   "Describe an MREPL entry.")
+
+# (definterface pprint-entry (index)
+#   "Pretty-print an MREPL entry.")
+
+# (definterface guess-and-set-package (string)
+#   "Guess and set the package.")
+
+# (definterface copy-to-repl (index)
+#   "Copy an MREPL entry to the REPL.")
+
+# (definterface sync-package-and-default-directory ()
+#   "Sync the package and default directory.")
 
 (slyk/defslyfun create-mrepl [remote-id]
                 "Creates a new MREPL instance and returns its details."

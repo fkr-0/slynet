@@ -1,4 +1,4 @@
-# ;; slynet/slynk_janet/contrib/slynet-fancy-inspector.janet
+# ;; slynet/contrib/slynet-fancy-inspector.janet
 # ;; Translated from slynk-fancy-inspector.lisp
 # ;; License: Public Domain
 
@@ -602,10 +602,11 @@
 # #    :emacs-inspect emacs-inspect
 # # })
 
-# slynet/slynk_janet/contrib/slynet-fancy-inspector.janet
+# slynet/contrib/slynet-fancy-inspector.janet
 # Minimal, safe Janet port that avoids CL splice/quasiquote.
 
 (import ../slynk :as slyk)
+
 
 (defn- newline [] '(:newline))
 
@@ -625,3 +626,69 @@
 (def export-api
   @{:initialize-module initialize-module
     :emacs-inspect emacs-inspect})
+
+# (definterface init-inspector (form)
+#   "Initialize the inspector.")
+
+# (definterface inspector-nth-part (n)
+#   "Return the nth part of the inspected object.")
+
+# (definterface inspector-nth-part-or-lose (n)
+#   "Return the nth part of the inspected object or lose.")
+
+# (definterface inspect-nth-part (n)
+#   "Inspect the nth part of the inspected object.")
+
+# (definterface inspector-range (from to)
+#   "Return a range of parts of the inspected object.")
+
+# (definterface inspector-call-nth-action (n)
+#   "Call the nth action of the inspected object.")
+
+# (definterface inspector-pop ()
+#   "Pop the inspector stack.")
+
+# (definterface inspector-next ()
+#   "Go to the next object in the inspector history.")
+
+# (definterface inspector-reinspect ()
+#   "Reinspect the current object.")
+
+# (definterface inspector-toggle-verbose ()
+#   "Toggle the verbosity of the inspector.")
+
+# (definterface inspector-eval (string)
+#   "Evaluate a string in the context of the inspector.")
+
+# (definterface inspector-history ()
+#   "Return the inspector history.")
+
+# (definterface quit-inspector ()
+#   "Quit the inspector.")
+
+# (definterface describe-inspectee ()
+#   "Describe the inspected object.")
+
+# (definterface describe-inspector-part (id)
+#   "Describe a part of the inspected object.")
+
+# p (definterface pprint-inspector-part (id)
+#     "Pretty-print a part of the inspected object.")
+
+# (definterface inspect-in-frame (form frame-number)
+#   "Inspect a form in a given frame.")
+
+# (definterface inspect-current-condition ()
+#   "Inspect the current condition.")
+
+# (definterface inspect-frame-var (frame-number var-id)
+#   "Inspect a variable in a frame.")
+
+# (definterface pprint-frame-var (frame-number var-id)
+#   "Pretty-print a variable in a frame.")
+
+# (definterface describe-frame-var (frame-number var-id)
+#   "Describe a variable in a frame.")
+
+# (definterface eval-for-inspector (form)
+#   "Evaluate a form for the inspector.")

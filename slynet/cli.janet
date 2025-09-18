@@ -1,55 +1,177 @@
-# slynet-cli.janet
-# Clean bootstrap + transports + in-memory test server for SLYNK
+# slynet/cli.janet
+# Unified CLI and initialization for SLYNK Janet backend
+
+(print "Loading SLYNK CLI...")
 
 ############################
-# Imports (wire these paths)
+# Imports
 ############################
-(import ./slynk_janet/slynk :as slynk)
-(import ./slynk_janet/backend :as backend)
-(import ./slynk_janet/rpc :as rpc)
+(import ./infrastructure :as inf)
+(import ./backend :as backend)
+(import ./rpc :as rpc)
+(import ./slynk :as slynk)
+(import ./gray)
+(import ./completion)
+(import ./xref)
+(import ./contrib)
 
 ############################
-# Tiny logger
+# Version and Module Registry
+############################
+(def version "0.2.0")
+(def compatible-versions ["0.1.0" "0.2.0"])
+(def required-modules @["backend" "rpc" "slynk" "gray" "completion" "xref"])
+(def optional-modules @["contrib"])
+(def modules @{})
+(def contrib-modules @{})
+
+############################
+# User Configuration and Hooks
+############################
+(def *user-init-file* "~/.slynk.janet")
+(var *loaded-user-init-file* false)
+(def *load-path* @["./" "./slynet/" "./slynet/" "./"])
+(var *slynk-hooks* @{:init @[]})
+(setdyn :doc "SLYNK implementation for Janet - A backend for the Superior Lisp Interaction Mode for Emacs (SLY)")
+
+############################
+# Logging
 ############################
 (defn log [lvl & xs]
   (print "[" lvl "] " (string/join (map string xs) "")))
 
 ############################
-# Core dispatch seam
+# Module Loading and Initialization
 ############################
-# This is the only place where transport meets protocol.
-# It feeds a *decoded* Janet message into your slynk/process-message.
+(defn load-module [name]
+  (def module-name (string name))
+  (def full-name (string (os/cwd) "/slynet/" module-name ".janet"))
+  (try
+    (do (log "INFO" "Loading module: " full-name "\n")
+      (dofile full-name))
+    ([err _]
+      (eprintf "Error loading module %s: %s\n" module-name err))))
 
-(defn handle-decoded! [conn decoded]
-  # Your slynk/process-message takes (connection message)
-  (slynk/process-message conn decoded)
+(defn initialize-backend [&opt options]
+  (default options @{})
+  (backend/initialize options)
+  true)
+
+(defn load-user-init []
+  (try
+    (do (dofile *user-init-file*)
+      (set *loaded-user-init-file* true))
+    ([err _]
+      (eprintf "Error loading user init file: %s\n" err))))
+
+(defn initialize-rpc [&opt options]
+  (default options @{})
+  # (def interfaces rpc/*slynet-rpc-interfaces-registry*)
+  # (def implementations rpc/*slynet-rpc-implementations-registry*)
+  (when (options :reset-registries)
+    (eprintf "Resetting RPC registries...\n")
+    (inf/reset-interfaces)
+    (inf/reset-implementations))
+  (var all-implementations-found true)
+  # (unless (and (table? interfaces) (table? implementations))
+  #   (eprintf "Error: SLYNET RPC registries are not properly initialized (not tables).\n")
+  #   (set all-implementations-found false)
+  #   (break "RPC registries not tables"))
+  (let [interfaces (inf/list-interfaces)
+        implementations (inf/list-implementations)]
+    (eachp [rpc-name interface-meta] interfaces
+      (unless (get implementations rpc-name)
+        (eprintf "Warning: SLYNET RPC interface '%s' (Doc: \"%s\") is declared but not implemented.\n"
+                 rpc-name (get interface-meta :doc "no docstring"))
+        (set all-implementations-found false)))
+    (eachp [rpc-name impl] implementations
+      (unless (get interfaces rpc-name)
+        (eprintf "Warning: SLYNET RPC implementation for '%s' has no corresponding interface declaration.\n"
+                 rpc-name)
+        (set all-implementations-found false)))
+    all-implementations-found))
+
+(defn initialize-contrib-modules [&opt modules]
+  (default modules nil)
+  (if (and (module/cache "./contrib") contrib/export-api)
+    (do
+      (def results (contrib/initialize-contrib modules))
+      (log "INFO" "SLYNET: Contrib modules initialized:\n")
+      (eachp [name result] results
+        (if (= (result :status) :ok)
+          (log "INFO" "  - " name ": OK\n")
+          (log "ERR" "  - " name ": ERROR - " (result :message) "\n")))
+      results)
+    (do
+      (log "WARN" "SLYNET: Contrib system not available\n")
+      @{})))
+
+(defn add-hook [hook-name func]
+  (unless (get *slynk-hooks* hook-name)
+    (put *slynk-hooks* hook-name @[]))
+  (array/push (get *slynk-hooks* hook-name) func))
+
+(defn remove-hook [hook-name func]
+  (when-let [hooks (get *slynk-hooks* hook-name)]
+    (array/remove hooks func)))
+
+(defn slynk-version [] version)
+
+############################
+# Unified Initialization
+############################
+(defn slynk-init
+  "Initialize the SLYNK environment."
+  [&opt options]
+  (default options @{})
+  (def delete (options :delete))
+  (def reload (options :reload))
+  (when (get modules :slynk)
+    (cond
+      delete (each name (keys modules) (put modules name nil))
+      (not reload) (do
+                     (log "INFO" "SLYNK already loaded. Use :reload true to reload.\n")
+                     (return nil))))
+  (each module required-modules (load-module module))
+  (put modules :backend backend/export-api)
+  (put modules :rpc rpc/export-api)
+  (put modules :slynk slynk/export-api)
+  (put modules :gray gray/export-api)
+  (put modules :completion completion/export-api)
+  (put modules :xref xref/export-api)
+  (initialize-backend options)
+  (initialize-rpc options)
+  (when (and (not *loaded-user-init-file*) (os/stat *user-init-file*))
+    (load-user-init))
+  (each hook (get *slynk-hooks* :init) (hook))
+  (when (or (options :enable-contrib) true)
+    (def contrib-modules (options :contrib-modules))
+    (initialize-contrib-modules contrib-modules)
+    (put modules :contrib contrib/export-api))
   true)
 
 ############################
-# STDIO transport (optional)
+# Server Lifecycle (TCP/STDIO)
 ############################
+(defn handle-decoded! [conn decoded]
+  (slynk/process-message conn decoded)
+  true)
 
 (defn start-stdio! [mk-conn]
   (var alive true)
-
-  # Minimal connection object that slynk/process-message expects
   (def conn @{:id "_stdio"
               :socket :stdio
               :addr "stdio"
               :package slynk/cl-package
               :rex-handlers @{}
               :repl-results @{}})
-
   (when (function? mk-conn) (mk-conn conn))
-
-  # --- wire helpers (6-hex header framing) ---
   (defn _write-frame [payload-str]
     (let [bytes (backend/string-to-utf8 payload-str)
           len (length bytes)]
       (ev/write (dyn :out) (string/format "%06x" len))
       (ev/write (dyn :out) (string bytes))
       true))
-
   (defn _read-exact [s need]
     (def out @"")
     (var got 0)
@@ -59,12 +181,10 @@
       (buffer/push-string out chunk)
       (set got (+ got (length chunk))))
     (if (= got need) out nil))
-
   (defn _read-header [s]
     (let [hdr (_read-exact s 6)]
       (when (nil? hdr) nil)
       (scan-number (string hdr) 16)))
-
   (defn _read-packet [s]
     (let [len (_read-header s)]
       (when (nil? len) nil)
@@ -81,18 +201,15 @@
                   (ev/write (dyn :out) (string/format "%06x" (length bytes)))
                   (ev/write (dyn :out) (string bytes))
                   true))))
-  # --- install temporary rpc send handler (mutable hook) ---
   (var prev-send-handler nil)
   (defn _stdio-send [c msg]
-    # c is ignored; we always write to stdout
     (let [pkg (or (:package c) (conn :package))
           wire (rpc/process-outgoing-message msg pkg)]
       (_write-frame wire)))
-
   (def reader
     (fiber/new
       (fn []
-        (set prev-send-handler (rpc/set-send-handler _stdio-send)) # ; record old, install new
+        (set prev-send-handler (rpc/set-send-handler _stdio-send))
         (while alive
           (try
             (let [pkt (_read-packet (dyn :in))]
@@ -102,24 +219,17 @@
             ([e _]
               (eprintf "[ERR] stdio read/handle: %s\n" e)
               (set alive false))))
-        # restore previous send handler
         (when prev-send-handler (rpc/set-send-handler prev-send-handler)))))
-
   (resume reader)
-
   {:mode :stdio
    :close! (fn []
              (set alive false)
              (when prev (rpc/set-send-handler prev)))})
 
-############################
-# TCP transport
-############################
 (defn start-tcp! [host port mk-conn]
   (def listener (net/listen host port))
   (log "INFO" "tcp listening on " host ":" port "\n")
   (var alive true)
-
   (def acceptor
     (fiber/new
       (fn []
@@ -129,17 +239,14 @@
               (ev/go
                 (fn []
                   (log "INFO" "client connected\n")
-                  # Per-connection record
                   (def conn @{:id (string (gensym))
                               :socket sock
                               :addr (try (net/address sock) ([_ _] "unknown"))
                               :package slynk/cl-package
                               :rex-handlers @{}
                               :repl-results @{}})
-
                   (when (function? mk-conn)
                     (mk-conn conn))
-
                   (while alive
                     (def msg (try (rpc/read-message sock (conn :package))
                                ([_ _] nil)))
@@ -150,7 +257,6 @@
             ([e _]
               (when alive
                 (log "ERR" "accept loop: " (string e) "\n"))))))))
-
   (resume acceptor)
   {:mode :tcp
    :listener listener
@@ -159,9 +265,6 @@
              (net/close listener)
              (log "INFO" "tcp transport stopped\n"))})
 
-############################
-# Server lifecycle API
-############################
 (defn server/start!
   "Start SLYNK with :mode :tcp|:stdio. Returns a server record.
    Options: :host, :port, :on-conn (fn [conn] ...) to customize per-conn."
@@ -170,15 +273,12 @@
   (default host "127.0.0.1")
   (default port 4005)
   (default on-conn nil)
-  # mk-conn is a small hook to let SLYNK keep its own globals current (e.g. *emacs-io*)
   (def mk-conn
     (fn [conn]
-      # You already do similar inside connection-repl-loop; we mirror that here:
       (when (nil? (slynk/*emacs-io*))
         (set slynk/*emacs-io* conn))
       (when (function? on-conn) (on-conn conn))
       true))
-
   (var base @{:state :none})
   (case mode
     :stdio (merge base {:transport (start-stdio! mk-conn)})
@@ -200,12 +300,17 @@
       "--tcp" (set mode :tcp)
       "--host" (do (set host (args (+ i 1))) (set i (+ i 1)))
       "--port" (do (set port (scan-number (args (+ i 1)))) (set i (+ i 1)))
+      "--version" (do (print "SLYNK Janet version: " version "\n") (os/exit 0))
+      "--help" (do
+                 (print "Usage: janet cli.janet [--tcp|--stdio] [--host HOST] [--port PORT]\n")
+                 (os/exit 0))
       _ (log "WARN" "unknown arg: " (args i) "\n"))
     (set i (+ i 1)))
   {:mode mode :host host :port port})
 
 (defn -main [& args]
   (def cfg (parse-args args))
+  (slynk-init cfg)
   (def srv (server/start!
              (cfg :mode)
              (cfg :host)
@@ -219,142 +324,18 @@
 (when (= (dyn :script) "true")
   (apply -main (dyn :args)))
 
-############################################
-# In-memory test server (no TCP no stdio)
-############################################
-
-# We capture replies by temporarily overriding `rpc.write-message`
-# (only within the test scope) to push decoded replies into a buffer.
-#
-# This gives you true end-to-end behavior through:
-#   emacs-rex -> slynk/process-message -> rpc.process-outgoing-message
-# but without sockets and without changing your production code.
-
-(defn- _decode-wire->msg [s package]
-  # Your rpc/process-incoming-message expects a single s-expression string.
-  # We assume callers of this helper give us one frame already.
-  (rpc/process-incoming-message s))
-
-(defn- _encode-msg->wire [msg package]
-  # Your rpc/process-outgoing-message returns a printable s-expression string.
-  (rpc/process-outgoing-message msg package))
-# test_harness.janet
-
-(defn test/make-server [&opt pkg timeout]
-  (default pkg slynk/cl-package) # default package for eval
-  (default timeout 1.0)
-
-  (def ch (ev/chan 32)) # capture channel for replies
-  (var replies @[]) # keep a copy if you want to inspect all
-  (def conn @{:id "_test"
-              :socket :mem # never used; handler path avoids sockets
-              :addr "in-memory"
-              :package pkg
-              :rex-handlers @{}
-              :repl-results @{}})
-
-  (when (nil? slynk/*emacs-io*) (set slynk/*emacs-io* conn))
-
-  # Install capture send-handler (mutable hook in rpc)
-  (def prev (rpc/set-send-handler
-              (fn [_ msg]
-                (print "setsendhandler")
-                (pp msg)
-                (array/push replies msg)
-                (ev/give ch msg) # signal a reply is available
-                true)))
-  # after you create conn
-  (when (nil? slynk/*emacs-io*) (set slynk/*emacs-io* conn))
-
-  # install BOTH: send-handler (puts into channel) AND conn-resolver
-  (def prev-send (rpc/set-send-handler
-                   (fn [_ msg]
-                     (ev/give ch msg) # use ev/put for channels
-                     true)))
-
-  (def prev-resolve (rpc/set-conn-resolver
-                      (fn [remote-id]
-                        (cond
-                          (or (nil? remote-id) (= remote-id :current)) conn
-                          (= remote-id (conn :id)) conn
-                          true nil))))
-
-  # on dispose, restore both:
-
-  (defn await-one []
-    (print "AwaitOne")
-
-    (var o (match (ev/take ch)
-             [:return [:ok msg]] msg
-             _ nil))
-    (print "got one:" o)
-    o)
-
-  (defn await-all
-    "Collect replies until no new messages arrive for idle_ms."
-    [&opt idle_ms]
-    (default idle_ms 20)
-    (print "AwaitAll")
-    (var last-count (length replies))
-    (while true
-      (match (ev/take ch)
-        [:ok _] (set last-count (length replies)) # keep draining
-        _ (break)))
-    (array/slice replies))
-
-  {:conn conn
-   :dispose (fn []
-              (when prev-send (rpc/set-send-handler prev-send))
-              (when prev-resolve (rpc/set-conn-resolver prev-resolve)))
-   :chan ch
-   :await-one await-one
-   :replies replies
-   :await-all await-all
-   :emacs-rex!
-   (fn [form &opt package thread id]
-     (default package pkg) (default thread nil) (default id 1)
-     (set replies @[])
-     (slynk/process-message conn (rpc/create-emacs-rex-message form package thread id))
-     (print "sent emacs-rex:" form "\n" "awaiting...")
-
-     (await-one)) # ;waits for the spawned fiber to reply
-   :send!
-   (fn [decoded-msg]
-     (set replies @[])
-     (slynk/process-message conn decoded-msg)
-     (print "sent message:" decoded-msg "\n" "awaiting...")
-     # (await-all)
-)})
-
-
-(defn test/rpc [srv msg] ((srv :send!) msg))
-(defn test/emacs-rex [srv form &opt package thread id]
-  ((srv :emacs-rex!) form package thread id))
-
-(defmacro with-test-server [binding & body]
-  (let [[name opts] (match binding
-                      [n o] [n o]
-                      [n] [n {}]
-                      _ (error "with-test-server needs [name opts?]"))]
-    ~(let [,name (apply test/make-server ,(flatten opts))]
-       (defer ((,name :dispose)))
-       ,;body)))
-
-# in-memory test
-# (with-test-server [srv]
-#   (pp (test/emacs-rex srv '(+ 1 2 3) :core nil 42))
-#   ((srv :await-one))
-# => e.g. [[:return [:ok 6] 42]]
-# )
-# (import ./test_harness :as T)
-
-(let [srv (test/make-server :core 1.0)]
-  (defer ((srv :dispose)))
-  (print "==> awaiting")
-  (pp ((srv :emacs-rex!) '(+ 1 2 3) :core nil 42))
-  # (pp ((srv :await-one)))
-  (print "<== awaiting end")
-  # => [[:return [:ok 6] 42]]
-)
-
-# # Convenience helpers
+############################
+# Exported API (for library use)
+############################
+(def export-api
+  @{:init slynk-init
+    :version version
+    :slynk-version slynk-version
+    :add-hook add-hook
+    :remove-hook remove-hook
+    :modules modules
+    :required-modules required-modules
+    :optional-modules optional-modules
+    :*user-init-file* *user-init-file*
+    :server/start! server/start!
+    :server/stop! server/stop!})

@@ -1,4 +1,4 @@
-# slynet/slynk_janet/contrib/slynet-package-fu.janet
+# slynet/contrib/slynet-package-fu.janet
 # Adapted from slynk-package-fu.lisp
 # Provides module/package manipulation for Janet
 
@@ -8,7 +8,7 @@
 (import ../rpc :as slyk-rpc)
 (import ../backend :as slyk-backend)
 
-# RPC Interface definitions are now in slynet/slynk_janet/interfaces.janet
+# RPC Interface definitions are now in slynet/interfaces.janet
 
 # Implementation helpers
 (defn- get-module-info [path]
@@ -153,6 +153,17 @@
   "Initialize the package-fu module."
   (print "Initializing SLYNET Package-Fu module")
   true)
+(definterface package= (package1 package2)
+  "Check if two packages are equal.")
+
+(definterface export-symbol-for-emacs (symbol-name package-name)
+  "Export a symbol for Emacs.")
+
+(definterface import-symbol-for-emacs (symbol-name package-name)
+  "Import a symbol for Emacs.")
+
+(definterface unexport-symbol-for-emacs (symbol-name package-name)
+  "Unexport a symbol for Emacs.")
 
 (def export-api
   @{:initialize-module initialize-module

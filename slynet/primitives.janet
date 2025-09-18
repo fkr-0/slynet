@@ -1,4 +1,4 @@
-# == slynet/slynk_janet/primitives.janet ==
+# == slynet/primitives.janet ==
 # Minimal, dependency-free helpers shared by backend and gray.
 
 # (import ev)
