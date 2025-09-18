@@ -8,13 +8,13 @@
 (defn- ensure-send-handler []
   (when (nil? slynk/*emacs-io*)
     (set slynk/*emacs-io* @{:id "_test" :socket :mem :addr "in-memory" :package slynk/cl-package
-                             :rex-handlers @{} :repl-results @{}})))
+                            :rex-handlers @{} :repl-results @{}})))
 
 (defn make-server
   [&opt opts]
   (default opts @{})
-  (def pkg (opts :package slynk/cl-package))
-  (def timeout (opts :timeout 1.0))
+  (def pkg (or (opts :package) slynk/cl-package))
+  (def timeout (or (opts :timeout) 1.0))
 
   (ensure-send-handler)
 
@@ -83,5 +83,9 @@
                       [n] [n {}]
                       _ (error "with-test-server requires [name opts?]"))]
     ~(let [,name (,ms ,opts)]
-       (defer ((,name :dispose)))
-       ,;body)))
+
+       ,;body
+       (defer ((,name :dispose))))))
+
+(with-test-server [srv]
+  (print (= 6 ((srv :emacs-rex!) '(+ 1 2 3) :core nil 42))))

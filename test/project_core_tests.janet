@@ -32,11 +32,11 @@
    :fn (fn []
          (wipe-registries!)
          (def err1 (expect-error (fn [] (inf/slynet-definterface "bad" [] "doc"))))
-         (assert-true (string/find err1 "rpc-name") "rpc-name must be symbol")
+         (assert-true (string/find (string err1) "rpc-name") "rpc-name must be symbol")
          (def err2 (expect-error (fn [] (inf/slynet-definterface 'test/bad :oops "doc"))))
-         (assert-true (string/find err2 "arglist-spec") "arglist-spec must be collection")
+         (assert-true (string/find (string err2) "arglist-spec") "arglist-spec must be collection")
          (def err3 (expect-error (fn [] (inf/slynet-definterface 'test/bad [] :oops))))
-         (assert-true (string/find err3 "docstring") "docstring must be string"))})
+         (assert-true (string/find (string err3) "docstring") "docstring must be string"))})
 
 (register-test
   {:name "defimplementation registers function"
@@ -76,6 +76,5 @@
   {:name "emacs-rex via test server"
    :tags [:integration :server]
    :fn (fn []
-         (wipe-registries!)
          (tt/with-test-server [srv]
-           (assert= 6 ((srv :emacs-rex!) '(+ 1 2 3) :core nil 42))))})
+                              (assert= 6 ((srv :emacs-rex!) '(+ 1 2 3) :core nil 42))))})

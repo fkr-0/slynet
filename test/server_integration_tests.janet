@@ -18,7 +18,7 @@
          (reset-all!)
          (tt/with-test-server [srv]
            (rpc/register-channel-object {:mock true})
-           (assert= 6 ((srv :emacs-rex!) '(+ 1 2 3) :core nil 7))
+           (assert= 6 (srv :emacs-rex! '(+ 1 2 3) :core nil 7))
            (def replies (srv :replies))
            (assert-true (> (length replies) 0))
            (assert= replies (srv :await-all))))})

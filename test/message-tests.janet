@@ -6,5 +6,5 @@
    :tags [:integration :server]
    :fn (fn []
          (tt/with-test-server [srv]
-           (def resp ((srv :emacs-rex!) '(getpid) :core nil 1))
-           (assert-true (number? resp))))})
+                              (def resp ((srv :emacs-rex!) '(os/getpid) :core nil 1))
+                              (assert-true (number? resp))))})

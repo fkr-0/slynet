@@ -48,6 +48,8 @@
   "Initialize the backend environment and reset any state needed."
   [&opt options]
   (default options @{})
+  (inf/reset-interfaces)
+  (inf/reset-implementations)
   (backend/initialize options)
   true)
 

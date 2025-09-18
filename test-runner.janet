@@ -201,17 +201,19 @@
         :none nil)))
   (def body (get spec :fn))
   (var err nil)
+  (var err-fiber nil)
   (def stdout
     (capture-out
       (fn []
         (with-dyns [:current-test ctx :on-assert on-assert]
           (try
             (body)
-            ([e _] (set err e)))))))
+            ([e f] (set err e) (set err-fiber f)))))))
   (put ctx :stdout stdout)
   (when err
     (with-dyns [:current-test ctx :on-assert on-assert]
-      (test-assert! false (string "uncaught error: " err) {:type :error})))
+      (test-assert! false (string "uncaught error: " err) {:type :error})
+      (print (color :red (string "  " (debug/stacktrace err-fiber))))))
   (when (get opts :headers true) (print (banner-done ctx) "\n"))
   ctx)
 

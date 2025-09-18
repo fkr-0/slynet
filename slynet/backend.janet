@@ -983,12 +983,12 @@ Example:
   (default options @{})
 
   # Reset warning tracker
-  (let [unimplemented-interfaces inf/list-unimplemented-interfaces]
+  (let [unimplemented (inf/list-unimplemented-interfaces)]
 
     # Warn about missing implementations (unless suppressed)
-    (unless (or (= 0 (length unimplemented-interfaces)) (options :suppress-warnings))
+    (unless (or (empty? unimplemented) (options :suppress-warnings))
       (eprintf "Warning: The following backend interfaces are unimplemented:")
-      (each iface unimplemented-interfaces
+      (each iface unimplemented
         (eprintf "  - %s" (string iface)))
       (eprintf "Some features may not work correctly without these implementations.")))
 

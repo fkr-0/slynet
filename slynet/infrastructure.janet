@@ -95,8 +95,8 @@
 (defn slynet-definterface [rpc-name arglist-spec docstring]
   (unless (symbol? rpc-name)
     (error (string "rpc-name must be symbol, got " (type rpc-name))))
-  (unless (or (tuple? arglist-spec) (array? arglist-spec) (keyword? arglist-spec))
-    (error "arglist-spec must be tuple, array, or keyword"))
+  (unless (or (tuple? arglist-spec) (array? arglist-spec))
+    (error "arglist-spec must be tuple or array"))
   (unless (string? docstring)
     (error "docstring must be string"))
   (slynet-register-interface-rt! rpc-name arglist-spec docstring)
