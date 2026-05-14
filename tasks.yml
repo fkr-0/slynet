@@ -418,8 +418,32 @@ task_groups:
           - "Current generator uses a curated first-slice operation list, not yet full source extraction."
           - "Evidence matching is mention-based and can over-classify files that contain operation names in broad contexts."
       - id: T01-2_full_source_extraction
-        status: todo
+        status: done
         description: "Expand generator to parse defslyfun, definterface, and contrib definitions across the full SLY source corpus."
+        verification_log:
+          - date: "2026-05-14"
+            phase: red
+            command: "JANET_PATH=$PWD janet test/run_tests.janet :report compact"
+            result: "failed as intended after fixing protocol_inventory_tests contains helper: generator only emitted curated operations and lacked backtrace/debugger/operator/definterface records"
+          - date: "2026-05-14"
+            phase: green
+            command: "JANET_PATH=$PWD janet test/run_tests.janet :report compact"
+            result: "passed: 47 tests, 151/151 asserts, compact stdout_lines=4, stderr empty; generated operation_count=249"
+          - date: "2026-05-14"
+            phase: regression
+            command: "bridge.yml:test"
+            result: "passed: 47 tests, 151/151 asserts, stderr empty"
+        implementation_details:
+          - "Generator now extracts defslyfun and definterface records from configured SLY source files instead of using a four-operation curated list."
+          - "Generated schema_version advanced to 2 and includes operation_count."
+          - "Fixed test helper bug: string/find arguments are pattern-first in Janet; previous contains helper was invalid and falsely green."
+        emerging_tasks:
+          - id: T01-2A_inventory_parser_self_tests
+            status: todo
+            description: "Add focused tests for token-after/source extraction helpers through exported or fixture-driven generator API, so parser regressions are caught before full-suite shell generation."
+          - id: T01-2B_deterministic_inventory_order
+            status: todo
+            description: "Implement deterministic sorting without unavailable array/sort, or define a local sort, so generated inventory diffs are stable across Janet/table iteration behavior."
       - id: T01-3_precise_evidence_matching
         status: todo
         description: "Replace broad string matching with definition-aware and test-assertion-aware evidence matching."
