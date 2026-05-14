@@ -174,9 +174,11 @@
 (defn initialize-module []
   "Initialize the arglists module."
   (hook-into-eval)
-  (print "SLYNET: Arglists module initialized.")
+  (when (= "1" (os/getenv "SLYNET_TEST_VERBOSE"))
+    (print "SLYNET: Arglists module initialized."))
   true)
-(print "SLYNET: Arglists module loaded.")
+(when (= "1" (os/getenv "SLYNET_TEST_VERBOSE"))
+  (print "SLYNET: Arglists module loaded."))
 
 # Module exports
 (def export-api

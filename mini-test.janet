@@ -78,17 +78,10 @@
 
 # Attempt to capture a single useful file:line frame for the callsite
 (defn- current-loc-line []
-  (var s "")
-  (try (error "__loc__") ([e f] (set s (debug/stacktrace f))))
-  (def lines (if (string? s) (string/split s "\n") @[""]))
-  (def cand
-    (or (first
-          (filter (fn [ln]
-                    (and (string/find ".janet:" ln)
-                         (not (string/find "mini-test.janet" ln))))
-                  lines))
-        (if (> (length lines) 0) (first lines) "")))
-  (string/trim cand))
+  # Green test runs must not synthesize errors just to discover call-site
+  # locations. Janet prints those synthetic frames to stderr, so location
+  # enrichment is disabled until a quiet call-site API is introduced.
+  "")
 
 # A dynamic slot holding current test ctx map during run
 # ctx keys: :name :doc :tags :asserts(vec) :pass :fail :stdout :started :def-loc
@@ -129,7 +122,6 @@
   (when (and (nil? (get d :loc))
              (not (= "" (current-loc-line))))
     (let [l (current-loc-line)]
-      (pp l)
       (put d :loc l)))
   (def rec {:ok ok :msg (string msg) :data d})
   (def asserts (get ctx :asserts))

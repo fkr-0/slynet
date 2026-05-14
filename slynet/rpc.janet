@@ -70,7 +70,8 @@
   "Parse a string into a Janet data structure.
    This handles Emacs/Common Lisp style s-expressions."
   [string]
-  (print "Parsing string: " string) # Debug log
+  (when (= "1" (os/getenv "SLYNET_TEST_VERBOSE"))
+    (print "Parsing string: " string)) # Debug log
   (def parser (peg/compile ~{# Main parser
                              :main (some :expr)
 
@@ -118,7 +119,8 @@
                                                tbl))}))
 
   (def result (peg/match parser string))
-  (print "Parse result: " result)
+  (when (= "1" (os/getenv "SLYNET_TEST_VERBOSE"))
+    (print "Parse result: " result))
   result)
 
 (defn read-form
@@ -235,7 +237,8 @@
 (defn A:int
   "Turn an integer string into a Janet number."
   [s]
-  (print "Parsing int: " s) # Debug log
+  (when (= "1" (os/getenv "SLYNET_TEST_VERBOSE"))
+    (print "Parsing int: " s)) # Debug log
   (scan-number s))
 
 (defn A:float
@@ -349,9 +352,11 @@
   "Parse a string into a Janet data structure.
    This handles Emacs/Common Lisp style s-expressions."
   [string]
-  (print "Parsing string: " string) # Debug log
+  (when (= "1" (os/getenv "SLYNET_TEST_VERBOSE"))
+    (print "Parsing string: " string)) # Debug log
   (def result (peg/match parser string))
-  (print "Parse result: " result)
+  (when (= "1" (os/getenv "SLYNET_TEST_VERBOSE"))
+    (print "Parse result: " result))
   result)
 
 (defn parse-sexp

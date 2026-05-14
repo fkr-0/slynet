@@ -1,7 +1,8 @@
 # SLYNK Janet Implementation
 # Main module that brings everything together
 # Translated from slynk-loader.lisp
-(print "Loading SLYNK module...init")
+(when (= "1" (os/getenv "SLYNET_TEST_VERBOSE"))
+  (print "Loading SLYNK module...init"))
 # Import all submodules
 (import ./backend)
 (import ./rpc)
@@ -73,7 +74,8 @@
 
   # Reset registries if requested
   (when (options :reset-registries)
-    (eprintf "Resetting RPC registries...\n")
+    (when (= "1" (os/getenv "SLYNET_TEST_VERBOSE"))
+      (eprintf "Resetting RPC registries...\n"))
     (inf/reset-interfaces)
     (inf/reset-implementations))
 
@@ -89,15 +91,17 @@
   # Check for interfaces without implementations
   (eachp [rpc-name interface-meta] interfaces
     (unless (get implementations rpc-name)
-      (eprintf "Warning: SLYNET RPC interface '%s' (Doc: \"%s\") is declared but not implemented."
-               rpc-name (get interface-meta :doc "no docstring"))
+      (when (= "1" (os/getenv "SLYNET_TEST_VERBOSE"))
+        (eprintf "Warning: SLYNET RPC interface '%s' (Doc: \"%s\") is declared but not implemented."
+                 rpc-name (get interface-meta :doc "no docstring")))
       (set all-implementations-found false)))
 
   # Check for implementations without interfaces
   (eachp [rpc-name impl] implementations
     (unless (get interfaces rpc-name)
-      (eprintf "Warning: SLYNET RPC implementation for '%s' has no corresponding interface declaration."
-               rpc-name)
+      (when (= "1" (os/getenv "SLYNET_TEST_VERBOSE"))
+        (eprintf "Warning: SLYNET RPC implementation for '%s' has no corresponding interface declaration."
+                 rpc-name))
       (set all-implementations-found false)))
 
   # Return validation status

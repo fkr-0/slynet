@@ -1,7 +1,8 @@
 # Entrypoint for starting the SLYNK server in Janet
 # Translated from start-slynk.lisp
 # Provides a convenient interface for starting the SLYNET server
-(print "Loading SLYNET startup module...start\n")
+(when (= "1" (os/getenv "SLYNET_TEST_VERBOSE"))
+  (print "Loading SLYNET startup module...start\n"))
 (import ./init)
 
 (import ./slynk)

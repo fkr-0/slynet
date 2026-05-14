@@ -3,6 +3,15 @@
 # Debug flag
 (def *debug-slynk-backend* false)
 
+(defn- diagnostics-enabled? []
+  (or *debug-slynk-backend*
+      (= "1" (os/getenv "SLYNET_TEST_VERBOSE"))
+      (= "true" (os/getenv "SLYNET_TEST_VERBOSE"))))
+
+(defn- diagnostic [fmt & args]
+  (when (diagnostics-enabled?)
+    (apply eprintf fmt args)))
+
 # Registry for interface definitions and implementations
 (def *interface-functions* @[]) # Ordered list of defined interfaces (if needed)
 (var *unimplemented-interfaces* @[]) # List of unimplemented interfaces (updated at runtime)
@@ -36,7 +45,7 @@
 (defn make-implementation-error
   "Create an error for missing or invalid implementations."
   [interface-name reason]
-  (eprintf "slynet implementation missing: %s (%s)\n" interface-name reason)
+  (diagnostic "slynet implementation missing: %s (%s)\n" interface-name reason)
   @{:type :slynk-implementation-error
     :interface interface-name
     :reason reason
@@ -71,8 +80,8 @@
   "Warn the user about unimplemented backend features."
   []
   (when (not (empty? *unimplemented-interfaces*))
-    (eprintf "Warning: These backend interfaces are not implemented: %j\n"
-             *unimplemented-interfaces*)))
+    (diagnostic "Warning: These backend interfaces are not implemented: %j\n"
+                *unimplemented-interfaces*)))
 
 
 # Dynamic accessors (safe even if not initialized)
@@ -96,13 +105,13 @@
 # Register interface via regular function (no macro)
 (defn slynet-definterface [rpc-name arglist-spec docstring]
   (unless (symbol? rpc-name)
-    (eprintf "slynet-definterface: rpc-name must be symbol, got %s\n" (type rpc-name))
+    (diagnostic "slynet-definterface: rpc-name must be symbol, got %s\n" (type rpc-name))
     (error "rpc-name"))
   (unless (or (tuple? arglist-spec) (array? arglist-spec))
-    (eprintf "slynet-definterface: arglist-spec must be tuple or array (got %s)\n" (type arglist-spec))
+    (diagnostic "slynet-definterface: arglist-spec must be tuple or array (got %s)\n" (type arglist-spec))
     (error "arglist-spec"))
   (unless (string? docstring)
-    (eprintf "slynet-definterface: docstring must be string (got %s)\n" (type docstring))
+    (diagnostic "slynet-definterface: docstring must be string (got %s)\n" (type docstring))
     (error "docstring"))
   (slynet-register-interface-rt! rpc-name arglist-spec docstring)
   true)
@@ -191,8 +200,8 @@
   (each fn-name *interface-functions*
     (def impl (get-in *implementations* [fn-name :implementation]))
     (if impl
-      (eprintf "%-30s : implemented\n" (string fn-name))
-      (eprintf "%-30s : NOT implemented\n" (string fn-name)))))
+      (diagnostic "%-30s : implemented\n" (string fn-name))
+      (diagnostic "%-30s : NOT implemented\n" (string fn-name)))))
 
 (def export-api
   @{:make-backend-error make-backend-error

@@ -427,7 +427,7 @@ task_groups:
 
   - id: T03_test_runner_noise_gate
     title: "Make verification output trustworthy and quiet"
-    status: todo
+    status: done
     files:
       update:
         - mini-test.janet
@@ -453,6 +453,32 @@ task_groups:
     done_when:
       - "Normal test run exits 0 with empty stderr."
       - "Verbose test run still exposes protocol traces when requested."
+    verification_log:
+      - date: "2026-05-14"
+        phase: red
+        command: "JANET_PATH=$PWD janet test/run_tests.janet >/tmp/slynet-t03.out 2>/tmp/slynet-t03.err; test ! -s /tmp/slynet-t03.err"
+        result: "failed as intended: suite_status=0, stderr_bytes=6777"
+      - date: "2026-05-14"
+        phase: green
+        command: "JANET_PATH=$PWD janet test/run_tests.janet >/tmp/slynet-t03-green3.out 2>/tmp/slynet-t03-green3.err; test ! -s /tmp/slynet-t03-green3.err"
+        result: "passed: suite_status=0, stderr_bytes=0"
+    implemented_details:
+      - "Disabled synthetic stacktrace generation in mini-test current-loc-line because Janet emits those synthetic frames to stderr."
+      - "Gated SLYNET normal diagnostics and debug prints behind SLYNET_TEST_VERBOSE=1."
+      - "Preserved actual uncaught test failure stacktrace printing in mini-test.janet."
+    emerging_followups:
+      - id: T03A_quiet_stdout_mode
+        status: todo
+        description: "Add an explicit compact test reporter mode that suppresses passing assertion echo while preserving failure details."
+        files:
+          update:
+            - mini-test.janet
+            - test/run_tests.janet
+        tests:
+          red:
+            - "JANET_PATH=$PWD janet test/run_tests.janet :report compact should emit summary and failures only."
+          green:
+            - "Default output remains current verbose test transcript; compact mode is concise and stderr-clean."
 
   - id: T04_core_wire_protocol_and_message_codec
     title: "Harden SLY wire message read/write compatibility"

@@ -45,14 +45,15 @@
                    :max-depth *pfe-max-depth*
                    :max-items *pfe-max-items*})
 
-  (print "prin1-to-string-for-emacs:")
-  (print "prin1-to-string-for-emacs package:" package)
-  (pp package)
-  (print "prin1-to-string-for-emacs state:" state)
-  (pp state)
-  (print "prin1-to-string-for-emacs called with obj:" obj)
-  (pp obj)
-  (print "=========================")
+  (when (= "1" (os/getenv "SLYNET_TEST_VERBOSE"))
+    (print "prin1-to-string-for-emacs:")
+    (print "prin1-to-string-for-emacs package:" package)
+    (pp package)
+    (print "prin1-to-string-for-emacs state:" state)
+    (pp state)
+    (print "prin1-to-string-for-emacs called with obj:" obj)
+    (pp obj)
+    (print "========================="))
   (def depth (state :depth))
   (def seen (state :seen))
 

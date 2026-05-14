@@ -2,7 +2,8 @@
 # Translated from slynk.lisp to idiomatic Janet
 # Core server functionality for the SLYNK protocol
 
-(print "Loading SLYNK core module...slynk\n")
+(when (= "1" (os/getenv "SLYNET_TEST_VERBOSE"))
+  (print "Loading SLYNK core module...slynk\n"))
 # Import necessary modules
 (import ./backend)
 (import ./infrastructure :as inf)
@@ -898,7 +899,8 @@
 
 (defn eval-for-emacs [form buffer-package id]
   # Evaluate a form for Emacs.
-  (print (string/format "Evaluating form for Emacs: %p" form))
+  (when (= "1" (os/getenv "SLYNET_TEST_VERBOSE"))
+    (print (string/format "Evaluating form for Emacs: %p" form)))
 
   (try
     (do
@@ -1147,7 +1149,8 @@ Usage: (with-file f \"log.txt\" true (file/write f \"message\"))"
 (defn process-message
   "Process a message received from Emacs."
   [connection message]
-  (printf "SLYNET RECV: %j\n" message)
+  (when (= "1" (os/getenv "SLYNET_TEST_VERBOSE"))
+    (printf "SLYNET RECV: %j\n" message))
   (server-logger "SLYNET RECV: %j\n" message)
   (match message
     [:emacs-rex form package thread id]

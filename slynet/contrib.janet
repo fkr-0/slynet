@@ -13,7 +13,8 @@
 # slynk/slynk.asd:115:(defsystem :slynk/indentation
 # slynk/slynk.asd:119:(defsystem :slynk/retro
 
-(print "Loading SLYNET Contrib Module Manager...\n")
+(when (= "1" (os/getenv "SLYNET_TEST_VERBOSE"))
+  (print "Loading SLYNET Contrib Module Manager...\n"))
 (import ./contrib/slynet-arglists :as arglists)
 (import ./contrib/slynet-indentation :as indentation)
 (import ./contrib/slynet-apropos :as apropos)

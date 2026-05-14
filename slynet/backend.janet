@@ -1,4 +1,5 @@
-(print "Loading backend.janet...")
+(when (= "1" (os/getenv "SLYNET_TEST_VERBOSE"))
+  (print "Loading backend.janet..."))
 
 (import ./types)
 (import ./infrastructure :as inf)
