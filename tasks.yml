@@ -445,8 +445,31 @@ task_groups:
             status: todo
             description: "Implement deterministic sorting without unavailable array/sort, or define a local sort, so generated inventory diffs are stable across Janet/table iteration behavior."
       - id: T01-3_precise_evidence_matching
-        status: todo
+        status: done
         description: "Replace broad string matching with definition-aware and test-assertion-aware evidence matching."
+        verification_log:
+          - date: "2026-05-14"
+            phase: red
+            command: "JANET_PATH=$PWD janet test/run_tests.janet :report compact"
+            result: "failed as intended: ping record included unrelated slynet/backend.janet and slynet/contrib/slynet-fancy-inspector.janet evidence"
+          - date: "2026-05-14"
+            phase: green
+            command: "JANET_PATH=$PWD janet test/run_tests.janet :report compact"
+            result: "passed: 48 tests, 155/155 asserts, compact stdout_lines=4, stderr empty"
+          - date: "2026-05-14"
+            phase: regression
+            command: "bridge.yml:test"
+            result: "passed: 48 tests, 155/155 asserts, stderr empty"
+        implementation_details:
+          - "Replaced broad operation substring matching with pattern families for source definitions, Janet definitions/defimpls/interfaces, tests, and stale docs."
+          - "Added record-level tests proving ping keeps slynet/slynk.janet evidence while excluding unrelated backend/fancy-inspector mentions."
+        emerging_tasks:
+          - id: T01-3A_test_evidence_precision
+            status: todo
+            description: "Tighten test evidence beyond string/name mentions so protocol_inventory_tests.janet does not count as product coverage for all inventory rows."
+          - id: T01-3B_constraint_classification
+            status: todo
+            description: "Classify known Janet design gaps such as CL packages, restarts, CLOS/MOP, and compiler notes into constraint fields instead of null."
     done_when:
       - "docs/generated/protocol-inventory.yml exists."
       - "Every operation has state, source_files, janet_files, tests, and constraint fields."

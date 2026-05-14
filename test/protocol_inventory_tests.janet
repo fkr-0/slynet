@@ -34,3 +34,25 @@
          (assert-true (contains text "  - name: debugger-info-for-emacs\n") "defslyfun debugger-info-for-emacs discovered")
          (assert-true (contains text "  - name: operator-arglist\n") "defslyfun/operator arglist discovered")
          (assert-true (contains text "kind: definterface") "backend definterface records are emitted"))})
+
+(defn- record-for [text operation]
+  (def marker (string "  - name: " operation "\n"))
+  (def start (string/find marker text))
+  (when start
+    (def rest (string/slice text start))
+    (def next (string/find "\n  - name: " rest 1))
+    (if next
+      (string/slice rest 0 next)
+      rest)))
+
+(register-test
+  {:name "protocol inventory uses definition-aware Janet evidence"
+   :tags [:inventory]
+   :fn (fn []
+         (run-inventory-generator)
+         (def text (inventory-text))
+         (def ping-record (record-for text "ping"))
+         (assert-true ping-record "ping record exists")
+         (assert-true (contains ping-record "slynet/slynk.janet") "ping implementation file retained")
+         (assert-false (contains ping-record "slynet/backend.janet") "unrelated backend mention excluded")
+         (assert-false (contains ping-record "slynet/contrib/slynet-fancy-inspector.janet") "unrelated substring mention excluded"))})

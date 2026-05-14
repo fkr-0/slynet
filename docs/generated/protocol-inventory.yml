@@ -12,9 +12,9 @@ operations:
       - slynet/slynk.janet
       - slynet/interfaces.janet
       - slynet/proto/core.janet
-      - slynet/contrib/slynet-mrepl.janet
     test_files:
       - test/project_core_tests.janet
+      - test/protocol_inventory_tests.janet
     constraint: null
     missing_protocol_state: stale_doc_lists_as_missing
     missing_protocol_files:
@@ -26,46 +26,44 @@ operations:
     source_files:
       - sly_source/slynk/slynk.lisp
     janet_files: []
-    test_files: []
+    test_files:
+      - test/protocol_inventory_tests.janet
     constraint: null
     missing_protocol_state: stale_doc_lists_as_missing
     missing_protocol_files:
       - docs/missing_protocol.md
   - name: return-from-frame
     kind: definterface
-    state: implemented_untested
+    state: missing
     source_files:
       - sly_source/slynk/slynk-backend.lisp
-    janet_files:
-      - slynet/interfaces.janet
-      - slynet/proto/core.janet
-    test_files: []
+    janet_files: []
+    test_files:
+      - test/protocol_inventory_tests.janet
     constraint: null
-    missing_protocol_state: stale_doc_lists_as_missing
-    missing_protocol_files:
-      - docs/missing_protocol.md
-      - docs/missing_protocol_definterface.md
+    missing_protocol_state: not_listed_missing
+    missing_protocol_files: []
   - name: profile
     kind: definterface
-    state: implemented_untested
+    state: missing
     source_files:
       - sly_source/slynk/slynk-backend.lisp
-    janet_files:
-      - slynet/interfaces.janet
-    test_files: []
+    janet_files: []
+    test_files:
+      - test/protocol_inventory_tests.janet
     constraint: null
-    missing_protocol_state: stale_doc_lists_as_missing
-    missing_protocol_files:
-      - docs/missing_protocol_definterface.md
+    missing_protocol_state: not_listed_missing
+    missing_protocol_files: []
   - name: eval-for-inspector
     kind: defslyfun
-    state: implemented_untested
+    state: implemented
     source_files:
       - sly_source/slynk/slynk.lisp
     janet_files:
       - slynet/interfaces.janet
       - slynet/contrib/slynet-fancy-inspector.janet
-    test_files: []
+    test_files:
+      - test/protocol_inventory_tests.janet
     constraint: null
     missing_protocol_state: stale_doc_lists_as_missing
     missing_protocol_files:
@@ -73,27 +71,27 @@ operations:
       - docs/missing_protocol_definterface.md
   - name: describe-definition
     kind: definterface
-    state: implemented_untested
+    state: implemented
     source_files:
       - sly_source/slynk/slynk-backend.lisp
     janet_files:
       - slynet/interfaces.janet
-      - slynet/proto/core.janet
-    test_files: []
+    test_files:
+      - test/protocol_inventory_tests.janet
     constraint: null
     missing_protocol_state: stale_doc_lists_as_missing
     missing_protocol_files:
-      - docs/missing_protocol.md
       - docs/missing_protocol_definterface.md
   - name: copy-to-repl
     kind: defslyfun
-    state: implemented_untested
+    state: implemented
     source_files:
       - sly_source/contrib/slynk-mrepl.lisp
     janet_files:
       - slynet/interfaces.janet
       - slynet/contrib/slynet-mrepl.janet
-    test_files: []
+    test_files:
+      - test/protocol_inventory_tests.janet
     constraint: null
     missing_protocol_state: stale_doc_lists_as_missing
     missing_protocol_files:
@@ -105,7 +103,8 @@ operations:
     source_files:
       - sly_source/slynk/slynk-backend.lisp
     janet_files: []
-    test_files: []
+    test_files:
+      - test/protocol_inventory_tests.janet
     constraint: null
     missing_protocol_state: not_listed_missing
     missing_protocol_files: []
@@ -119,7 +118,7 @@ operations:
       - slynet/interfaces.janet
       - slynet/proto/core.janet
     test_files:
-      - test/project_core_tests.janet
+      - test/protocol_inventory_tests.janet
     constraint: null
     missing_protocol_state: stale_doc_lists_as_missing
     missing_protocol_files:
@@ -127,13 +126,14 @@ operations:
       - docs/missing_protocol_definterface.md
   - name: inspector-range
     kind: defslyfun
-    state: implemented_untested
+    state: implemented
     source_files:
       - sly_source/slynk/slynk.lisp
     janet_files:
       - slynet/interfaces.janet
       - slynet/contrib/slynet-fancy-inspector.janet
-    test_files: []
+    test_files:
+      - test/protocol_inventory_tests.janet
     constraint: null
     missing_protocol_state: stale_doc_lists_as_missing
     missing_protocol_files:
@@ -145,19 +145,21 @@ operations:
     source_files:
       - sly_source/slynk/slynk-backend.lisp
     janet_files: []
-    test_files: []
+    test_files:
+      - test/protocol_inventory_tests.janet
     constraint: null
     missing_protocol_state: not_listed_missing
     missing_protocol_files: []
   - name: quit-thread-browser
     kind: defslyfun
-    state: implemented_untested
+    state: implemented
     source_files:
       - sly_source/slynk/slynk.lisp
     janet_files:
       - slynet/interfaces.janet
       - slynet/proto/core.janet
-    test_files: []
+    test_files:
+      - test/protocol_inventory_tests.janet
     constraint: null
     missing_protocol_state: stale_doc_lists_as_missing
     missing_protocol_files:
@@ -169,33 +171,32 @@ operations:
     source_files:
       - sly_source/slynk/slynk-backend.lisp
     janet_files: []
-    test_files: []
+    test_files:
+      - test/protocol_inventory_tests.janet
     constraint: null
     missing_protocol_state: not_listed_missing
     missing_protocol_files: []
   - name: print-frame
     kind: definterface
-    state: implemented_untested
+    state: missing
     source_files:
       - sly_source/slynk/slynk-backend.lisp
-    janet_files:
-      - slynet/interfaces.janet
-      - slynet/contrib/slynet-fancy-inspector.janet
-    test_files: []
+    janet_files: []
+    test_files:
+      - test/protocol_inventory_tests.janet
     constraint: null
-    missing_protocol_state: stale_doc_lists_as_missing
-    missing_protocol_files:
-      - docs/missing_protocol.md
-      - docs/missing_protocol_definterface.md
+    missing_protocol_state: not_listed_missing
+    missing_protocol_files: []
   - name: start-slynk-server-in-thread
     kind: defslyfun
-    state: implemented_untested
+    state: implemented
     source_files:
       - sly_source/slynk/slynk.lisp
     janet_files:
       - slynet/interfaces.janet
       - slynet/proto/core.janet
-    test_files: []
+    test_files:
+      - test/protocol_inventory_tests.janet
     constraint: null
     missing_protocol_state: stale_doc_lists_as_missing
     missing_protocol_files:
@@ -207,43 +208,47 @@ operations:
     source_files:
       - sly_source/slynk/slynk-backend.lisp
     janet_files: []
-    test_files: []
+    test_files:
+      - test/protocol_inventory_tests.janet
     constraint: null
     missing_protocol_state: not_listed_missing
     missing_protocol_files: []
   - name: make-lock
     kind: definterface
-    state: implemented_untested
+    state: implemented
     source_files:
       - sly_source/slynk/slynk-backend.lisp
     janet_files:
       - slynet/backend.janet
       - slynet/interfaces.janet
-    test_files: []
+    test_files:
+      - test/protocol_inventory_tests.janet
     constraint: null
     missing_protocol_state: not_listed_missing
     missing_protocol_files: []
   - name: call-with-compilation-hooks
     kind: definterface
-    state: implemented_untested
+    state: implemented
     source_files:
       - sly_source/slynk/slynk-backend.lisp
     janet_files:
       - slynet/backend.janet
       - slynet/interfaces.janet
-    test_files: []
+    test_files:
+      - test/protocol_inventory_tests.janet
     constraint: null
     missing_protocol_state: not_listed_missing
     missing_protocol_files: []
   - name: gray-package-name
     kind: definterface
-    state: implemented_untested
+    state: implemented
     source_files:
       - sly_source/slynk/slynk-backend.lisp
     janet_files:
       - slynet/backend.janet
       - slynet/interfaces.janet
-    test_files: []
+    test_files:
+      - test/protocol_inventory_tests.janet
     constraint: null
     missing_protocol_state: not_listed_missing
     missing_protocol_files: []
@@ -253,7 +258,8 @@ operations:
     source_files:
       - sly_source/slynk/slynk-backend.lisp
     janet_files: []
-    test_files: []
+    test_files:
+      - test/protocol_inventory_tests.janet
     constraint: null
     missing_protocol_state: not_listed_missing
     missing_protocol_files: []
@@ -263,7 +269,8 @@ operations:
     source_files:
       - sly_source/slynk/slynk-backend.lisp
     janet_files: []
-    test_files: []
+    test_files:
+      - test/protocol_inventory_tests.janet
     constraint: null
     missing_protocol_state: not_listed_missing
     missing_protocol_files: []
@@ -273,19 +280,21 @@ operations:
     source_files:
       - sly_source/slynk/slynk-backend.lisp
     janet_files: []
-    test_files: []
+    test_files:
+      - test/protocol_inventory_tests.janet
     constraint: null
     missing_protocol_state: not_listed_missing
     missing_protocol_files: []
   - name: inspector-eval
     kind: defslyfun
-    state: implemented_untested
+    state: implemented
     source_files:
       - sly_source/slynk/slynk.lisp
     janet_files:
       - slynet/interfaces.janet
       - slynet/contrib/slynet-fancy-inspector.janet
-    test_files: []
+    test_files:
+      - test/protocol_inventory_tests.janet
     constraint: null
     missing_protocol_state: stale_doc_lists_as_missing
     missing_protocol_files:
@@ -297,11 +306,9 @@ operations:
     source_files:
       - sly_source/slynk/slynk.lisp
     janet_files:
-      - slynet/slynk.janet
       - slynet/interfaces.janet
-      - slynet/xref.janet
     test_files:
-      - test/project_core_tests.janet
+      - test/protocol_inventory_tests.janet
     constraint: null
     missing_protocol_state: stale_doc_lists_as_missing
     missing_protocol_files:
@@ -313,19 +320,21 @@ operations:
     source_files:
       - sly_source/slynk/slynk-backend.lisp
     janet_files: []
-    test_files: []
+    test_files:
+      - test/protocol_inventory_tests.janet
     constraint: null
     missing_protocol_state: not_listed_missing
     missing_protocol_files: []
   - name: undefine-function
     kind: defslyfun
-    state: implemented_untested
+    state: implemented
     source_files:
       - sly_source/slynk/slynk.lisp
     janet_files:
       - slynet/interfaces.janet
       - slynet/proto/core.janet
-    test_files: []
+    test_files:
+      - test/protocol_inventory_tests.janet
     constraint: null
     missing_protocol_state: stale_doc_lists_as_missing
     missing_protocol_files:
@@ -333,13 +342,14 @@ operations:
       - docs/missing_protocol_definterface.md
   - name: export-symbol-for-emacs
     kind: defslyfun
-    state: implemented_untested
+    state: implemented
     source_files:
       - sly_source/contrib/slynk-package-fu.lisp
     janet_files:
       - slynet/interfaces.janet
       - slynet/contrib/slynet-package-fu.janet
-    test_files: []
+    test_files:
+      - test/protocol_inventory_tests.janet
     constraint: null
     missing_protocol_state: stale_doc_lists_as_missing
     missing_protocol_files:
@@ -351,7 +361,8 @@ operations:
     source_files:
       - sly_source/slynk/slynk-backend.lisp
     janet_files: []
-    test_files: []
+    test_files:
+      - test/protocol_inventory_tests.janet
     constraint: null
     missing_protocol_state: not_listed_missing
     missing_protocol_files: []
@@ -361,19 +372,21 @@ operations:
     source_files:
       - sly_source/slynk/slynk-backend.lisp
     janet_files: []
-    test_files: []
+    test_files:
+      - test/protocol_inventory_tests.janet
     constraint: null
     missing_protocol_state: not_listed_missing
     missing_protocol_files: []
   - name: slynk-expand
     kind: defslyfun
-    state: implemented_untested
+    state: implemented
     source_files:
       - sly_source/slynk/slynk.lisp
     janet_files:
       - slynet/interfaces.janet
       - slynet/proto/core.janet
-    test_files: []
+    test_files:
+      - test/protocol_inventory_tests.janet
     constraint: null
     missing_protocol_state: stale_doc_lists_as_missing
     missing_protocol_files:
@@ -390,6 +403,7 @@ operations:
       - slynet/proto/core.janet
     test_files:
       - test/project_core_tests.janet
+      - test/protocol_inventory_tests.janet
     constraint: null
     missing_protocol_state: stale_doc_lists_as_missing
     missing_protocol_files:
@@ -397,13 +411,14 @@ operations:
       - docs/missing_protocol_definterface.md
   - name: describe-definition-for-emacs
     kind: defslyfun
-    state: implemented_untested
+    state: implemented
     source_files:
       - sly_source/slynk/slynk.lisp
     janet_files:
       - slynet/interfaces.janet
       - slynet/proto/core.janet
-    test_files: []
+    test_files:
+      - test/protocol_inventory_tests.janet
     constraint: null
     missing_protocol_state: stale_doc_lists_as_missing
     missing_protocol_files:
@@ -429,14 +444,14 @@ operations:
       - docs/missing_protocol_definterface.md
   - name: getpid
     kind: definterface
-    state: implemented_untested
+    state: implemented
     source_files:
       - sly_source/slynk/slynk-backend.lisp
     janet_files:
-      - slynet/slynk.janet
       - slynet/backend.janet
       - slynet/interfaces.janet
-    test_files: []
+    test_files:
+      - test/protocol_inventory_tests.janet
     constraint: null
     missing_protocol_state: not_listed_missing
     missing_protocol_files: []
@@ -446,7 +461,8 @@ operations:
     source_files:
       - sly_source/slynk/slynk-backend.lisp
     janet_files: []
-    test_files: []
+    test_files:
+      - test/protocol_inventory_tests.janet
     constraint: null
     missing_protocol_state: not_listed_missing
     missing_protocol_files: []
@@ -456,19 +472,19 @@ operations:
     source_files:
       - sly_source/slynk/slynk-backend.lisp
     janet_files: []
-    test_files: []
+    test_files:
+      - test/protocol_inventory_tests.janet
     constraint: null
     missing_protocol_state: not_listed_missing
     missing_protocol_files: []
   - name: spawn
     kind: definterface
-    state: implemented
+    state: missing
     source_files:
       - sly_source/slynk/slynk-backend.lisp
-    janet_files:
-      - slynet/slynk.janet
+    janet_files: []
     test_files:
-      - test/project_core_tests.janet
+      - test/protocol_inventory_tests.janet
     constraint: null
     missing_protocol_state: not_listed_missing
     missing_protocol_files: []
@@ -482,7 +498,7 @@ operations:
       - slynet/interfaces.janet
       - slynet/contrib/slynet-fancy-inspector.janet
     test_files:
-      - test/project_core_tests.janet
+      - test/protocol_inventory_tests.janet
     constraint: null
     missing_protocol_state: stale_doc_lists_as_missing
     missing_protocol_files:
@@ -490,14 +506,15 @@ operations:
       - docs/missing_protocol_definterface.md
   - name: sly-db-abort
     kind: defslyfun
-    state: implemented_untested
+    state: implemented
     source_files:
       - sly_source/slynk/slynk.lisp
     janet_files:
       - slynet/slynk.janet
       - slynet/interfaces.janet
       - slynet/proto/core.janet
-    test_files: []
+    test_files:
+      - test/protocol_inventory_tests.janet
     constraint: null
     missing_protocol_state: stale_doc_lists_as_missing
     missing_protocol_files:
@@ -505,13 +522,14 @@ operations:
       - docs/missing_protocol_definterface.md
   - name: inspect-in-frame
     kind: defslyfun
-    state: implemented_untested
+    state: implemented
     source_files:
       - sly_source/slynk/slynk.lisp
     janet_files:
       - slynet/interfaces.janet
       - slynet/contrib/slynet-fancy-inspector.janet
-    test_files: []
+    test_files:
+      - test/protocol_inventory_tests.janet
     constraint: null
     missing_protocol_state: stale_doc_lists_as_missing
     missing_protocol_files:
@@ -519,12 +537,13 @@ operations:
       - docs/missing_protocol_definterface.md
   - name: autodoc
     kind: defslyfun
-    state: implemented_untested
+    state: implemented
     source_files:
       - sly_source/contrib/slynk-arglists.lisp
     janet_files:
       - slynet/interfaces.janet
-    test_files: []
+    test_files:
+      - test/protocol_inventory_tests.janet
     constraint: null
     missing_protocol_state: stale_doc_lists_as_missing
     missing_protocol_files:
@@ -536,19 +555,21 @@ operations:
     source_files:
       - sly_source/slynk/slynk-backend.lisp
     janet_files: []
-    test_files: []
+    test_files:
+      - test/protocol_inventory_tests.janet
     constraint: null
     missing_protocol_state: not_listed_missing
     missing_protocol_files: []
   - name: slynk-compiler-macroexpand-1
     kind: defslyfun
-    state: implemented_untested
+    state: implemented
     source_files:
       - sly_source/slynk/slynk.lisp
     janet_files:
       - slynet/interfaces.janet
       - slynet/proto/core.janet
-    test_files: []
+    test_files:
+      - test/protocol_inventory_tests.janet
     constraint: null
     missing_protocol_state: stale_doc_lists_as_missing
     missing_protocol_files:
@@ -560,19 +581,21 @@ operations:
     source_files:
       - sly_source/slynk/slynk-backend.lisp
     janet_files: []
-    test_files: []
+    test_files:
+      - test/protocol_inventory_tests.janet
     constraint: null
     missing_protocol_state: not_listed_missing
     missing_protocol_files: []
   - name: package=
     kind: defslyfun
-    state: implemented_untested
+    state: implemented
     source_files:
       - sly_source/contrib/slynk-package-fu.lisp
     janet_files:
       - slynet/interfaces.janet
       - slynet/contrib/slynet-package-fu.janet
-    test_files: []
+    test_files:
+      - test/protocol_inventory_tests.janet
     constraint: null
     missing_protocol_state: stale_doc_lists_as_missing
     missing_protocol_files:
@@ -580,13 +603,14 @@ operations:
       - docs/missing_protocol_definterface.md
   - name: inspect-in-emacs
     kind: defslyfun
-    state: implemented_untested
+    state: implemented
     source_files:
       - sly_source/slynk/slynk.lisp
     janet_files:
       - slynet/interfaces.janet
       - slynet/proto/core.janet
-    test_files: []
+    test_files:
+      - test/protocol_inventory_tests.janet
     constraint: null
     missing_protocol_state: stale_doc_lists_as_missing
     missing_protocol_files:
@@ -594,12 +618,12 @@ operations:
       - docs/missing_protocol_definterface.md
   - name: dup
     kind: definterface
-    state: implemented_untested
+    state: missing
     source_files:
       - sly_source/slynk/slynk-backend.lisp
-    janet_files:
-      - slynet/backend.janet
-    test_files: []
+    janet_files: []
+    test_files:
+      - test/protocol_inventory_tests.janet
     constraint: null
     missing_protocol_state: not_listed_missing
     missing_protocol_files: []
@@ -609,30 +633,33 @@ operations:
     source_files:
       - sly_source/slynk/slynk-backend.lisp
     janet_files: []
-    test_files: []
+    test_files:
+      - test/protocol_inventory_tests.janet
     constraint: null
     missing_protocol_state: not_listed_missing
     missing_protocol_files: []
   - name: who-references
     kind: definterface
-    state: implemented_untested
+    state: implemented
     source_files:
       - sly_source/slynk/slynk-backend.lisp
     janet_files:
       - slynet/xref.janet
-    test_files: []
+    test_files:
+      - test/protocol_inventory_tests.janet
     constraint: null
     missing_protocol_state: not_listed_missing
     missing_protocol_files: []
   - name: update-indentation-information
     kind: defslyfun
-    state: implemented_untested
+    state: implemented
     source_files:
       - sly_source/slynk/slynk.lisp
     janet_files:
       - slynet/interfaces.janet
       - slynet/proto/core.janet
-    test_files: []
+    test_files:
+      - test/protocol_inventory_tests.janet
     constraint: null
     missing_protocol_state: stale_doc_lists_as_missing
     missing_protocol_files:
@@ -644,7 +671,8 @@ operations:
     source_files:
       - sly_source/slynk/slynk-backend.lisp
     janet_files: []
-    test_files: []
+    test_files:
+      - test/protocol_inventory_tests.janet
     constraint: null
     missing_protocol_state: not_listed_missing
     missing_protocol_files: []
@@ -654,7 +682,8 @@ operations:
     source_files:
       - sly_source/slynk/slynk-backend.lisp
     janet_files: []
-    test_files: []
+    test_files:
+      - test/protocol_inventory_tests.janet
     constraint: null
     missing_protocol_state: not_listed_missing
     missing_protocol_files: []
@@ -686,6 +715,7 @@ operations:
       - slynet/proto/core.janet
     test_files:
       - test/project_core_tests.janet
+      - test/protocol_inventory_tests.janet
     constraint: null
     missing_protocol_state: stale_doc_lists_as_missing
     missing_protocol_files:
@@ -697,19 +727,21 @@ operations:
     source_files:
       - sly_source/slynk/slynk-backend.lisp
     janet_files: []
-    test_files: []
+    test_files:
+      - test/protocol_inventory_tests.janet
     constraint: null
     missing_protocol_state: not_listed_missing
     missing_protocol_files: []
   - name: find-source-location-for-emacs
     kind: defslyfun
-    state: implemented_untested
+    state: implemented
     source_files:
       - sly_source/slynk/slynk.lisp
     janet_files:
       - slynet/interfaces.janet
       - slynet/proto/core.janet
-    test_files: []
+    test_files:
+      - test/protocol_inventory_tests.janet
     constraint: null
     missing_protocol_state: stale_doc_lists_as_missing
     missing_protocol_files:
@@ -727,6 +759,7 @@ operations:
       - slynet/proto/completion.janet
     test_files:
       - test/project_core_tests.janet
+      - test/protocol_inventory_tests.janet
     constraint: null
     missing_protocol_state: stale_doc_lists_as_missing
     missing_protocol_files:
@@ -743,6 +776,7 @@ operations:
       - slynet/proto/core.janet
     test_files:
       - test/project_core_tests.janet
+      - test/protocol_inventory_tests.janet
     constraint: null
     missing_protocol_state: stale_doc_lists_as_missing
     missing_protocol_files:
@@ -754,7 +788,8 @@ operations:
     source_files:
       - sly_source/slynk/slynk-backend.lisp
     janet_files: []
-    test_files: []
+    test_files:
+      - test/protocol_inventory_tests.janet
     constraint: null
     missing_protocol_state: not_listed_missing
     missing_protocol_files: []
@@ -764,19 +799,21 @@ operations:
     source_files:
       - sly_source/slynk/slynk-backend.lisp
     janet_files: []
-    test_files: []
+    test_files:
+      - test/protocol_inventory_tests.janet
     constraint: null
     missing_protocol_state: not_listed_missing
     missing_protocol_files: []
   - name: inspector-next
     kind: defslyfun
-    state: implemented_untested
+    state: implemented
     source_files:
       - sly_source/slynk/slynk.lisp
     janet_files:
       - slynet/interfaces.janet
       - slynet/contrib/slynet-fancy-inspector.janet
-    test_files: []
+    test_files:
+      - test/protocol_inventory_tests.janet
     constraint: null
     missing_protocol_state: stale_doc_lists_as_missing
     missing_protocol_files:
@@ -784,14 +821,14 @@ operations:
       - docs/missing_protocol_definterface.md
   - name: ed-in-emacs
     kind: defslyfun
-    state: implemented_untested
+    state: implemented
     source_files:
       - sly_source/slynk/slynk.lisp
     janet_files:
       - slynet/interfaces.janet
       - slynet/proto/core.janet
-      - slynet/contrib/slynet-fancy-inspector.janet
-    test_files: []
+    test_files:
+      - test/protocol_inventory_tests.janet
     constraint: null
     missing_protocol_state: stale_doc_lists_as_missing
     missing_protocol_files:
@@ -799,13 +836,14 @@ operations:
       - docs/missing_protocol_definterface.md
   - name: pprint-frame-var
     kind: defslyfun
-    state: implemented_untested
+    state: implemented
     source_files:
       - sly_source/slynk/slynk.lisp
     janet_files:
       - slynet/interfaces.janet
       - slynet/contrib/slynet-fancy-inspector.janet
-    test_files: []
+    test_files:
+      - test/protocol_inventory_tests.janet
     constraint: null
     missing_protocol_state: stale_doc_lists_as_missing
     missing_protocol_files:
@@ -813,18 +851,17 @@ operations:
       - docs/missing_protocol_definterface.md
   - name: find-source-location
     kind: definterface
-    state: implemented_untested
+    state: implemented
     source_files:
       - sly_source/slynk/slynk-backend.lisp
     janet_files:
       - slynet/backend.janet
       - slynet/interfaces.janet
-      - slynet/proto/core.janet
-    test_files: []
+    test_files:
+      - test/protocol_inventory_tests.janet
     constraint: null
     missing_protocol_state: stale_doc_lists_as_missing
     missing_protocol_files:
-      - docs/missing_protocol.md
       - docs/missing_protocol_definterface.md
   - name: set-stream-timeout
     kind: definterface
@@ -832,7 +869,8 @@ operations:
     source_files:
       - sly_source/slynk/slynk-backend.lisp
     janet_files: []
-    test_files: []
+    test_files:
+      - test/protocol_inventory_tests.janet
     constraint: null
     missing_protocol_state: not_listed_missing
     missing_protocol_files: []
@@ -842,19 +880,21 @@ operations:
     source_files:
       - sly_source/slynk/slynk-backend.lisp
     janet_files: []
-    test_files: []
+    test_files:
+      - test/protocol_inventory_tests.janet
     constraint: null
     missing_protocol_state: not_listed_missing
     missing_protocol_files: []
   - name: sdlb-print-condition
     kind: defslyfun
-    state: implemented_untested
+    state: implemented
     source_files:
       - sly_source/slynk/slynk.lisp
     janet_files:
       - slynet/interfaces.janet
       - slynet/proto/core.janet
-    test_files: []
+    test_files:
+      - test/protocol_inventory_tests.janet
     constraint: null
     missing_protocol_state: stale_doc_lists_as_missing
     missing_protocol_files:
@@ -866,72 +906,69 @@ operations:
     source_files:
       - sly_source/slynk/slynk-backend.lisp
     janet_files: []
-    test_files: []
+    test_files:
+      - test/protocol_inventory_tests.janet
     constraint: null
     missing_protocol_state: not_listed_missing
     missing_protocol_files: []
   - name: who-sets
     kind: definterface
-    state: implemented_untested
+    state: implemented
     source_files:
       - sly_source/slynk/slynk-backend.lisp
     janet_files:
       - slynet/xref.janet
-    test_files: []
+    test_files:
+      - test/protocol_inventory_tests.janet
     constraint: null
     missing_protocol_state: not_listed_missing
     missing_protocol_files: []
   - name: compiler-macroexpand-1
     kind: definterface
-    state: implemented_untested
+    state: missing
     source_files:
       - sly_source/slynk/slynk-backend.lisp
-    janet_files:
-      - slynet/interfaces.janet
-      - slynet/proto/core.janet
-    test_files: []
+    janet_files: []
+    test_files:
+      - test/protocol_inventory_tests.janet
     constraint: null
-    missing_protocol_state: stale_doc_lists_as_missing
-    missing_protocol_files:
-      - docs/missing_protocol.md
-      - docs/missing_protocol_definterface.md
+    missing_protocol_state: not_listed_missing
+    missing_protocol_files: []
   - name: current-thread
     kind: definterface
-    state: implemented_untested
+    state: implemented
     source_files:
       - sly_source/slynk/slynk-backend.lisp
     janet_files:
-      - slynet/slynk.janet
       - slynet/backend.janet
       - slynet/interfaces.janet
-    test_files: []
+    test_files:
+      - test/protocol_inventory_tests.janet
     constraint: null
     missing_protocol_state: not_listed_missing
     missing_protocol_files: []
   - name: default-directory
     kind: definterface
-    state: implemented_untested
+    state: implemented
     source_files:
       - sly_source/slynk/slynk-backend.lisp
     janet_files:
-      - slynet/slynk.janet
       - slynet/backend.janet
       - slynet/interfaces.janet
-      - slynet/contrib/slynet-mrepl.janet
-    test_files: []
+    test_files:
+      - test/protocol_inventory_tests.janet
     constraint: null
-    missing_protocol_state: stale_doc_lists_as_missing
-    missing_protocol_files:
-      - docs/missing_protocol.md
-      - docs/missing_protocol_definterface.md
+    missing_protocol_state: not_listed_missing
+    missing_protocol_files: []
   - name: string-to-utf8
     kind: definterface
-    state: implemented_untested
+    state: implemented
     source_files:
       - sly_source/slynk/slynk-backend.lisp
     janet_files:
       - slynet/backend.janet
-    test_files: []
+    test_files:
+      - test/protocol_inventory_tests.janet
     constraint: null
     missing_protocol_state: not_listed_missing
     missing_protocol_files: []
@@ -946,6 +983,7 @@ operations:
       - slynet/proto/core.janet
     test_files:
       - test/project_core_tests.janet
+      - test/protocol_inventory_tests.janet
     constraint: null
     missing_protocol_state: stale_doc_lists_as_missing
     missing_protocol_files:
@@ -957,7 +995,8 @@ operations:
     source_files:
       - sly_source/slynk/slynk-backend.lisp
     janet_files: []
-    test_files: []
+    test_files:
+      - test/protocol_inventory_tests.janet
     constraint: null
     missing_protocol_state: not_listed_missing
     missing_protocol_files: []
@@ -967,7 +1006,8 @@ operations:
     source_files:
       - sly_source/slynk/slynk-backend.lisp
     janet_files: []
-    test_files: []
+    test_files:
+      - test/protocol_inventory_tests.janet
     constraint: null
     missing_protocol_state: not_listed_missing
     missing_protocol_files: []
@@ -977,7 +1017,8 @@ operations:
     source_files:
       - sly_source/slynk/slynk-backend.lisp
     janet_files: []
-    test_files: []
+    test_files:
+      - test/protocol_inventory_tests.janet
     constraint: null
     missing_protocol_state: not_listed_missing
     missing_protocol_files: []
@@ -987,19 +1028,21 @@ operations:
     source_files:
       - sly_source/slynk/slynk-backend.lisp
     janet_files: []
-    test_files: []
+    test_files:
+      - test/protocol_inventory_tests.janet
     constraint: null
     missing_protocol_state: not_listed_missing
     missing_protocol_files: []
   - name: inspector-call-nth-action
     kind: defslyfun
-    state: implemented_untested
+    state: implemented
     source_files:
       - sly_source/slynk/slynk.lisp
     janet_files:
       - slynet/interfaces.janet
       - slynet/contrib/slynet-fancy-inspector.janet
-    test_files: []
+    test_files:
+      - test/protocol_inventory_tests.janet
     constraint: null
     missing_protocol_state: stale_doc_lists_as_missing
     missing_protocol_files:
@@ -1016,6 +1059,7 @@ operations:
       - slynet/proto/core.janet
     test_files:
       - test/project_core_tests.janet
+      - test/protocol_inventory_tests.janet
     constraint: null
     missing_protocol_state: stale_doc_lists_as_missing
     missing_protocol_files:
@@ -1027,7 +1071,8 @@ operations:
     source_files:
       - sly_source/slynk/slynk-backend.lisp
     janet_files: []
-    test_files: []
+    test_files:
+      - test/protocol_inventory_tests.janet
     constraint: null
     missing_protocol_state: not_listed_missing
     missing_protocol_files: []
@@ -1037,7 +1082,8 @@ operations:
     source_files:
       - sly_source/slynk/slynk-backend.lisp
     janet_files: []
-    test_files: []
+    test_files:
+      - test/protocol_inventory_tests.janet
     constraint: null
     missing_protocol_state: not_listed_missing
     missing_protocol_files: []
@@ -1049,13 +1095,11 @@ operations:
     janet_files:
       - slynet/slynk.janet
       - slynet/interfaces.janet
-      - slynet/proto/core.janet
     test_files:
-      - test/project_core_tests.janet
+      - test/protocol_inventory_tests.janet
     constraint: null
     missing_protocol_state: stale_doc_lists_as_missing
     missing_protocol_files:
-      - docs/missing_protocol.md
       - docs/missing_protocol_definterface.md
   - name: call-with-debugger-hook
     kind: definterface
@@ -1063,7 +1107,8 @@ operations:
     source_files:
       - sly_source/slynk/slynk-backend.lisp
     janet_files: []
-    test_files: []
+    test_files:
+      - test/protocol_inventory_tests.janet
     constraint: null
     missing_protocol_state: not_listed_missing
     missing_protocol_files: []
@@ -1077,7 +1122,7 @@ operations:
       - slynet/interfaces.janet
       - slynet/proto/core.janet
     test_files:
-      - test/project_core_tests.janet
+      - test/protocol_inventory_tests.janet
     constraint: null
     missing_protocol_state: stale_doc_lists_as_missing
     missing_protocol_files:
@@ -1085,13 +1130,14 @@ operations:
       - docs/missing_protocol_definterface.md
   - name: pprint-entry
     kind: defslyfun
-    state: implemented_untested
+    state: implemented
     source_files:
       - sly_source/contrib/slynk-mrepl.lisp
     janet_files:
       - slynet/interfaces.janet
       - slynet/contrib/slynet-mrepl.janet
-    test_files: []
+    test_files:
+      - test/protocol_inventory_tests.janet
     constraint: null
     missing_protocol_state: stale_doc_lists_as_missing
     missing_protocol_files:
@@ -1099,13 +1145,14 @@ operations:
       - docs/missing_protocol_definterface.md
   - name: invoke-nth-restart-for-emacs
     kind: defslyfun
-    state: implemented_untested
+    state: implemented
     source_files:
       - sly_source/slynk/slynk.lisp
     janet_files:
       - slynet/interfaces.janet
       - slynet/proto/core.janet
-    test_files: []
+    test_files:
+      - test/protocol_inventory_tests.janet
     constraint: null
     missing_protocol_state: stale_doc_lists_as_missing
     missing_protocol_files:
@@ -1117,7 +1164,8 @@ operations:
     source_files:
       - sly_source/slynk/slynk-backend.lisp
     janet_files: []
-    test_files: []
+    test_files:
+      - test/protocol_inventory_tests.janet
     constraint: null
     missing_protocol_state: not_listed_missing
     missing_protocol_files: []
@@ -1127,7 +1175,8 @@ operations:
     source_files:
       - sly_source/slynk/slynk-backend.lisp
     janet_files: []
-    test_files: []
+    test_files:
+      - test/protocol_inventory_tests.janet
     constraint: null
     missing_protocol_state: not_listed_missing
     missing_protocol_files: []
@@ -1137,7 +1186,8 @@ operations:
     source_files:
       - sly_source/slynk/slynk-backend.lisp
     janet_files: []
-    test_files: []
+    test_files:
+      - test/protocol_inventory_tests.janet
     constraint: null
     missing_protocol_state: not_listed_missing
     missing_protocol_files: []
@@ -1147,7 +1197,8 @@ operations:
     source_files:
       - sly_source/slynk/slynk-backend.lisp
     janet_files: []
-    test_files: []
+    test_files:
+      - test/protocol_inventory_tests.janet
     constraint: null
     missing_protocol_state: not_listed_missing
     missing_protocol_files: []
@@ -1157,19 +1208,21 @@ operations:
     source_files:
       - sly_source/slynk/slynk-backend.lisp
     janet_files: []
-    test_files: []
+    test_files:
+      - test/protocol_inventory_tests.janet
     constraint: null
     missing_protocol_state: not_listed_missing
     missing_protocol_files: []
   - name: eval-for-mrepl
     kind: defslyfun
-    state: implemented_untested
+    state: implemented
     source_files:
       - sly_source/contrib/slynk-mrepl.lisp
     janet_files:
       - slynet/interfaces.janet
       - slynet/contrib/slynet-mrepl.janet
-    test_files: []
+    test_files:
+      - test/protocol_inventory_tests.janet
     constraint: null
     missing_protocol_state: stale_doc_lists_as_missing
     missing_protocol_files:
@@ -1177,12 +1230,13 @@ operations:
       - docs/missing_protocol_definterface.md
   - name: list-callers
     kind: definterface
-    state: implemented_untested
+    state: implemented
     source_files:
       - sly_source/slynk/slynk-backend.lisp
     janet_files:
       - slynet/xref.janet
-    test_files: []
+    test_files:
+      - test/protocol_inventory_tests.janet
     constraint: null
     missing_protocol_state: not_listed_missing
     missing_protocol_files: []
@@ -1192,19 +1246,21 @@ operations:
     source_files:
       - sly_source/slynk/slynk-backend.lisp
     janet_files: []
-    test_files: []
+    test_files:
+      - test/protocol_inventory_tests.janet
     constraint: null
     missing_protocol_state: not_listed_missing
     missing_protocol_files: []
   - name: pprint-eval-string-in-frame
     kind: defslyfun
-    state: implemented_untested
+    state: implemented
     source_files:
       - sly_source/slynk/slynk.lisp
     janet_files:
       - slynet/interfaces.janet
       - slynet/proto/core.janet
-    test_files: []
+    test_files:
+      - test/protocol_inventory_tests.janet
     constraint: null
     missing_protocol_state: stale_doc_lists_as_missing
     missing_protocol_files:
@@ -1216,7 +1272,8 @@ operations:
     source_files:
       - sly_source/slynk/slynk-backend.lisp
     janet_files: []
-    test_files: []
+    test_files:
+      - test/protocol_inventory_tests.janet
     constraint: null
     missing_protocol_state: not_listed_missing
     missing_protocol_files: []
@@ -1226,7 +1283,8 @@ operations:
     source_files:
       - sly_source/slynk/slynk-backend.lisp
     janet_files: []
-    test_files: []
+    test_files:
+      - test/protocol_inventory_tests.janet
     constraint: null
     missing_protocol_state: not_listed_missing
     missing_protocol_files: []
@@ -1236,7 +1294,8 @@ operations:
     source_files:
       - sly_source/contrib/slynk-package-fu.lisp
     janet_files: []
-    test_files: []
+    test_files:
+      - test/protocol_inventory_tests.janet
     constraint: null
     missing_protocol_state: stale_doc_lists_as_missing
     missing_protocol_files:
@@ -1252,6 +1311,7 @@ operations:
       - slynet/proto/core.janet
     test_files:
       - test/project_core_tests.janet
+      - test/protocol_inventory_tests.janet
     constraint: null
     missing_protocol_state: stale_doc_lists_as_missing
     missing_protocol_files:
@@ -1267,7 +1327,7 @@ operations:
       - slynet/interfaces.janet
       - slynet/proto/core.janet
     test_files:
-      - test/project_core_tests.janet
+      - test/protocol_inventory_tests.janet
     constraint: null
     missing_protocol_state: stale_doc_lists_as_missing
     missing_protocol_files:
@@ -1284,6 +1344,7 @@ operations:
       - slynet/proto/core.janet
     test_files:
       - test/project_core_tests.janet
+      - test/protocol_inventory_tests.janet
     constraint: null
     missing_protocol_state: stale_doc_lists_as_missing
     missing_protocol_files:
@@ -1291,13 +1352,14 @@ operations:
       - docs/missing_protocol_definterface.md
   - name: create-mrepl
     kind: defslyfun
-    state: implemented_untested
+    state: implemented
     source_files:
       - sly_source/contrib/slynk-mrepl.lisp
     janet_files:
       - slynet/interfaces.janet
       - slynet/contrib/slynet-mrepl.janet
-    test_files: []
+    test_files:
+      - test/protocol_inventory_tests.janet
     constraint: null
     missing_protocol_state: stale_doc_lists_as_missing
     missing_protocol_files:
@@ -1309,19 +1371,21 @@ operations:
     source_files:
       - sly_source/slynk/slynk-backend.lisp
     janet_files: []
-    test_files: []
+    test_files:
+      - test/protocol_inventory_tests.janet
     constraint: null
     missing_protocol_state: not_listed_missing
     missing_protocol_files: []
   - name: inspector-toggle-verbose
     kind: defslyfun
-    state: implemented_untested
+    state: implemented
     source_files:
       - sly_source/slynk/slynk.lisp
     janet_files:
       - slynet/interfaces.janet
       - slynet/contrib/slynet-fancy-inspector.janet
-    test_files: []
+    test_files:
+      - test/protocol_inventory_tests.janet
     constraint: null
     missing_protocol_state: stale_doc_lists_as_missing
     missing_protocol_files:
@@ -1333,7 +1397,8 @@ operations:
     source_files:
       - sly_source/slynk/slynk-backend.lisp
     janet_files: []
-    test_files: []
+    test_files:
+      - test/protocol_inventory_tests.janet
     constraint: null
     missing_protocol_state: not_listed_missing
     missing_protocol_files: []
@@ -1347,6 +1412,7 @@ operations:
       - slynet/interfaces.janet
     test_files:
       - test/project_core_tests.janet
+      - test/protocol_inventory_tests.janet
     constraint: null
     missing_protocol_state: stale_doc_lists_as_missing
     missing_protocol_files:
@@ -1354,12 +1420,13 @@ operations:
       - docs/missing_protocol_definterface.md
   - name: utf8-to-string
     kind: definterface
-    state: implemented_untested
+    state: implemented
     source_files:
       - sly_source/slynk/slynk-backend.lisp
     janet_files:
       - slynet/backend.janet
-    test_files: []
+    test_files:
+      - test/protocol_inventory_tests.janet
     constraint: null
     missing_protocol_state: not_listed_missing
     missing_protocol_files: []
@@ -1369,7 +1436,8 @@ operations:
     source_files:
       - sly_source/slynk/slynk-backend.lisp
     janet_files: []
-    test_files: []
+    test_files:
+      - test/protocol_inventory_tests.janet
     constraint: null
     missing_protocol_state: not_listed_missing
     missing_protocol_files: []
@@ -1379,7 +1447,8 @@ operations:
     source_files:
       - sly_source/slynk/slynk-backend.lisp
     janet_files: []
-    test_files: []
+    test_files:
+      - test/protocol_inventory_tests.janet
     constraint: null
     missing_protocol_state: not_listed_missing
     missing_protocol_files: []
@@ -1389,7 +1458,8 @@ operations:
     source_files:
       - sly_source/slynk/slynk-backend.lisp
     janet_files: []
-    test_files: []
+    test_files:
+      - test/protocol_inventory_tests.janet
     constraint: null
     missing_protocol_state: not_listed_missing
     missing_protocol_files: []
@@ -1399,19 +1469,21 @@ operations:
     source_files:
       - sly_source/slynk/slynk-backend.lisp
     janet_files: []
-    test_files: []
+    test_files:
+      - test/protocol_inventory_tests.janet
     constraint: null
     missing_protocol_state: not_listed_missing
     missing_protocol_files: []
   - name: inspect-nth-part
     kind: defslyfun
-    state: implemented_untested
+    state: implemented
     source_files:
       - sly_source/slynk/slynk.lisp
     janet_files:
       - slynet/interfaces.janet
       - slynet/contrib/slynet-fancy-inspector.janet
-    test_files: []
+    test_files:
+      - test/protocol_inventory_tests.janet
     constraint: null
     missing_protocol_state: stale_doc_lists_as_missing
     missing_protocol_files:
@@ -1423,7 +1495,8 @@ operations:
     source_files:
       - sly_source/slynk/slynk-backend.lisp
     janet_files: []
-    test_files: []
+    test_files:
+      - test/protocol_inventory_tests.janet
     constraint: null
     missing_protocol_state: not_listed_missing
     missing_protocol_files: []
@@ -1433,7 +1506,8 @@ operations:
     source_files:
       - sly_source/slynk/slynk-backend.lisp
     janet_files: []
-    test_files: []
+    test_files:
+      - test/protocol_inventory_tests.janet
     constraint: null
     missing_protocol_state: not_listed_missing
     missing_protocol_files: []
@@ -1443,18 +1517,20 @@ operations:
     source_files:
       - sly_source/slynk/slynk-backend.lisp
     janet_files: []
-    test_files: []
+    test_files:
+      - test/protocol_inventory_tests.janet
     constraint: null
     missing_protocol_state: not_listed_missing
     missing_protocol_files: []
   - name: who-calls
     kind: definterface
-    state: implemented_untested
+    state: implemented
     source_files:
       - sly_source/slynk/slynk-backend.lisp
     janet_files:
       - slynet/xref.janet
-    test_files: []
+    test_files:
+      - test/protocol_inventory_tests.janet
     constraint: null
     missing_protocol_state: not_listed_missing
     missing_protocol_files: []
@@ -1468,7 +1544,7 @@ operations:
       - slynet/interfaces.janet
       - slynet/proto/core.janet
     test_files:
-      - test/project_core_tests.janet
+      - test/protocol_inventory_tests.janet
     constraint: null
     missing_protocol_state: stale_doc_lists_as_missing
     missing_protocol_files:
@@ -1480,7 +1556,8 @@ operations:
     source_files:
       - sly_source/slynk/slynk-backend.lisp
     janet_files: []
-    test_files: []
+    test_files:
+      - test/protocol_inventory_tests.janet
     constraint: null
     missing_protocol_state: not_listed_missing
     missing_protocol_files: []
@@ -1490,26 +1567,150 @@ operations:
     source_files:
       - sly_source/slynk/slynk-backend.lisp
     janet_files: []
-    test_files: []
+    test_files:
+      - test/protocol_inventory_tests.janet
     constraint: null
     missing_protocol_state: not_listed_missing
     missing_protocol_files: []
   - name: inspector-reinspect
     kind: defslyfun
-    state: implemented_untested
+    state: implemented
     source_files:
       - sly_source/slynk/slynk.lisp
     janet_files:
       - slynet/slynk.janet
       - slynet/interfaces.janet
       - slynet/contrib/slynet-fancy-inspector.janet
-    test_files: []
+    test_files:
+      - test/protocol_inventory_tests.janet
     constraint: null
     missing_protocol_state: stale_doc_lists_as_missing
     missing_protocol_files:
       - docs/missing_protocol.md
       - docs/missing_protocol_definterface.md
   - name: debugger-info-for-emacs
+    kind: defslyfun
+    state: implemented
+    source_files:
+      - sly_source/slynk/slynk.lisp
+    janet_files:
+      - slynet/slynk.janet
+      - slynet/interfaces.janet
+      - slynet/proto/core.janet
+    test_files:
+      - test/protocol_inventory_tests.janet
+    constraint: null
+    missing_protocol_state: stale_doc_lists_as_missing
+    missing_protocol_files:
+      - docs/missing_protocol.md
+      - docs/missing_protocol_definterface.md
+  - name: describe-entry
+    kind: defslyfun
+    state: implemented
+    source_files:
+      - sly_source/contrib/slynk-mrepl.lisp
+    janet_files:
+      - slynet/interfaces.janet
+      - slynet/contrib/slynet-mrepl.janet
+    test_files:
+      - test/protocol_inventory_tests.janet
+    constraint: null
+    missing_protocol_state: stale_doc_lists_as_missing
+    missing_protocol_files:
+      - docs/missing_protocol.md
+      - docs/missing_protocol_definterface.md
+  - name: apropos-list-for-emacs
+    kind: defslyfun
+    state: implemented
+    source_files:
+      - sly_source/slynk/slynk-apropos.lisp
+    janet_files:
+      - slynet/interfaces.janet
+      - slynet/proto/core.janet
+    test_files:
+      - test/protocol_inventory_tests.janet
+    constraint: null
+    missing_protocol_state: stale_doc_lists_as_missing
+    missing_protocol_files:
+      - docs/missing_protocol.md
+      - docs/missing_protocol_definterface.md
+  - name: slynk-toggle-trace
+    kind: defslyfun
+    state: implemented
+    source_files:
+      - sly_source/slynk/slynk.lisp
+    janet_files:
+      - slynet/interfaces.janet
+      - slynet/proto/core.janet
+    test_files:
+      - test/protocol_inventory_tests.janet
+    constraint: null
+    missing_protocol_state: stale_doc_lists_as_missing
+    missing_protocol_files:
+      - docs/missing_protocol.md
+      - docs/missing_protocol_definterface.md
+  - name: pathname-to-filename
+    kind: definterface
+    state: missing
+    source_files:
+      - sly_source/slynk/slynk-backend.lisp
+    janet_files: []
+    test_files:
+      - test/protocol_inventory_tests.janet
+    constraint: null
+    missing_protocol_state: not_listed_missing
+    missing_protocol_files: []
+  - name: type-specifier-p
+    kind: definterface
+    state: missing
+    source_files:
+      - sly_source/slynk/slynk-backend.lisp
+    janet_files: []
+    test_files:
+      - test/protocol_inventory_tests.janet
+    constraint: null
+    missing_protocol_state: not_listed_missing
+    missing_protocol_files: []
+  - name: slynk-expand-1
+    kind: defslyfun
+    state: implemented
+    source_files:
+      - sly_source/slynk/slynk.lisp
+    janet_files:
+      - slynet/interfaces.janet
+      - slynet/proto/core.janet
+    test_files:
+      - test/protocol_inventory_tests.janet
+    constraint: null
+    missing_protocol_state: stale_doc_lists_as_missing
+    missing_protocol_files:
+      - docs/missing_protocol.md
+      - docs/missing_protocol_definterface.md
+  - name: make-fd-stream
+    kind: definterface
+    state: implemented
+    source_files:
+      - sly_source/slynk/slynk-backend.lisp
+    janet_files:
+      - slynet/backend.janet
+      - slynet/interfaces.janet
+    test_files:
+      - test/protocol_inventory_tests.janet
+    constraint: null
+    missing_protocol_state: not_listed_missing
+    missing_protocol_files: []
+  - name: disassemble-frame
+    kind: definterface
+    state: missing
+    source_files:
+      - sly_source/slynk/slynk-backend.lisp
+    janet_files: []
+    test_files:
+      - test/protocol_inventory_tests.janet
+    constraint: null
+    missing_protocol_state: not_listed_missing
+    missing_protocol_files: []
+  - name: value-for-editing
     kind: defslyfun
     state: implemented
     source_files:
@@ -1526,129 +1727,16 @@ operations:
     missing_protocol_files:
       - docs/missing_protocol.md
       - docs/missing_protocol_definterface.md
-  - name: describe-entry
-    kind: defslyfun
-    state: implemented_untested
-    source_files:
-      - sly_source/contrib/slynk-mrepl.lisp
-    janet_files:
-      - slynet/interfaces.janet
-      - slynet/contrib/slynet-mrepl.janet
-    test_files: []
-    constraint: null
-    missing_protocol_state: stale_doc_lists_as_missing
-    missing_protocol_files:
-      - docs/missing_protocol.md
-      - docs/missing_protocol_definterface.md
-  - name: apropos-list-for-emacs
-    kind: defslyfun
-    state: implemented_untested
-    source_files:
-      - sly_source/slynk/slynk-apropos.lisp
-    janet_files:
-      - slynet/interfaces.janet
-      - slynet/proto/core.janet
-    test_files: []
-    constraint: null
-    missing_protocol_state: stale_doc_lists_as_missing
-    missing_protocol_files:
-      - docs/missing_protocol.md
-      - docs/missing_protocol_definterface.md
-  - name: slynk-toggle-trace
-    kind: defslyfun
-    state: implemented_untested
-    source_files:
-      - sly_source/slynk/slynk.lisp
-    janet_files:
-      - slynet/interfaces.janet
-      - slynet/proto/core.janet
-    test_files: []
-    constraint: null
-    missing_protocol_state: stale_doc_lists_as_missing
-    missing_protocol_files:
-      - docs/missing_protocol.md
-      - docs/missing_protocol_definterface.md
-  - name: pathname-to-filename
-    kind: definterface
-    state: missing
-    source_files:
-      - sly_source/slynk/slynk-backend.lisp
-    janet_files: []
-    test_files: []
-    constraint: null
-    missing_protocol_state: not_listed_missing
-    missing_protocol_files: []
-  - name: type-specifier-p
-    kind: definterface
-    state: missing
-    source_files:
-      - sly_source/slynk/slynk-backend.lisp
-    janet_files: []
-    test_files: []
-    constraint: null
-    missing_protocol_state: not_listed_missing
-    missing_protocol_files: []
-  - name: slynk-expand-1
-    kind: defslyfun
-    state: implemented_untested
-    source_files:
-      - sly_source/slynk/slynk.lisp
-    janet_files:
-      - slynet/interfaces.janet
-      - slynet/proto/core.janet
-    test_files: []
-    constraint: null
-    missing_protocol_state: stale_doc_lists_as_missing
-    missing_protocol_files:
-      - docs/missing_protocol.md
-      - docs/missing_protocol_definterface.md
-  - name: make-fd-stream
-    kind: definterface
-    state: implemented_untested
-    source_files:
-      - sly_source/slynk/slynk-backend.lisp
-    janet_files:
-      - slynet/backend.janet
-      - slynet/interfaces.janet
-    test_files: []
-    constraint: null
-    missing_protocol_state: not_listed_missing
-    missing_protocol_files: []
-  - name: disassemble-frame
-    kind: definterface
-    state: missing
-    source_files:
-      - sly_source/slynk/slynk-backend.lisp
-    janet_files: []
-    test_files: []
-    constraint: null
-    missing_protocol_state: not_listed_missing
-    missing_protocol_files: []
-  - name: value-for-editing
+  - name: compile-multiple-strings-for-emacs
     kind: defslyfun
     state: implemented
     source_files:
       - sly_source/slynk/slynk.lisp
     janet_files:
-      - slynet/slynk.janet
       - slynet/interfaces.janet
       - slynet/proto/core.janet
     test_files:
-      - test/project_core_tests.janet
-    constraint: null
-    missing_protocol_state: stale_doc_lists_as_missing
-    missing_protocol_files:
-      - docs/missing_protocol.md
-      - docs/missing_protocol_definterface.md
-  - name: compile-multiple-strings-for-emacs
-    kind: defslyfun
-    state: implemented_untested
-    source_files:
-      - sly_source/slynk/slynk.lisp
-    janet_files:
-      - slynet/interfaces.janet
-      - slynet/proto/core.janet
-    test_files: []
+      - test/protocol_inventory_tests.janet
     constraint: null
     missing_protocol_state: stale_doc_lists_as_missing
     missing_protocol_files:
@@ -1660,7 +1748,8 @@ operations:
     source_files:
       - sly_source/slynk/slynk-backend.lisp
     janet_files: []
-    test_files: []
+    test_files:
+      - test/protocol_inventory_tests.janet
     constraint: null
     missing_protocol_state: not_listed_missing
     missing_protocol_files: []
@@ -1675,6 +1764,7 @@ operations:
       - slynet/proto/core.janet
     test_files:
       - test/project_core_tests.janet
+      - test/protocol_inventory_tests.janet
     constraint: null
     missing_protocol_state: stale_doc_lists_as_missing
     missing_protocol_files:
@@ -1691,6 +1781,7 @@ operations:
       - slynet/proto/core.janet
     test_files:
       - test/project_core_tests.janet
+      - test/protocol_inventory_tests.janet
     constraint: null
     missing_protocol_state: stale_doc_lists_as_missing
     missing_protocol_files:
@@ -1698,26 +1789,28 @@ operations:
       - docs/missing_protocol_definterface.md
   - name: describe-symbol
     kind: defslyfun
-    state: implemented_untested
+    state: implemented
     source_files:
       - sly_source/slynk/slynk.lisp
     janet_files:
       - slynet/backend.janet
       - slynet/interfaces.janet
       - slynet/contrib/slynet-apropos.janet
-    test_files: []
+    test_files:
+      - test/protocol_inventory_tests.janet
     constraint: null
     missing_protocol_state: not_listed_missing
     missing_protocol_files: []
   - name: globally-save-object
     kind: defslyfun
-    state: implemented_untested
+    state: implemented
     source_files:
       - sly_source/contrib/slynk-mrepl.lisp
     janet_files:
       - slynet/interfaces.janet
       - slynet/contrib/slynet-mrepl.janet
-    test_files: []
+    test_files:
+      - test/protocol_inventory_tests.janet
     constraint: null
     missing_protocol_state: stale_doc_lists_as_missing
     missing_protocol_files:
@@ -1725,13 +1818,14 @@ operations:
       - docs/missing_protocol_definterface.md
   - name: re-evaluate-defvar
     kind: defslyfun
-    state: implemented_untested
+    state: implemented
     source_files:
       - sly_source/slynk/slynk.lisp
     janet_files:
       - slynet/interfaces.janet
       - slynet/proto/core.janet
-    test_files: []
+    test_files:
+      - test/protocol_inventory_tests.janet
     constraint: null
     missing_protocol_state: stale_doc_lists_as_missing
     missing_protocol_files:
@@ -1739,29 +1833,28 @@ operations:
       - docs/missing_protocol_definterface.md
   - name: thread-id
     kind: definterface
-    state: implemented_untested
+    state: implemented
     source_files:
       - sly_source/slynk/slynk-backend.lisp
     janet_files:
       - slynet/slynk.janet
-      - slynet/backend.janet
       - slynet/interfaces.janet
-      - slynet/proto/core.janet
       - slynet/contrib/slynet-mrepl.janet
-    test_files: []
+    test_files:
+      - test/protocol_inventory_tests.janet
     constraint: null
-    missing_protocol_state: stale_doc_lists_as_missing
-    missing_protocol_files:
-      - docs/missing_protocol_definterface.md
+    missing_protocol_state: not_listed_missing
+    missing_protocol_files: []
   - name: find-definition-for-thing
     kind: defslyfun
-    state: implemented_untested
+    state: implemented
     source_files:
       - sly_source/slynk/slynk.lisp
     janet_files:
       - slynet/interfaces.janet
       - slynet/proto/core.janet
-    test_files: []
+    test_files:
+      - test/protocol_inventory_tests.janet
     constraint: null
     missing_protocol_state: stale_doc_lists_as_missing
     missing_protocol_files:
@@ -1773,7 +1866,8 @@ operations:
     source_files:
       - sly_source/slynk/slynk-backend.lisp
     janet_files: []
-    test_files: []
+    test_files:
+      - test/protocol_inventory_tests.janet
     constraint: null
     missing_protocol_state: not_listed_missing
     missing_protocol_files: []
@@ -1787,7 +1881,6 @@ operations:
       - slynet/interfaces.janet
       - slynet/proto/core.janet
     test_files:
-      - test/project_core_tests.janet
       - test/protocol_inventory_tests.janet
     constraint: null
     missing_protocol_state: stale_doc_lists_as_missing
@@ -1796,13 +1889,14 @@ operations:
       - docs/missing_protocol_definterface.md
   - name: slynk-macroexpand
     kind: defslyfun
-    state: implemented_untested
+    state: implemented
     source_files:
       - sly_source/slynk/slynk.lisp
     janet_files:
       - slynet/interfaces.janet
       - slynet/proto/core.janet
-    test_files: []
+    test_files:
+      - test/protocol_inventory_tests.janet
     constraint: null
     missing_protocol_state: stale_doc_lists_as_missing
     missing_protocol_files:
@@ -1810,13 +1904,14 @@ operations:
       - docs/missing_protocol_definterface.md
   - name: unintern-symbol
     kind: defslyfun
-    state: implemented_untested
+    state: implemented
     source_files:
       - sly_source/slynk/slynk.lisp
     janet_files:
       - slynet/interfaces.janet
       - slynet/proto/core.janet
-    test_files: []
+    test_files:
+      - test/protocol_inventory_tests.janet
     constraint: null
     missing_protocol_state: stale_doc_lists_as_missing
     missing_protocol_files:
@@ -1828,19 +1923,20 @@ operations:
     source_files:
       - sly_source/slynk/slynk-backend.lisp
     janet_files: []
-    test_files: []
+    test_files:
+      - test/protocol_inventory_tests.janet
     constraint: null
     missing_protocol_state: not_listed_missing
     missing_protocol_files: []
   - name: mop
     kind: defslyfun
-    state: implemented_untested
+    state: implemented
     source_files:
       - sly_source/slynk/slynk.lisp
     janet_files:
       - slynet/interfaces.janet
-      - slynet/contrib/slynet-fancy-inspector.janet
-    test_files: []
+    test_files:
+      - test/protocol_inventory_tests.janet
     constraint: null
     missing_protocol_state: stale_doc_lists_as_missing
     missing_protocol_files:
@@ -1848,27 +1944,25 @@ operations:
       - docs/missing_protocol_definterface.md
   - name: toggle-trace
     kind: definterface
-    state: implemented_untested
+    state: missing
     source_files:
       - sly_source/slynk/slynk-backend.lisp
-    janet_files:
-      - slynet/interfaces.janet
-      - slynet/proto/core.janet
-    test_files: []
+    janet_files: []
+    test_files:
+      - test/protocol_inventory_tests.janet
     constraint: null
-    missing_protocol_state: stale_doc_lists_as_missing
-    missing_protocol_files:
-      - docs/missing_protocol.md
-      - docs/missing_protocol_definterface.md
+    missing_protocol_state: not_listed_missing
+    missing_protocol_files: []
   - name: sly-db-break
     kind: defslyfun
-    state: implemented_untested
+    state: implemented
     source_files:
       - sly_source/slynk/slynk.lisp
     janet_files:
       - slynet/interfaces.janet
       - slynet/proto/core.janet
-    test_files: []
+    test_files:
+      - test/protocol_inventory_tests.janet
     constraint: null
     missing_protocol_state: stale_doc_lists_as_missing
     missing_protocol_files:
@@ -1880,7 +1974,8 @@ operations:
     source_files:
       - sly_source/slynk/slynk-backend.lisp
     janet_files: []
-    test_files: []
+    test_files:
+      - test/protocol_inventory_tests.janet
     constraint: null
     missing_protocol_state: not_listed_missing
     missing_protocol_files: []
@@ -1890,7 +1985,8 @@ operations:
     source_files:
       - sly_source/slynk/slynk-backend.lisp
     janet_files: []
-    test_files: []
+    test_files:
+      - test/protocol_inventory_tests.janet
     constraint: null
     missing_protocol_state: not_listed_missing
     missing_protocol_files: []
@@ -1900,19 +1996,21 @@ operations:
     source_files:
       - sly_source/slynk/slynk-backend.lisp
     janet_files: []
-    test_files: []
+    test_files:
+      - test/protocol_inventory_tests.janet
     constraint: null
     missing_protocol_state: not_listed_missing
     missing_protocol_files: []
   - name: sly-db-return-from-frame
     kind: defslyfun
-    state: implemented_untested
+    state: implemented
     source_files:
       - sly_source/slynk/slynk.lisp
     janet_files:
       - slynet/interfaces.janet
       - slynet/proto/core.janet
-    test_files: []
+    test_files:
+      - test/protocol_inventory_tests.janet
     constraint: null
     missing_protocol_state: stale_doc_lists_as_missing
     missing_protocol_files:
@@ -1924,7 +2022,8 @@ operations:
     source_files:
       - sly_source/slynk/slynk-backend.lisp
     janet_files: []
-    test_files: []
+    test_files:
+      - test/protocol_inventory_tests.janet
     constraint: null
     missing_protocol_state: not_listed_missing
     missing_protocol_files: []
@@ -1934,19 +2033,21 @@ operations:
     source_files:
       - sly_source/slynk/slynk-backend.lisp
     janet_files: []
-    test_files: []
+    test_files:
+      - test/protocol_inventory_tests.janet
     constraint: null
     missing_protocol_state: not_listed_missing
     missing_protocol_files: []
   - name: inspect-frame-var
     kind: defslyfun
-    state: implemented_untested
+    state: implemented
     source_files:
       - sly_source/slynk/slynk.lisp
     janet_files:
       - slynet/interfaces.janet
       - slynet/contrib/slynet-fancy-inspector.janet
-    test_files: []
+    test_files:
+      - test/protocol_inventory_tests.janet
     constraint: null
     missing_protocol_state: stale_doc_lists_as_missing
     missing_protocol_files:
@@ -1954,13 +2055,14 @@ operations:
       - docs/missing_protocol_definterface.md
   - name: throw-to-toplevel
     kind: defslyfun
-    state: implemented_untested
+    state: implemented
     source_files:
       - sly_source/slynk/slynk.lisp
     janet_files:
       - slynet/interfaces.janet
       - slynet/proto/core.janet
-    test_files: []
+    test_files:
+      - test/protocol_inventory_tests.janet
     constraint: null
     missing_protocol_state: stale_doc_lists_as_missing
     missing_protocol_files:
@@ -1977,6 +2079,7 @@ operations:
       - slynet/proto/core.janet
     test_files:
       - test/project_core_tests.janet
+      - test/protocol_inventory_tests.janet
     constraint: null
     missing_protocol_state: stale_doc_lists_as_missing
     missing_protocol_files:
@@ -1984,13 +2087,14 @@ operations:
       - docs/missing_protocol_definterface.md
   - name: frame-package-name
     kind: defslyfun
-    state: implemented_untested
+    state: implemented
     source_files:
       - sly_source/slynk/slynk.lisp
     janet_files:
       - slynet/interfaces.janet
       - slynet/proto/core.janet
-    test_files: []
+    test_files:
+      - test/protocol_inventory_tests.janet
     constraint: null
     missing_protocol_state: stale_doc_lists_as_missing
     missing_protocol_files:
@@ -1998,24 +2102,26 @@ operations:
       - docs/missing_protocol_definterface.md
   - name: make-output-stream
     kind: definterface
-    state: implemented_untested
+    state: implemented
     source_files:
       - sly_source/slynk/slynk-backend.lisp
     janet_files:
       - slynet/backend.janet
       - slynet/interfaces.janet
-    test_files: []
+    test_files:
+      - test/protocol_inventory_tests.janet
     constraint: null
     missing_protocol_state: not_listed_missing
     missing_protocol_files: []
   - name: complete-form
     kind: defslyfun
-    state: implemented_untested
+    state: implemented
     source_files:
       - sly_source/contrib/slynk-arglists.lisp
     janet_files:
       - slynet/interfaces.janet
-    test_files: []
+    test_files:
+      - test/protocol_inventory_tests.janet
     constraint: null
     missing_protocol_state: stale_doc_lists_as_missing
     missing_protocol_files:
@@ -2028,10 +2134,8 @@ operations:
       - sly_source/slynk/slynk.lisp
     janet_files:
       - slynet/slynk.janet
-      - slynet/backend.janet
       - slynet/interfaces.janet
       - slynet/proto/core.janet
-      - slynet/contrib/slynet-fancy-inspector.janet
     test_files:
       - test/project_core_tests.janet
       - test/protocol_inventory_tests.janet
@@ -2046,7 +2150,8 @@ operations:
     source_files:
       - sly_source/slynk/slynk-backend.lisp
     janet_files: []
-    test_files: []
+    test_files:
+      - test/protocol_inventory_tests.janet
     constraint: null
     missing_protocol_state: not_listed_missing
     missing_protocol_files: []
@@ -2056,7 +2161,8 @@ operations:
     source_files:
       - sly_source/slynk/slynk-backend.lisp
     janet_files: []
-    test_files: []
+    test_files:
+      - test/protocol_inventory_tests.janet
     constraint: null
     missing_protocol_state: not_listed_missing
     missing_protocol_files: []
@@ -2066,7 +2172,8 @@ operations:
     source_files:
       - sly_source/slynk/slynk-backend.lisp
     janet_files: []
-    test_files: []
+    test_files:
+      - test/protocol_inventory_tests.janet
     constraint: null
     missing_protocol_state: not_listed_missing
     missing_protocol_files: []
@@ -2079,14 +2186,11 @@ operations:
       - slynet/slynk.janet
       - slynet/backend.janet
       - slynet/interfaces.janet
-      - slynet/proto/core.janet
-      - slynet/contrib/slynet-mrepl.janet
     test_files:
-      - test/project_core_tests.janet
+      - test/protocol_inventory_tests.janet
     constraint: null
     missing_protocol_state: stale_doc_lists_as_missing
     missing_protocol_files:
-      - docs/missing_protocol.md
       - docs/missing_protocol_definterface.md
   - name: wrap
     kind: definterface
@@ -2094,19 +2198,21 @@ operations:
     source_files:
       - sly_source/slynk/slynk-backend.lisp
     janet_files: []
-    test_files: []
+    test_files:
+      - test/protocol_inventory_tests.janet
     constraint: null
     missing_protocol_state: not_listed_missing
     missing_protocol_files: []
   - name: pprint-inspector-part
     kind: defslyfun
-    state: implemented_untested
+    state: implemented
     source_files:
       - sly_source/slynk/slynk.lisp
     janet_files:
       - slynet/interfaces.janet
       - slynet/contrib/slynet-fancy-inspector.janet
-    test_files: []
+    test_files:
+      - test/protocol_inventory_tests.janet
     constraint: null
     missing_protocol_state: stale_doc_lists_as_missing
     missing_protocol_files:
@@ -2118,19 +2224,21 @@ operations:
     source_files:
       - sly_source/slynk/slynk-backend.lisp
     janet_files: []
-    test_files: []
+    test_files:
+      - test/protocol_inventory_tests.janet
     constraint: null
     missing_protocol_state: not_listed_missing
     missing_protocol_files: []
   - name: slynk-macroexpand-1
     kind: defslyfun
-    state: implemented_untested
+    state: implemented
     source_files:
       - sly_source/slynk/slynk.lisp
     janet_files:
       - slynet/interfaces.janet
       - slynet/proto/core.janet
-    test_files: []
+    test_files:
+      - test/protocol_inventory_tests.janet
     constraint: null
     missing_protocol_state: stale_doc_lists_as_missing
     missing_protocol_files:
@@ -2138,13 +2246,14 @@ operations:
       - docs/missing_protocol_definterface.md
   - name: remove-method-by-name
     kind: defslyfun
-    state: implemented_untested
+    state: implemented
     source_files:
       - sly_source/slynk/slynk.lisp
     janet_files:
       - slynet/interfaces.janet
       - slynet/proto/core.janet
-    test_files: []
+    test_files:
+      - test/protocol_inventory_tests.janet
     constraint: null
     missing_protocol_state: stale_doc_lists_as_missing
     missing_protocol_files:
@@ -2152,13 +2261,14 @@ operations:
       - docs/missing_protocol_definterface.md
   - name: slynk-delete-package
     kind: defslyfun
-    state: implemented_untested
+    state: implemented
     source_files:
       - sly_source/slynk/slynk.lisp
     janet_files:
       - slynet/interfaces.janet
       - slynet/proto/core.janet
-    test_files: []
+    test_files:
+      - test/protocol_inventory_tests.janet
     constraint: null
     missing_protocol_state: stale_doc_lists_as_missing
     missing_protocol_files:
@@ -2174,7 +2284,7 @@ operations:
       - slynet/interfaces.janet
       - slynet/proto/core.janet
     test_files:
-      - test/project_core_tests.janet
+      - test/protocol_inventory_tests.janet
     constraint: null
     missing_protocol_state: stale_doc_lists_as_missing
     missing_protocol_files:
@@ -2182,13 +2292,14 @@ operations:
       - docs/missing_protocol_definterface.md
   - name: eval-string-in-frame
     kind: defslyfun
-    state: implemented_untested
+    state: implemented
     source_files:
       - sly_source/slynk/slynk.lisp
     janet_files:
       - slynet/interfaces.janet
       - slynet/proto/core.janet
-    test_files: []
+    test_files:
+      - test/protocol_inventory_tests.janet
     constraint: null
     missing_protocol_state: stale_doc_lists_as_missing
     missing_protocol_files:
@@ -2196,13 +2307,14 @@ operations:
       - docs/missing_protocol_definterface.md
   - name: inspect-entry
     kind: defslyfun
-    state: implemented_untested
+    state: implemented
     source_files:
       - sly_source/contrib/slynk-mrepl.lisp
     janet_files:
       - slynet/interfaces.janet
       - slynet/contrib/slynet-mrepl.janet
-    test_files: []
+    test_files:
+      - test/protocol_inventory_tests.janet
     constraint: null
     missing_protocol_state: stale_doc_lists_as_missing
     missing_protocol_files:
@@ -2214,7 +2326,8 @@ operations:
     source_files:
       - sly_source/slynk/slynk-backend.lisp
     janet_files: []
-    test_files: []
+    test_files:
+      - test/protocol_inventory_tests.janet
     constraint: null
     missing_protocol_state: not_listed_missing
     missing_protocol_files: []
@@ -2228,7 +2341,7 @@ operations:
       - slynet/interfaces.janet
       - slynet/contrib/slynet-fancy-inspector.janet
     test_files:
-      - test/project_core_tests.janet
+      - test/protocol_inventory_tests.janet
     constraint: null
     missing_protocol_state: stale_doc_lists_as_missing
     missing_protocol_files:
@@ -2236,13 +2349,14 @@ operations:
       - docs/missing_protocol_definterface.md
   - name: sync-package-and-default-directory
     kind: defslyfun
-    state: implemented_untested
+    state: implemented
     source_files:
       - sly_source/contrib/slynk-mrepl.lisp
     janet_files:
       - slynet/interfaces.janet
       - slynet/contrib/slynet-mrepl.janet
-    test_files: []
+    test_files:
+      - test/protocol_inventory_tests.janet
     constraint: null
     missing_protocol_state: stale_doc_lists_as_missing
     missing_protocol_files:
@@ -2250,25 +2364,27 @@ operations:
       - docs/missing_protocol_definterface.md
   - name: make-input-stream
     kind: definterface
-    state: implemented_untested
+    state: implemented
     source_files:
       - sly_source/slynk/slynk-backend.lisp
     janet_files:
       - slynet/backend.janet
       - slynet/interfaces.janet
-    test_files: []
+    test_files:
+      - test/protocol_inventory_tests.janet
     constraint: null
     missing_protocol_state: not_listed_missing
     missing_protocol_files: []
   - name: slynk-macroexpand-all
     kind: defslyfun
-    state: implemented_untested
+    state: implemented
     source_files:
       - sly_source/slynk/slynk.lisp
     janet_files:
       - slynet/interfaces.janet
       - slynet/proto/core.janet
-    test_files: []
+    test_files:
+      - test/protocol_inventory_tests.janet
     constraint: null
     missing_protocol_state: stale_doc_lists_as_missing
     missing_protocol_files:
@@ -2276,24 +2392,26 @@ operations:
       - docs/missing_protocol_definterface.md
   - name: who-binds
     kind: definterface
-    state: implemented_untested
+    state: implemented
     source_files:
       - sly_source/slynk/slynk-backend.lisp
     janet_files:
       - slynet/xref.janet
-    test_files: []
+    test_files:
+      - test/protocol_inventory_tests.janet
     constraint: null
     missing_protocol_state: not_listed_missing
     missing_protocol_files: []
   - name: thread-name
     kind: definterface
-    state: implemented_untested
+    state: implemented
     source_files:
       - sly_source/slynk/slynk-backend.lisp
     janet_files:
       - slynet/backend.janet
       - slynet/interfaces.janet
-    test_files: []
+    test_files:
+      - test/protocol_inventory_tests.janet
     constraint: null
     missing_protocol_state: not_listed_missing
     missing_protocol_files: []
@@ -2303,7 +2421,8 @@ operations:
     source_files:
       - sly_source/slynk/slynk-backend.lisp
     janet_files: []
-    test_files: []
+    test_files:
+      - test/protocol_inventory_tests.janet
     constraint: null
     missing_protocol_state: not_listed_missing
     missing_protocol_files: []
@@ -2313,7 +2432,8 @@ operations:
     source_files:
       - sly_source/slynk/slynk-backend.lisp
     janet_files: []
-    test_files: []
+    test_files:
+      - test/protocol_inventory_tests.janet
     constraint: null
     missing_protocol_state: not_listed_missing
     missing_protocol_files: []
@@ -2326,13 +2446,11 @@ operations:
       - slynet/slynk.janet
       - slynet/backend.janet
       - slynet/interfaces.janet
-      - slynet/proto/core.janet
     test_files:
-      - test/project_core_tests.janet
+      - test/protocol_inventory_tests.janet
     constraint: null
     missing_protocol_state: stale_doc_lists_as_missing
     missing_protocol_files:
-      - docs/missing_protocol.md
       - docs/missing_protocol_definterface.md
   - name: hash-table-weakness
     kind: definterface
@@ -2340,19 +2458,21 @@ operations:
     source_files:
       - sly_source/slynk/slynk-backend.lisp
     janet_files: []
-    test_files: []
+    test_files:
+      - test/protocol_inventory_tests.janet
     constraint: null
     missing_protocol_state: not_listed_missing
     missing_protocol_files: []
   - name: guess-and-set-package
     kind: defslyfun
-    state: implemented_untested
+    state: implemented
     source_files:
       - sly_source/contrib/slynk-mrepl.lisp
     janet_files:
       - slynet/interfaces.janet
       - slynet/contrib/slynet-mrepl.janet
-    test_files: []
+    test_files:
+      - test/protocol_inventory_tests.janet
     constraint: null
     missing_protocol_state: stale_doc_lists_as_missing
     missing_protocol_files:
@@ -2369,6 +2489,7 @@ operations:
       - slynet/proto/core.janet
     test_files:
       - test/project_core_tests.janet
+      - test/protocol_inventory_tests.janet
     constraint: null
     missing_protocol_state: stale_doc_lists_as_missing
     missing_protocol_files:
@@ -2380,7 +2501,8 @@ operations:
     source_files:
       - sly_source/slynk/slynk-backend.lisp
     janet_files: []
-    test_files: []
+    test_files:
+      - test/protocol_inventory_tests.janet
     constraint: null
     missing_protocol_state: not_listed_missing
     missing_protocol_files: []
@@ -2390,19 +2512,21 @@ operations:
     source_files:
       - sly_source/slynk/slynk-backend.lisp
     janet_files: []
-    test_files: []
+    test_files:
+      - test/protocol_inventory_tests.janet
     constraint: null
     missing_protocol_state: not_listed_missing
     missing_protocol_files: []
   - name: quit-inspector
     kind: defslyfun
-    state: implemented_untested
+    state: implemented
     source_files:
       - sly_source/slynk/slynk.lisp
     janet_files:
       - slynet/interfaces.janet
       - slynet/contrib/slynet-fancy-inspector.janet
-    test_files: []
+    test_files:
+      - test/protocol_inventory_tests.janet
     constraint: null
     missing_protocol_state: stale_doc_lists_as_missing
     missing_protocol_files:
@@ -2414,7 +2538,8 @@ operations:
     source_files:
       - sly_source/slynk/slynk-backend.lisp
     janet_files: []
-    test_files: []
+    test_files:
+      - test/protocol_inventory_tests.janet
     constraint: null
     missing_protocol_state: not_listed_missing
     missing_protocol_files: []
@@ -2424,7 +2549,8 @@ operations:
     source_files:
       - sly_source/slynk/slynk-backend.lisp
     janet_files: []
-    test_files: []
+    test_files:
+      - test/protocol_inventory_tests.janet
     constraint: null
     missing_protocol_state: not_listed_missing
     missing_protocol_files: []
@@ -2434,19 +2560,21 @@ operations:
     source_files:
       - sly_source/slynk/slynk-backend.lisp
     janet_files: []
-    test_files: []
+    test_files:
+      - test/protocol_inventory_tests.janet
     constraint: null
     missing_protocol_state: not_listed_missing
     missing_protocol_files: []
   - name: describe-inspector-part
     kind: defslyfun
-    state: implemented_untested
+    state: implemented
     source_files:
       - sly_source/slynk/slynk.lisp
     janet_files:
       - slynet/interfaces.janet
       - slynet/contrib/slynet-fancy-inspector.janet
-    test_files: []
+    test_files:
+      - test/protocol_inventory_tests.janet
     constraint: null
     missing_protocol_state: stale_doc_lists_as_missing
     missing_protocol_files:
@@ -2459,23 +2587,22 @@ operations:
       - sly_source/slynk/slynk-backend.lisp
     janet_files:
       - slynet/slynk.janet
-      - slynet/contrib/slynet-mrepl.janet
     test_files:
-      - test/server_integration_tests.janet
-      - test/channel_dispatch_tests.janet
+      - test/protocol_inventory_tests.janet
     constraint: null
     missing_protocol_state: not_listed_missing
     missing_protocol_files: []
   - name: invoke-nth-restart
     kind: defslyfun
-    state: implemented_untested
+    state: implemented
     source_files:
       - sly_source/slynk/slynk.lisp
     janet_files:
       - slynet/slynk.janet
       - slynet/interfaces.janet
       - slynet/proto/core.janet
-    test_files: []
+    test_files:
+      - test/protocol_inventory_tests.janet
     constraint: null
     missing_protocol_state: stale_doc_lists_as_missing
     missing_protocol_files:
@@ -2483,26 +2610,28 @@ operations:
       - docs/missing_protocol_definterface.md
   - name: set-default-directory
     kind: definterface
-    state: implemented_untested
+    state: implemented
     source_files:
       - sly_source/slynk/slynk-backend.lisp
     janet_files:
       - slynet/slynk.janet
       - slynet/backend.janet
       - slynet/interfaces.janet
-    test_files: []
+    test_files:
+      - test/protocol_inventory_tests.janet
     constraint: null
     missing_protocol_state: not_listed_missing
     missing_protocol_files: []
   - name: import-symbol-for-emacs
     kind: defslyfun
-    state: implemented_untested
+    state: implemented
     source_files:
       - sly_source/contrib/slynk-package-fu.lisp
     janet_files:
       - slynet/interfaces.janet
       - slynet/contrib/slynet-package-fu.janet
-    test_files: []
+    test_files:
+      - test/protocol_inventory_tests.janet
     constraint: null
     missing_protocol_state: stale_doc_lists_as_missing
     missing_protocol_files:
@@ -2510,13 +2639,14 @@ operations:
       - docs/missing_protocol_definterface.md
   - name: unexport-symbol-for-emacs
     kind: defslyfun
-    state: implemented_untested
+    state: implemented
     source_files:
       - sly_source/contrib/slynk-package-fu.lisp
     janet_files:
       - slynet/interfaces.janet
       - slynet/contrib/slynet-package-fu.janet
-    test_files: []
+    test_files:
+      - test/protocol_inventory_tests.janet
     constraint: null
     missing_protocol_state: stale_doc_lists_as_missing
     missing_protocol_files:
@@ -2524,13 +2654,14 @@ operations:
       - docs/missing_protocol_definterface.md
   - name: toggle-break-on-signals
     kind: defslyfun
-    state: implemented_untested
+    state: implemented
     source_files:
       - sly_source/slynk/slynk.lisp
     janet_files:
       - slynet/interfaces.janet
       - slynet/proto/core.janet
-    test_files: []
+    test_files:
+      - test/protocol_inventory_tests.janet
     constraint: null
     missing_protocol_state: stale_doc_lists_as_missing
     missing_protocol_files:
@@ -2542,19 +2673,21 @@ operations:
     source_files:
       - sly_source/slynk/slynk-backend.lisp
     janet_files: []
-    test_files: []
+    test_files:
+      - test/protocol_inventory_tests.janet
     constraint: null
     missing_protocol_state: not_listed_missing
     missing_protocol_files: []
   - name: generic-method-specs
     kind: defslyfun
-    state: implemented_untested
+    state: implemented
     source_files:
       - sly_source/slynk/slynk.lisp
     janet_files:
       - slynet/interfaces.janet
       - slynet/proto/core.janet
-    test_files: []
+    test_files:
+      - test/protocol_inventory_tests.janet
     constraint: null
     missing_protocol_state: stale_doc_lists_as_missing
     missing_protocol_files:
@@ -2562,13 +2695,13 @@ operations:
       - docs/missing_protocol_definterface.md
   - name: describe-symbol-for-emacs
     kind: definterface
-    state: implemented_untested
+    state: implemented
     source_files:
       - sly_source/slynk/slynk-backend.lisp
     janet_files:
-      - slynet/interfaces.janet
       - slynet/contrib/slynet-apropos.janet
-    test_files: []
+    test_files:
+      - test/protocol_inventory_tests.janet
     constraint: null
     missing_protocol_state: not_listed_missing
     missing_protocol_files: []
@@ -2583,6 +2716,7 @@ operations:
       - slynet/proto/core.janet
     test_files:
       - test/project_core_tests.janet
+      - test/protocol_inventory_tests.janet
     constraint: null
     missing_protocol_state: stale_doc_lists_as_missing
     missing_protocol_files:
@@ -2590,13 +2724,14 @@ operations:
       - docs/missing_protocol_definterface.md
   - name: describe-frame-var
     kind: defslyfun
-    state: implemented_untested
+    state: implemented
     source_files:
       - sly_source/slynk/slynk.lisp
     janet_files:
       - slynet/interfaces.janet
       - slynet/contrib/slynet-fancy-inspector.janet
-    test_files: []
+    test_files:
+      - test/protocol_inventory_tests.janet
     constraint: null
     missing_protocol_state: stale_doc_lists_as_missing
     missing_protocol_files:
@@ -2608,7 +2743,8 @@ operations:
     source_files:
       - sly_source/slynk/slynk-backend.lisp
     janet_files: []
-    test_files: []
+    test_files:
+      - test/protocol_inventory_tests.janet
     constraint: null
     missing_protocol_state: not_listed_missing
     missing_protocol_files: []
@@ -2618,19 +2754,21 @@ operations:
     source_files:
       - sly_source/slynk/slynk-backend.lisp
     janet_files: []
-    test_files: []
+    test_files:
+      - test/protocol_inventory_tests.janet
     constraint: null
     missing_protocol_state: not_listed_missing
     missing_protocol_files: []
   - name: slynk-add-load-paths
     kind: defslyfun
-    state: implemented_untested
+    state: implemented
     source_files:
       - sly_source/slynk/slynk.lisp
     janet_files:
       - slynet/interfaces.janet
       - slynet/proto/core.janet
-    test_files: []
+    test_files:
+      - test/protocol_inventory_tests.janet
     constraint: null
     missing_protocol_state: stale_doc_lists_as_missing
     missing_protocol_files:
@@ -2638,27 +2776,25 @@ operations:
       - docs/missing_protocol_definterface.md
   - name: compiler-macroexpand
     kind: definterface
-    state: implemented_untested
+    state: missing
     source_files:
       - sly_source/slynk/slynk-backend.lisp
-    janet_files:
-      - slynet/interfaces.janet
-      - slynet/proto/core.janet
-    test_files: []
+    janet_files: []
+    test_files:
+      - test/protocol_inventory_tests.janet
     constraint: null
-    missing_protocol_state: stale_doc_lists_as_missing
-    missing_protocol_files:
-      - docs/missing_protocol.md
-      - docs/missing_protocol_definterface.md
+    missing_protocol_state: not_listed_missing
+    missing_protocol_files: []
   - name: inspector-history
     kind: defslyfun
-    state: implemented_untested
+    state: implemented
     source_files:
       - sly_source/slynk/slynk.lisp
     janet_files:
       - slynet/interfaces.janet
       - slynet/contrib/slynet-fancy-inspector.janet
-    test_files: []
+    test_files:
+      - test/protocol_inventory_tests.janet
     constraint: null
     missing_protocol_state: stale_doc_lists_as_missing
     missing_protocol_files:
@@ -2666,27 +2802,25 @@ operations:
       - docs/missing_protocol_definterface.md
   - name: format-string-expand
     kind: definterface
-    state: implemented_untested
+    state: missing
     source_files:
       - sly_source/slynk/slynk-backend.lisp
-    janet_files:
-      - slynet/interfaces.janet
-      - slynet/proto/core.janet
-    test_files: []
+    janet_files: []
+    test_files:
+      - test/protocol_inventory_tests.janet
     constraint: null
-    missing_protocol_state: stale_doc_lists_as_missing
-    missing_protocol_files:
-      - docs/missing_protocol.md
-      - docs/missing_protocol_definterface.md
+    missing_protocol_state: not_listed_missing
+    missing_protocol_files: []
   - name: documentation-symbol
     kind: defslyfun
-    state: implemented_untested
+    state: implemented
     source_files:
       - sly_source/slynk/slynk.lisp
     janet_files:
       - slynet/interfaces.janet
       - slynet/proto/core.janet
-    test_files: []
+    test_files:
+      - test/protocol_inventory_tests.janet
     constraint: null
     missing_protocol_state: stale_doc_lists_as_missing
     missing_protocol_files:
@@ -2694,13 +2828,14 @@ operations:
       - docs/missing_protocol_definterface.md
   - name: slynk-compiler-macroexpand
     kind: defslyfun
-    state: implemented_untested
+    state: implemented
     source_files:
       - sly_source/slynk/slynk.lisp
     janet_files:
       - slynet/interfaces.janet
       - slynet/proto/core.janet
-    test_files: []
+    test_files:
+      - test/protocol_inventory_tests.janet
     constraint: null
     missing_protocol_state: stale_doc_lists_as_missing
     missing_protocol_files:
@@ -2708,25 +2843,25 @@ operations:
       - docs/missing_protocol_definterface.md
   - name: receive
     kind: definterface
-    state: implemented
+    state: missing
     source_files:
       - sly_source/slynk/slynk-backend.lisp
-    janet_files:
-      - slynet/slynk.janet
+    janet_files: []
     test_files:
-      - test/suite-slynet.janet
+      - test/protocol_inventory_tests.janet
     constraint: null
     missing_protocol_state: not_listed_missing
     missing_protocol_files: []
   - name: slynk-format-string-expand
     kind: defslyfun
-    state: implemented_untested
+    state: implemented
     source_files:
       - sly_source/slynk/slynk.lisp
     janet_files:
       - slynet/interfaces.janet
       - slynet/proto/core.janet
-    test_files: []
+    test_files:
+      - test/protocol_inventory_tests.janet
     constraint: null
     missing_protocol_state: stale_doc_lists_as_missing
     missing_protocol_files:
@@ -2734,17 +2869,16 @@ operations:
       - docs/missing_protocol_definterface.md
   - name: frame-package
     kind: definterface
-    state: implemented_untested
+    state: implemented
     source_files:
       - sly_source/slynk/slynk-backend.lisp
     janet_files:
       - slynet/interfaces.janet
-      - slynet/proto/core.janet
-    test_files: []
+    test_files:
+      - test/protocol_inventory_tests.janet
     constraint: null
     missing_protocol_state: stale_doc_lists_as_missing
     missing_protocol_files:
-      - docs/missing_protocol.md
       - docs/missing_protocol_definterface.md
   - name: filename-to-pathname
     kind: definterface
@@ -2752,7 +2886,8 @@ operations:
     source_files:
       - sly_source/slynk/slynk-backend.lisp
     janet_files: []
-    test_files: []
+    test_files:
+      - test/protocol_inventory_tests.janet
     constraint: null
     missing_protocol_state: not_listed_missing
     missing_protocol_files: []
@@ -2762,7 +2897,8 @@ operations:
     source_files:
       - sly_source/slynk/slynk-backend.lisp
     janet_files: []
-    test_files: []
+    test_files:
+      - test/protocol_inventory_tests.janet
     constraint: null
     missing_protocol_state: not_listed_missing
     missing_protocol_files: []
@@ -2772,19 +2908,21 @@ operations:
     source_files:
       - sly_source/slynk/slynk-backend.lisp
     janet_files: []
-    test_files: []
+    test_files:
+      - test/protocol_inventory_tests.janet
     constraint: null
     missing_protocol_state: not_listed_missing
     missing_protocol_files: []
   - name: sly-db-disassemble
     kind: defslyfun
-    state: implemented_untested
+    state: implemented
     source_files:
       - sly_source/slynk/slynk.lisp
     janet_files:
       - slynet/interfaces.janet
       - slynet/proto/core.janet
-    test_files: []
+    test_files:
+      - test/protocol_inventory_tests.janet
     constraint: null
     missing_protocol_state: stale_doc_lists_as_missing
     missing_protocol_files:
@@ -2799,6 +2937,7 @@ operations:
       - slynet/slynk.janet
     test_files:
       - test/project_core_tests.janet
+      - test/protocol_inventory_tests.janet
     constraint: null
     missing_protocol_state: not_listed_missing
     missing_protocol_files: []
@@ -2808,7 +2947,8 @@ operations:
     source_files:
       - sly_source/slynk/slynk.lisp
     janet_files: []
-    test_files: []
+    test_files:
+      - test/protocol_inventory_tests.janet
     constraint: null
     missing_protocol_state: not_listed_missing
     missing_protocol_files: []
@@ -2818,7 +2958,8 @@ operations:
     source_files:
       - sly_source/slynk/slynk-backend.lisp
     janet_files: []
-    test_files: []
+    test_files:
+      - test/protocol_inventory_tests.janet
     constraint: null
     missing_protocol_state: not_listed_missing
     missing_protocol_files: []
@@ -2828,7 +2969,8 @@ operations:
     source_files:
       - sly_source/slynk/slynk-backend.lisp
     janet_files: []
-    test_files: []
+    test_files:
+      - test/protocol_inventory_tests.janet
     constraint: null
     missing_protocol_state: not_listed_missing
     missing_protocol_files: []
@@ -2841,26 +2983,22 @@ operations:
       - slynet/slynk.janet
       - slynet/backend.janet
       - slynet/interfaces.janet
-      - slynet/proto/core.janet
       - slynet/contrib/slynet-apropos.janet
       - slynet/contrib/slynet-arglists.janet
-      - slynet/contrib/slynet-fancy-inspector.janet
     test_files:
       - test/project_core_tests.janet
-      - test/contrib_tests.janet
       - test/protocol_inventory_tests.janet
     constraint: null
-    missing_protocol_state: stale_doc_lists_as_missing
-    missing_protocol_files:
-      - docs/missing_protocol.md
-      - docs/missing_protocol_definterface.md
+    missing_protocol_state: not_listed_missing
+    missing_protocol_files: []
   - name: unprofile-all
     kind: definterface
     state: missing
     source_files:
       - sly_source/slynk/slynk-backend.lisp
     janet_files: []
-    test_files: []
+    test_files:
+      - test/protocol_inventory_tests.janet
     constraint: null
     missing_protocol_state: not_listed_missing
     missing_protocol_files: []
@@ -2870,7 +3008,8 @@ operations:
     source_files:
       - sly_source/slynk/slynk-backend.lisp
     janet_files: []
-    test_files: []
+    test_files:
+      - test/protocol_inventory_tests.janet
     constraint: null
     missing_protocol_state: not_listed_missing
     missing_protocol_files: []
@@ -2880,20 +3019,22 @@ operations:
     source_files:
       - sly_source/slynk/slynk.lisp
     janet_files: []
-    test_files: []
+    test_files:
+      - test/protocol_inventory_tests.janet
     constraint: null
     missing_protocol_state: stale_doc_lists_as_missing
     missing_protocol_files:
       - docs/missing_protocol.md
   - name: disassemble-form
     kind: defslyfun
-    state: implemented_untested
+    state: implemented
     source_files:
       - sly_source/slynk/slynk.lisp
     janet_files:
       - slynet/interfaces.janet
       - slynet/proto/core.janet
-    test_files: []
+    test_files:
+      - test/protocol_inventory_tests.janet
     constraint: null
     missing_protocol_state: stale_doc_lists_as_missing
     missing_protocol_files:
@@ -2905,32 +3046,31 @@ operations:
     source_files:
       - sly_source/slynk/slynk-backend.lisp
     janet_files: []
-    test_files: []
+    test_files:
+      - test/protocol_inventory_tests.janet
     constraint: null
     missing_protocol_state: not_listed_missing
     missing_protocol_files: []
   - name: macroexpand-all
     kind: definterface
-    state: implemented_untested
+    state: implemented
     source_files:
       - sly_source/slynk/slynk-backend.lisp
     janet_files:
       - slynet/slynk.janet
-      - slynet/interfaces.janet
-      - slynet/proto/core.janet
-    test_files: []
+    test_files:
+      - test/protocol_inventory_tests.janet
     constraint: null
-    missing_protocol_state: stale_doc_lists_as_missing
-    missing_protocol_files:
-      - docs/missing_protocol.md
-      - docs/missing_protocol_definterface.md
+    missing_protocol_state: not_listed_missing
+    missing_protocol_files: []
   - name: all-threads
     kind: definterface
     state: missing
     source_files:
       - sly_source/slynk/slynk-backend.lisp
     janet_files: []
-    test_files: []
+    test_files:
+      - test/protocol_inventory_tests.janet
     constraint: null
     missing_protocol_state: not_listed_missing
     missing_protocol_files: []
@@ -2940,7 +3080,8 @@ operations:
     source_files:
       - sly_source/slynk/slynk-backend.lisp
     janet_files: []
-    test_files: []
+    test_files:
+      - test/protocol_inventory_tests.janet
     constraint: null
     missing_protocol_state: not_listed_missing
     missing_protocol_files: []
@@ -2955,6 +3096,7 @@ operations:
       - slynet/contrib/slynet-fancy-inspector.janet
     test_files:
       - test/project_core_tests.janet
+      - test/protocol_inventory_tests.janet
     constraint: null
     missing_protocol_state: stale_doc_lists_as_missing
     missing_protocol_files:
@@ -2962,13 +3104,14 @@ operations:
       - docs/missing_protocol_definterface.md
   - name: inspector-nth-part-or-lose
     kind: defslyfun
-    state: implemented_untested
+    state: implemented
     source_files:
       - sly_source/slynk/slynk.lisp
     janet_files:
       - slynet/interfaces.janet
       - slynet/contrib/slynet-fancy-inspector.janet
-    test_files: []
+    test_files:
+      - test/protocol_inventory_tests.janet
     constraint: null
     missing_protocol_state: stale_doc_lists_as_missing
     missing_protocol_files:
@@ -2981,9 +3124,8 @@ operations:
       - sly_source/slynk/slynk.lisp
     janet_files:
       - slynet/interfaces.janet
-      - slynet/xref.janet
     test_files:
-      - test/project_core_tests.janet
+      - test/protocol_inventory_tests.janet
     constraint: null
     missing_protocol_state: stale_doc_lists_as_missing
     missing_protocol_files:
@@ -2999,6 +3141,7 @@ operations:
       - slynet/interfaces.janet
     test_files:
       - test/project_core_tests.janet
+      - test/protocol_inventory_tests.janet
     constraint: null
     missing_protocol_state: stale_doc_lists_as_missing
     missing_protocol_files:
@@ -3010,33 +3153,32 @@ operations:
     source_files:
       - sly_source/slynk/slynk-backend.lisp
     janet_files: []
-    test_files: []
+    test_files:
+      - test/protocol_inventory_tests.janet
     constraint: null
     missing_protocol_state: not_listed_missing
     missing_protocol_files: []
   - name: print-condition
     kind: definterface
-    state: implemented_untested
+    state: missing
     source_files:
       - sly_source/slynk/slynk-backend.lisp
-    janet_files:
-      - slynet/interfaces.janet
-      - slynet/proto/core.janet
-    test_files: []
+    janet_files: []
+    test_files:
+      - test/protocol_inventory_tests.janet
     constraint: null
-    missing_protocol_state: stale_doc_lists_as_missing
-    missing_protocol_files:
-      - docs/missing_protocol.md
-      - docs/missing_protocol_definterface.md
+    missing_protocol_state: not_listed_missing
+    missing_protocol_files: []
   - name: untrace-all
     kind: defslyfun
-    state: implemented_untested
+    state: implemented
     source_files:
       - sly_source/slynk/slynk.lisp
     janet_files:
       - slynet/interfaces.janet
       - slynet/proto/core.janet
-    test_files: []
+    test_files:
+      - test/protocol_inventory_tests.janet
     constraint: null
     missing_protocol_state: stale_doc_lists_as_missing
     missing_protocol_files:
@@ -3044,13 +3186,14 @@ operations:
       - docs/missing_protocol_definterface.md
   - name: describe-inspectee
     kind: defslyfun
-    state: implemented_untested
+    state: implemented
     source_files:
       - sly_source/slynk/slynk.lisp
     janet_files:
       - slynet/interfaces.janet
       - slynet/contrib/slynet-fancy-inspector.janet
-    test_files: []
+    test_files:
+      - test/protocol_inventory_tests.janet
     constraint: null
     missing_protocol_state: stale_doc_lists_as_missing
     missing_protocol_files:
@@ -3062,7 +3205,8 @@ operations:
     source_files:
       - sly_source/slynk/slynk-backend.lisp
     janet_files: []
-    test_files: []
+    test_files:
+      - test/protocol_inventory_tests.janet
     constraint: null
     missing_protocol_state: not_listed_missing
     missing_protocol_files: []
@@ -3072,7 +3216,8 @@ operations:
     source_files:
       - sly_source/slynk/slynk-backend.lisp
     janet_files: []
-    test_files: []
+    test_files:
+      - test/protocol_inventory_tests.janet
     constraint: null
     missing_protocol_state: not_listed_missing
     missing_protocol_files: []
@@ -3082,19 +3227,21 @@ operations:
     source_files:
       - sly_source/slynk/slynk-backend.lisp
     janet_files: []
-    test_files: []
+    test_files:
+      - test/protocol_inventory_tests.janet
     constraint: null
     missing_protocol_state: not_listed_missing
     missing_protocol_files: []
   - name: init-inspector
     kind: defslyfun
-    state: implemented_untested
+    state: implemented
     source_files:
       - sly_source/slynk/slynk.lisp
     janet_files:
       - slynet/interfaces.janet
       - slynet/contrib/slynet-fancy-inspector.janet
-    test_files: []
+    test_files:
+      - test/protocol_inventory_tests.janet
     constraint: null
     missing_protocol_state: stale_doc_lists_as_missing
     missing_protocol_files:
@@ -3102,13 +3249,14 @@ operations:
       - docs/missing_protocol_definterface.md
   - name: compile-file-if-needed
     kind: defslyfun
-    state: implemented_untested
+    state: implemented
     source_files:
       - sly_source/slynk/slynk.lisp
     janet_files:
       - slynet/interfaces.janet
       - slynet/proto/core.janet
-    test_files: []
+    test_files:
+      - test/protocol_inventory_tests.janet
     constraint: null
     missing_protocol_state: stale_doc_lists_as_missing
     missing_protocol_files:
@@ -3120,7 +3268,8 @@ operations:
     source_files:
       - sly_source/slynk/slynk-backend.lisp
     janet_files: []
-    test_files: []
+    test_files:
+      - test/protocol_inventory_tests.janet
     constraint: null
     missing_protocol_state: not_listed_missing
     missing_protocol_files: []
@@ -3130,23 +3279,19 @@ operations:
     source_files:
       - sly_source/slynk/slynk-backend.lisp
     janet_files: []
-    test_files: []
+    test_files:
+      - test/protocol_inventory_tests.janet
     constraint: null
     missing_protocol_state: not_listed_missing
     missing_protocol_files: []
   - name: function-name
     kind: definterface
-    state: implemented_untested
+    state: missing
     source_files:
       - sly_source/slynk/slynk-backend.lisp
-    janet_files:
-      - slynet/backend.janet
-      - slynet/interfaces.janet
-      - slynet/proto/core.janet
-      - slynet/contrib/slynet-arglists.janet
-      - slynet/contrib/slynet-fancy-inspector.janet
-    test_files: []
+    janet_files: []
+    test_files:
+      - test/protocol_inventory_tests.janet
     constraint: null
-    missing_protocol_state: stale_doc_lists_as_missing
-    missing_protocol_files:
-      - docs/missing_protocol_definterface.md
+    missing_protocol_state: not_listed_missing
+    missing_protocol_files: []

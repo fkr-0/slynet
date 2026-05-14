@@ -48,15 +48,50 @@
 (defn- contains? [text needle]
   (not (nil? (string/find needle text))))
 
-(defn- file-mentions? [path needle]
-  (contains? (slurp-or-empty path) needle))
+(defn- any-pattern? [text patterns]
+  (var ok false)
+  (each pattern patterns
+    (when (contains? text pattern)
+      (set ok true)))
+  ok)
 
-(defn- matching-files [files needle]
+(defn- file-matches-patterns? [path patterns]
+  (any-pattern? (slurp-or-empty path) patterns))
+
+(defn- evidence-files [files patterns]
   (def out @[])
   (each path files
-    (when (file-mentions? path needle)
+    (when (file-matches-patterns? path patterns)
       (array/push out path)))
   out)
+
+(defn- source-patterns [operation]
+  @[(string "(defslyfun " operation)
+    (string "(definterface " operation)])
+
+(defn- janet-patterns [operation]
+  @[(string "(defn " operation)
+    (string "(def " operation " ")
+    (string "(var " operation " ")
+    (string "(inf/defimpl '" operation)
+    (string "(inf/defimpl "" operation """)
+    (string "(definterface '" operation)
+    (string "(definterface " operation " ")
+    (string ":" operation " ")
+    (string ":" operation "}")])
+
+(defn- test-patterns [operation]
+  @[(string "'(" operation " ")
+    (string "'" operation)
+    (string """ operation """)
+    (string "name: " operation)
+    (string "  - name: " operation)])
+
+(defn- missing-doc-patterns [operation]
+  @[(string "`" operation "`")
+    (string "*   `" operation "`")
+    (string "(definterface " operation)
+    (string "(defslyfun " operation)])
 
 (defn- min2 [a b]
   (if (< a b) a b))
@@ -110,7 +145,7 @@
   names)
 
 (defn- stale-doc-state [operation]
-  (if (> (length (matching-files stale-doc-files operation)) 0)
+  (if (> (length (evidence-files stale-doc-files (missing-doc-patterns operation))) 0)
     "stale_doc_lists_as_missing"
     "not_listed_missing"))
 
@@ -135,9 +170,9 @@
 (defn- operation-record [rec]
   (def operation (rec :name))
   (def source-evidence (rec :source_files))
-  (def janet-evidence (matching-files janet-files operation))
-  (def test-evidence (matching-files test-files operation))
-  (def stale-files (matching-files stale-doc-files operation))
+  (def janet-evidence (evidence-files janet-files (janet-patterns operation)))
+  (def test-evidence (evidence-files test-files (test-patterns operation)))
+  (def stale-files (evidence-files stale-doc-files (missing-doc-patterns operation)))
   (def out (buffer/new 0))
   (buffer/push-string out (string "  - name: " operation "\n"))
   (buffer/push-string out (string "    kind: " (string/join (rec :kinds) ",") "\n"))
