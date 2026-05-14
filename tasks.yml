@@ -351,7 +351,7 @@ task_groups:
 
   - id: T01_protocol_inventory_generator
     title: "Generate a machine-readable SLY/SLYNK-to-SLYNET inventory"
-    status: todo
+    status: in_progress
     description: >-
       Build slynt's translation map from source, not from stale hand-written lists. Classify each
       reference operation as implemented, tested, stubbed, missing, emulated, or Janet-forbidden.
@@ -389,6 +389,40 @@ task_groups:
           command: "JANET_PATH=$PWD janet test/protocol_inventory_tests.janet --case handshake-status"
       aggregate:
         - "JANET_PATH=$PWD janet test/run_tests.janet"
+    implementation_slices:
+      - id: T01-1_handshake_completion_inventory
+        status: done
+        description: "Generate initial inventory records for ping, connection-info, simple-completions, and flex-completions."
+        files:
+          created:
+            - tools/protocol_inventory.janet
+            - docs/generated/protocol-inventory.yml
+            - test/protocol_inventory_tests.janet
+          updated:
+            - test/run_tests.janet
+            - tasks.yml
+        verification_log:
+          - date: "2026-05-14"
+            phase: red
+            command: "bridge.yml:test"
+            result: "failed as intended: tools/protocol_inventory.janet and docs/generated/protocol-inventory.yml missing"
+          - date: "2026-05-14"
+            phase: green
+            command: "JANET_PATH=$PWD janet test/run_tests.janet :report compact"
+            result: "passed: 46 tests, 147/147 asserts, compact stdout_lines=4, stderr empty"
+          - date: "2026-05-14"
+            phase: regression
+            command: "bridge.yml:test"
+            result: "passed: 46 tests, 147/147 asserts, stderr empty"
+        limitations:
+          - "Current generator uses a curated first-slice operation list, not yet full source extraction."
+          - "Evidence matching is mention-based and can over-classify files that contain operation names in broad contexts."
+      - id: T01-2_full_source_extraction
+        status: todo
+        description: "Expand generator to parse defslyfun, definterface, and contrib definitions across the full SLY source corpus."
+      - id: T01-3_precise_evidence_matching
+        status: todo
+        description: "Replace broad string matching with definition-aware and test-assertion-aware evidence matching."
     done_when:
       - "docs/generated/protocol-inventory.yml exists."
       - "Every operation has state, source_files, janet_files, tests, and constraint fields."
