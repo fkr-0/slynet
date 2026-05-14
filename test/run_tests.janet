@@ -7,6 +7,7 @@
 (import ./message-tests)
 (import ./suite-slynet)
 (import ./contrib_tests)
+(import ./runner_self_tests)
 
 (defn main [& args]
   (apply runner/run-args args))

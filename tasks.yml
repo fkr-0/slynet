@@ -468,7 +468,7 @@ task_groups:
       - "Preserved actual uncaught test failure stacktrace printing in mini-test.janet."
     emerging_followups:
       - id: T03A_quiet_stdout_mode
-        status: in_progress
+        status: done
         description: "Add an explicit compact test reporter mode that suppresses passing assertion echo while preserving failure details."
         files:
           update:
@@ -502,14 +502,23 @@ task_groups:
             task: T03A-1_regression
             command: "bridge.yml:test"
             result: "passed: 43 tests, 133/133 asserts, stderr empty"
+          - date: "2026-05-14"
+            task: T03A-2_add_runner_self_tests
+            command: "bridge.yml:test"
+            result: "passed: 45 tests, 140/140 asserts, stderr empty"
+          - date: "2026-05-14"
+            task: T03A-2_compact_regression
+            command: "JANET_PATH=$PWD janet test/run_tests.janet :report compact >/tmp/slynet-t03a2-compact.out 2>/tmp/slynet-t03a2-compact.err"
+            result: "passed: status=0, stdout_lines=4, stderr_bytes=0, no per-test banners"
+
         remaining_subtasks:
           - id: T03A-1_remove_test_body_prints
             status: done
             description: "Eliminate or gate direct prints from test bodies and module initialization so compact output becomes summary-only on success."
             evidence: "RED: compact mode emitted 90 stdout lines; GREEN: compact mode emits only summary framing, stdout_lines=4, stderr_bytes=0."
           - id: T03A-2_add_runner_self_tests
-            status: todo
-            description: "Add focused self-tests for parse-cli-args and normalize-report-options instead of relying only on shell probes."
+            status: done
+            description: "Add focused self-tests for parse-cli-args and normalize-report-options instead of relying only on shell probes. Implemented in test/runner_self_tests.janet."
 
   - id: T04_core_wire_protocol_and_message_codec
     title: "Harden SLY wire message read/write compatibility"

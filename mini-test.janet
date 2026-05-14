@@ -320,7 +320,7 @@
 #  :headers true|false
 #  :verbose true|false
 #  :loc :fails|:all|:none
-(defn- normalize-report-options [opts]
+(defn normalize-report-options [opts]
   (case (get opts :report nil)
     :compact
     (do
@@ -644,4 +644,6 @@
     :spy-reset! spy-reset!
     :tests *tests*
     :last-run *last-run*
+    :parse-cli-args parse-cli-args
+    :normalize-report-options normalize-report-options
     :run-args run-args})
