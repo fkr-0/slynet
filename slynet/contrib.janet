@@ -42,7 +42,8 @@
 
   (each name modules
     (let [module (get contrib-modules name)]
-      (print (string "SLYNET Contrib ...." name ".. module" (pp module)))
+      (when (= "1" (os/getenv "SLYNET_TEST_VERBOSE"))
+        (print (string "SLYNET Contrib ...." name ".. module" module)))
       (if module
         (try
           (do
@@ -56,14 +57,16 @@
               (print (string "Error initializing module " name ": " err))
               (put results name {:status :error :message (string err)}))))
         (put results name {:status :error :message "Module not found"}))))
-  (pp results)
+  (when (= "1" (os/getenv "SLYNET_TEST_VERBOSE"))
+    (pp results))
 
   results)
 
 (defn list-contrib-modules
   "Return a list of all available contrib modules."
   []
-  (print (keys contrib-modules))
+  (when (= "1" (os/getenv "SLYNET_TEST_VERBOSE"))
+    (print (keys contrib-modules)))
   (keys contrib-modules))
 
 (defn get-module

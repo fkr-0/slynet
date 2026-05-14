@@ -176,7 +176,8 @@
 
 (defn initialize-module []
   "Initialize the apropos module."
-  (print "Initializing SLYNET Apropos module")
+  (when (= "1" (os/getenv "SLYNET_TEST_VERBOSE"))
+    (print "Initializing SLYNET Apropos module"))
 
   # Check if the backend has the necessary functionality
   (def has-documentation (function? slyk-backend/documentation))

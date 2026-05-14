@@ -39,7 +39,7 @@
 # Emacs connection identifier
 (def *m-x-sly-from-emacs* nil)
 
-(print "1") #
+(when (= "1" (os/getenv "SLYNET_TEST_VERBOSE")) (print "1")) #
 # Connection and server state
 #
 
@@ -63,7 +63,7 @@
 (var *debug-io* nil)
 
 #
-(print "2") #
+(when (= "1" (os/getenv "SLYNET_TEST_VERBOSE")) (print "2")) #
 # Default preferences and settings
 #
 
@@ -75,7 +75,7 @@
 
 # Current debugger hook function
 (var *debugger-hook-function* nil)
-(print "3") #
+(when (= "1" (os/getenv "SLYNET_TEST_VERBOSE")) (print "3")) #
 
 # Default bindings for worker threads
 (def *default-worker-thread-bindings*
@@ -877,7 +877,7 @@
 (ensure-core-implementations!)
 (ensure-core-implementations!)
 
-(print "4") #
+(when (= "1" (os/getenv "SLYNET_TEST_VERBOSE")) (print "4")) #
 
 #
 # Error handling
@@ -895,7 +895,7 @@
    Adds the SLYNET prefix and ensures proper string conversion."
   [& args]
   (string *echo-area-prefix* (string/join (map string args) " ")))
-(print "3") #
+(when (= "1" (os/getenv "SLYNET_TEST_VERBOSE")) (print "3")) #
 
 (defn eval-for-emacs [form buffer-package id]
   # Evaluate a form for Emacs.
@@ -1068,7 +1068,7 @@ Usage: (with-file f \"log.txt\" true (file/write f \"message\"))"
 #   # Store handler in connection's rex-handlers map
 #   (put (connection :rex-handlers) id eval-fiber))
 
-(print "4") #
+(when (= "1" (os/getenv "SLYNET_TEST_VERBOSE")) (print "4")) #
 (server-logger "SLYNET: Server module loaded.")
 (defn process-channel-send
   "Process a channel-send message."
@@ -1118,7 +1118,8 @@ Usage: (with-file f \"log.txt\" true (file/write f \"message\"))"
   "Close a connection cleanly."
   [connection reason]
   (server-logger "SLYNET: Closing connection: " reason)
-  (print "SLYNET: Closing connection: " reason)
+  (when (= "1" (os/getenv "SLYNET_TEST_VERBOSE"))
+    (print "SLYNET: Closing connection: " reason))
 
   # Try to send disconnect notification
   (try
@@ -1226,7 +1227,7 @@ Usage: (with-file f \"log.txt\" true (file/write f \"message\"))"
 
   # When loop exits, clean up
   (print "SLYNET: Connection loop exited for " (connection :addr)))
-(print "4") #
+(when (= "1" (os/getenv "SLYNET_TEST_VERBOSE")) (print "4")) #
 
 (defn start-server
   "Start the SLYNK server on the specified port.

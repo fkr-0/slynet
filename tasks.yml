@@ -487,16 +487,26 @@ task_groups:
           - date: "2026-05-14"
             phase: green_partial
             command: "JANET_PATH=$PWD janet test/run_tests.janet :report compact >/tmp/slynet-t03a-final.out 2>/tmp/slynet-t03a-final.err"
-            result: "passed compact gate subset: status=0, stdout_lines=90, stderr_bytes=0, summary present, no per-test banners"
+            result: "passed compact gate subset: status=0, stdout_lines=4 after T03A-1, stderr_bytes=0, summary present, no per-test banners"
         implemented_details:
           - "Added :report compact CLI option parsing."
           - "Normalized compact report to disable per-test headers, passing assertion streaming, and captured stdout display for passing tests."
           - "Reduced assertion message construction side effects by replacing several pp-based message builders with string-based builders."
+
+        latest_verification:
+          - date: "2026-05-14"
+            task: T03A-1_remove_test_body_prints
+            command: "JANET_PATH=$PWD janet test/run_tests.janet :report compact >/tmp/slynet-t03a1-green.out 2>/tmp/slynet-t03a1-green.err"
+            result: "passed: status=0, stdout_lines=4, stderr_bytes=0, summary only"
+          - date: "2026-05-14"
+            task: T03A-1_regression
+            command: "bridge.yml:test"
+            result: "passed: 43 tests, 133/133 asserts, stderr empty"
         remaining_subtasks:
           - id: T03A-1_remove_test_body_prints
-            status: todo
+            status: done
             description: "Eliminate or gate direct prints from test bodies and module initialization so compact output becomes summary-only on success."
-            evidence: "Compact mode still emits 90 stdout lines after removing banners."
+            evidence: "RED: compact mode emitted 90 stdout lines; GREEN: compact mode emits only summary framing, stdout_lines=4, stderr_bytes=0."
           - id: T03A-2_add_runner_self_tests
             status: todo
             description: "Add focused self-tests for parse-cli-args and normalize-report-options instead of relying only on shell probes."

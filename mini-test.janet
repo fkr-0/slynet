@@ -159,13 +159,13 @@
 (defmacro assert-true [expr &opt msg]
   (let [gx (gensym)]
     ~(let [,gx ,expr]
-       (test-assert! ,gx (or ,msg (string (pp ',expr) " is truthy"))
+       (test-assert! ,gx (or ,msg (string (string ',expr) " is truthy"))
                      {:type :true :got ,gx}))))
 
 (defmacro assert-false [expr &opt msg]
   (let [gx (gensym)]
     ~(let [,gx ,expr]
-       (test-assert! (not ,gx) (or ,msg (string (pp ',expr) " is falsy"))
+       (test-assert! (not ,gx) (or ,msg (string (string ',expr) " is falsy"))
                      {:type :false :got ,gx}))))
 
 (defmacro assert-in [x coll &opt msg]
@@ -179,14 +179,14 @@
   (let [gp (gensym) gx (gensym)]
     ~(let [,gp ,pred ,gx ,x]
        (def ok (,gp ,gx))
-       (test-assert! ok (or ,msg (string "predicate " (pp ',pred) " " (pp ,gx)))
+       (test-assert! ok (or ,msg (string "predicate " (string ',pred) " " ,gx))
                      {:type :pred :pred ',pred :arg ,gx}))))
 
 (defmacro assert-not-nil [x &opt msg]
   (let [gx (gensym)]
     ~(let [,gx ,x]
        (test-assert! (not (= ,gx nil))
-                     (or ,msg (string (pp ',x) " is not nil"))
+                     (or ,msg (string (string ',x) " is not nil"))
                      {:type :not-nil :got ,gx}))))
 
 (defmacro assert-throws [& body]
@@ -199,7 +199,7 @@
 # A "require-" variant that aborts test on failure (throws)
 (defmacro require-true [expr &opt msg]
   ~(when (not ,expr)
-     (error (or ,msg (string "required truthy: " (pp ',expr))))))
+     (error (or ,msg (string "required truthy: " (string ',expr))))))
 
 # ========= Test definition macro =========
 # Forms:
@@ -602,12 +602,14 @@
       (slice args 1)
       args))
   (def opts (parse-cli-args rest-args))
+  (def compact? (= :compact (get opts :report nil)))
   (def test-files (collect-test-files opts))
   (when (empty? test-files)
     (print (color :yellow "No test files found to load.\n")))
   (load-test-files test-files)
-  (print "\nLoaded " (length (keys *tests*)) " tests.\n")
-  (print (string/format "Options: %p\n" opts))
+  (unless compact?
+    (print "\nLoaded " (length (keys *tests*)) " tests.\n")
+    (print (string/format "Options: %p\n" opts)))
   (run-tests opts))
 
 # (defn -main [& args]
