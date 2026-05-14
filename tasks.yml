@@ -468,7 +468,7 @@ task_groups:
       - "Preserved actual uncaught test failure stacktrace printing in mini-test.janet."
     emerging_followups:
       - id: T03A_quiet_stdout_mode
-        status: todo
+        status: in_progress
         description: "Add an explicit compact test reporter mode that suppresses passing assertion echo while preserving failure details."
         files:
           update:
@@ -479,6 +479,27 @@ task_groups:
             - "JANET_PATH=$PWD janet test/run_tests.janet :report compact should emit summary and failures only."
           green:
             - "Default output remains current verbose test transcript; compact mode is concise and stderr-clean."
+        verification_log:
+          - date: "2026-05-14"
+            phase: red
+            command: "JANET_PATH=$PWD janet test/run_tests.janet :report compact >/tmp/slynet-t03a-red.out 2>/tmp/slynet-t03a-red.err; grep -q '======running test' /tmp/slynet-t03a-red.out"
+            result: "failed requirement as intended: status=0, stdout_lines=388, stderr_bytes=0, banners still present"
+          - date: "2026-05-14"
+            phase: green_partial
+            command: "JANET_PATH=$PWD janet test/run_tests.janet :report compact >/tmp/slynet-t03a-final.out 2>/tmp/slynet-t03a-final.err"
+            result: "passed compact gate subset: status=0, stdout_lines=90, stderr_bytes=0, summary present, no per-test banners"
+        implemented_details:
+          - "Added :report compact CLI option parsing."
+          - "Normalized compact report to disable per-test headers, passing assertion streaming, and captured stdout display for passing tests."
+          - "Reduced assertion message construction side effects by replacing several pp-based message builders with string-based builders."
+        remaining_subtasks:
+          - id: T03A-1_remove_test_body_prints
+            status: todo
+            description: "Eliminate or gate direct prints from test bodies and module initialization so compact output becomes summary-only on success."
+            evidence: "Compact mode still emits 90 stdout lines after removing banners."
+          - id: T03A-2_add_runner_self_tests
+            status: todo
+            description: "Add focused self-tests for parse-cli-args and normalize-report-options instead of relying only on shell probes."
 
   - id: T04_core_wire_protocol_and_message_codec
     title: "Harden SLY wire message read/write compatibility"

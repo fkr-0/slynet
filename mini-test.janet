@@ -143,9 +143,9 @@
                   (= (tuple/slice ,ga 0) (tuple/slice ,gb 0))
                   (= ,ga ,gb)))
        (if eq
-         (test-assert! true (or ,msg (string "(= " (pp ,a) " " (pp ,b) ")"))
+         (test-assert! true (or ,msg (string "(= " ,ga " " ,gb ")"))
                        {:type := :got ,ga :want ,gb})
-         (test-assert! false (or ,msg (string (pp ,a) " != " (pp ,b)))
+         (test-assert! false (or ,msg (string ,ga " != " ,gb))
                        {:type := :got ,ga :want ,gb})))))
 
 (defmacro assert-approx= [a b eps &opt msg]
@@ -153,7 +153,7 @@
     ~(let [,ga ,a ,gb ,b ,ge ,eps]
        (def ok (<= (math/abs (- ,ga ,gb)) ,ge))
        (test-assert! ok
-                     (or ,msg (string "approx " (pp ,a) " ~= " (pp ,b) " ± " (pp ,eps)))
+                     (or ,msg (string "approx " ,ga " ~= " ,gb " ± " ,ge))
                      {:type :approx :got ,ga :want ,gb :eps ,ge}))))
 
 (defmacro assert-true [expr &opt msg]
@@ -172,7 +172,7 @@
   (let [gx (gensym) gc (gensym)]
     ~(let [,gx ,x ,gc ,coll]
        (test-assert! (contains? ,gc ,gx)
-                     (or ,msg (string (pp ,x) " ∈ " (pp ,coll)))
+                     (or ,msg (string ,gx " ∈ " ,gc))
                      {:type :in :elem ,gx :coll ,gc}))))
 
 (defmacro assert-pred [pred x &opt msg]
@@ -320,13 +320,25 @@
 #  :headers true|false
 #  :verbose true|false
 #  :loc :fails|:all|:none
+(defn- normalize-report-options [opts]
+  (case (get opts :report nil)
+    :compact
+    (do
+      (put opts :headers false)
+      (put opts :stream :none)
+      (put opts :stdout :on-failure)
+      (put opts :loc :fails))
+    nil)
+  opts)
+
 (defn run-tests [&opt opts]
   (default opts @{})
+  (def run-opts (normalize-report-options opts))
   (set *last-run* @[])
   (def chosen
     (->> (values *tests*)
-         (filter (fn [t] (and (name-matches? (t :name) opts)
-                              (tags-match? (t :tags) opts))))))
+         (filter (fn [t] (and (name-matches? (t :name) run-opts)
+                              (tags-match? (t :tags) run-opts))))))
   (when (empty? chosen)
     (print (color :yellow "No tests selected.\n")))
 
@@ -335,13 +347,13 @@
   (var total-asserts 0)
 
   (each spec chosen
-    (def ctx (run-one spec opts))
+    (def ctx (run-one spec run-opts))
     (array/push *last-run* ctx)
     (set total-pass (+ total-pass (ctx :pass)))
     (set total-fail (+ total-fail (ctx :fail)))
     (set total-asserts (+ total-asserts (+ (ctx :pass) (ctx :fail))))
 
-    (case (get opts :stdout :on-failure)
+    (case (get run-opts :stdout :on-failure)
       :always
       (when (not (= "" (ctx :stdout)))
         (print (color :dim "----- stdout -----\n")
@@ -473,6 +485,7 @@
               :verbose (put opts key (parse-bool val))
               :stream (put opts key (parse-keyword val))
               :stdout (put opts key (parse-keyword val))
+              :report (put opts key (parse-keyword val))
               :loc (put opts key (parse-keyword val))
               :dir (put opts key (ensure-string val))
               :files (put opts key (parse-list val))
