@@ -10,29 +10,29 @@
   (and (>= (length string) (length prefix))
        (= (string/slice string 0 (length prefix)) prefix)))
 
-(defn format-completion-set [strings internal? package-name]
+(defn format-completion-set [strings _internal? _package-name]
   "Format a set of completion strings."
-  strings)
+  (array/slice (sorted strings) 0))
+
+
 (defn all-simple-completions [prefix package]
   "Return all symbols that match PREFIX in PACKAGE."
+  (default prefix "")
   (var result @[])
+  (var seen @{})
   # First try matching bindings in the current environment
   (var env (fiber/getenv (fiber/current)))
-  (while env
-    (eachp [k v] env
-      (var sym-name (string k))
-      (when (prefix-match-p prefix sym-name)
-        (array/push result sym-name)))
+  (while (table? env)
+    (eachp [k _] env
+      (let [sym-name (string k)]
+        (when (and (prefix-match-p prefix sym-name)
+                   (not (get seen sym-name)))
+          (put seen sym-name true)
+          (array/push result sym-name))))
     (set env (table/getproto env)))
 
-  # Also match imported modules and their bindings
-  (eachp [mod-name _] module/paths
-    (var mod-str (string mod-name))
-    (when (prefix-match-p prefix mod-str)
-      (array/push result mod-str)))
-
   # Format and return results
-  (format-completion-set (sort result) false package))
+  (format-completion-set result false package))
 
 (defn longest-common-prefix [strings]
   "Return the longest common prefix of STRINGS."
@@ -44,9 +44,9 @@
       (each str (array/slice strings 1)
         (var i 0)
         (while (and (< i common-len)
-                   (< i (length str))
-                   (= (string/slice first-str i (+ i 1))
-                      (string/slice str i (+ i 1))))
+                    (< i (length str))
+                    (= (string/slice first-str i (+ i 1))
+                       (string/slice str i (+ i 1))))
           (++ i))
         (set common-len i))
       (string/slice first-str 0 common-len))))
@@ -54,7 +54,7 @@
   "Return completions for PREFIX in PACKAGE as [COMPLETIONS COMMON-PREFIX]."
   (let [symbols (all-simple-completions prefix package)]
     (if (empty? symbols)
-      [[] prefix]
+      [@[] prefix]
       (let [common (longest-common-prefix symbols)]
         [symbols common]))))
 
@@ -64,7 +64,7 @@
   (var i 0)
   (var j 0)
   (while (and (< i (length pattern))
-             (< j (length string)))
+              (< j (length string)))
     (if (= (string/slice pattern i (+ i 1))
            (string/slice string j (+ j 1)))
       (do (++ i) (++ j))
@@ -73,20 +73,19 @@
 
 (defn find-flex-matches [pattern package]
   "Find symbols matching PATTERN with a flex-matching approach."
-  # Simple implementation for now
-  (let [result @[]]
-    # Implement flex matching logic here
-    # This could involve a more sophisticated substring matching algorithm
+  (default pattern "")
+  (let [result @[]
+        seen @{}]
     (var env (fiber/getenv (fiber/current)))
-    (while env
-      (eachp [k v] env
+    (while (table? env)
+      (eachp [k _] env
         (let [sym-name (string k)]
-          (when (flex-match-p pattern sym-name)
-            (array/push result [sym-name [0 (length sym-name)]]))))
+          (when (and (not (get seen sym-name))
+                     (flex-match-p pattern sym-name))
+            (put seen sym-name true)
+            (array/push result @[sym-name [0 (length sym-name)]]))))
       (set env (table/getproto env)))
-    result))
-
-
+    (sorted result)))
 
 
 # Flex matching completion
@@ -97,13 +96,10 @@
   # non-contiguous matches, e.g. "mv" matching "move-to"
   (let [result (find-flex-matches pattern package)]
     (if (empty? result)
-      [[] pattern]
+      [@[] pattern]
       (let [completions (map first result)
             common (longest-common-prefix completions)]
         [result common]))))
-
-
-
 
 
 # Export public API

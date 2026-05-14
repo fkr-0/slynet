@@ -1,4 +1,6 @@
-(use ../test-runner)
+# (use ../mini-test)
+(use ../mini-test)
+
 (import ../slynet/infrastructure :as inf)
 (import ../slynet/rpc :as rpc)
 
@@ -9,8 +11,7 @@
          (def err (inf/make-backend-error "fail" {:foo "bar"}))
          (assert= :slynk-backend-error (err :type))
          (assert= "fail" (err :message))
-         (assert= {:foo "bar"} (err :details)))
-   })
+         (assert= {:foo "bar"} (err :details)))})
 
 (register-test
   {:name "implementation error helper"
@@ -19,8 +20,7 @@
          (def err (inf/make-implementation-error 'iface "missing"))
          (assert= :slynk-implementation-error (err :type))
          (assert= 'iface (err :interface))
-         (assert-true (string/find (err :message) "Implementation error")))
-   })
+         (assert-true (string/find (string (err :message)) "Implementation error")))})
 
 (register-test
   {:name "rpc reader error helper"
@@ -29,8 +29,7 @@
          (def err (rpc/make-slynk-reader-error "packet" "oops"))
          (assert= :slynk-reader-error (err :type))
          (assert= "packet" (err :packet))
-         (assert= "oops" (err :cause)))
-   })
+         (assert= "oops" (err :cause)))})
 
 (register-test
   {:name "rpc protocol error helper"
@@ -40,5 +39,4 @@
          (assert= :slynk-protocol-error (err :type))
          (assert= "msg" (err :message))
          (assert= "want" (err :expected))
-         (assert= "got" (err :received)))
-   })
+         (assert= "got" (err :received)))})

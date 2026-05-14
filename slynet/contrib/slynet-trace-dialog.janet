@@ -15,11 +15,13 @@
 (def show-trace-output-in-repl false) # Whether to show traces in REPL as well
 (var current-trace-id 0) # Counter for unique trace IDs
 (var current-trace-depth 0) # Track nesting depth of traced calls
-(definterface trace-format (trace)
-  "Format a trace.")
+(defn trace-format [trace]
+  "Format a trace."
+  (string/format "%j" trace))
 
-(definterface trace-or-lose (id)
-  "Trace a part or lose.")
+(defn trace-or-lose [id]
+  "Trace a part or lose."
+  (error "Not implemented"))
 
 (definterface report-partial-tree (id)
   "Report a partial trace tree.")
@@ -292,4 +294,6 @@
     :dialog-untrace-all dialog-untrace-all
     :clear-trace-buffer clear-trace-buffer
     :report-partial-traces report-partial-traces
-    :report-all-traced-functions report-all-traced-functions})
+    :report-all-traced-functions report-all-traced-functions
+    :trace-format trace-format
+    :trace-or-lose trace-or-lose})

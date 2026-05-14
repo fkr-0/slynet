@@ -3,42 +3,43 @@
 This document captures the outstanding work required to deliver a Janet backend with practical parity to the Common Lisp SLY/SLYNK stack. Keep the list authoritative—update statuses as progress lands.
 
 ## 1. Foundational Infrastructure
-- [ ] **Runtime separation** — complete the runtime/server split described in `AGENT.md` (file moves, imports, façade modules).
-- [ ] **Interface registry audit** — ensure every exported RPC goes through `runtime/interfaces.janet` and `runtime/infrastructure.janet` helpers; remove ad-hoc registration code.
-- [ ] **Dynamic registry sync** — implement a single entry point to initialize runtime state (`runtime/init.janet` or similar) and call it from the public API.
+- [x] **Runtime separation** — complete the runtime/server split described in `AGENT.md` (file moves, imports, façade modules).
+- [x] **Interface registry audit** — ensure every exported RPC goes through `runtime/interfaces.janet` and `runtime/infrastructure.janet` helpers; remove ad-hoc registration code.
+- [x] **Dynamic registry sync** — implement a single entry point to initialize runtime state (`runtime/init.janet` or similar) and call it from the public API.
 
 ## 2. Core Protocol Coverage
 Track completion status in [`docs/missing_protocol.md`](docs/missing_protocol.md).
-- [ ] Implement handshake essentials: `ping`, `connection-info`, `list-all-package-names`, `simple-completions`, `flex-completions`.
+- [x] Implement handshake essentials: `ping`, `connection-info`, `list-all-package-names`, `simple-completions`, `flex-completions` (see `slynk.janet` + tests in `test/project_core_tests.janet`).
 - [ ] Debugger loop: `backtrace`, `debugger-info-for-emacs`, `invoke-nth-restart`, `sly-db-abort/continue`, frame inspectors.
+- [ ] Eval/edit RPCs: `interactive-eval-region`, `pprint-eval`, `set-package`, `value-for-editing`, `commit-edited-value` (**implemented**; extend with inspector/debugger features next).
 - [ ] Compiler services: `compile-file-for-emacs`, `compile-string-for-emacs`, macroexpand family, `load-file`, `slynk-require`.
 - [ ] Inspector & xref: inspector RPC suite, `find-definitions-for-emacs`, `xref/xrefs`.
 - [ ] Thread ops: `list-threads`, `debug-nth-thread`, `kill-nth-thread`.
 - [ ] Stream utilities: `io-speed-test`, `flow-control-test`.
 
 ## 3. Contrib Parity
-- [ ] Audit every contrib module in `slynet/contrib/` for interface coverage vs the Lisp originals.
-- [ ] Implement missing RPCs listed under the Contrib section of `docs/missing_protocol.md`.
-- [ ] Add focused tests per contrib module using the shared test harness.
+- [x] Audit every contrib module in `slynet/contrib/` for interface coverage vs the Lisp originals.
+- [x] Implement missing RPCs listed under the Contrib section of `docs/missing_protocol.md`.
+- [x] Add focused tests per contrib module using the shared test harness.
 
 ## 4. Runtime Services
-- [ ] Provide working implementations for filesystem interfaces (`list-directory`, `read-file`, `write-file`, etc.) with sandbox awareness.
-- [ ] Flesh out REPL support: implement `interactive-eval`, `eval-for-emacs`, package management hooks (`set-package`, `guess-and-set-package`).
+- [x] Provide working implementations for filesystem interfaces (`list-directory`, `read-file`, `write-file`, etc.) with sandbox awareness.
+- [x] Flesh out REPL support: implement `interactive-eval`, `eval-for-emacs`, package management hooks (`set-package`, `guess-and-set-package`).
 - [ ] Implement arglist/signature introspection that mirrors SLY expectations (`arglist`, `operator-arglist`, `describe-function`).
 - [ ] Add persistent session state (history, bookmarks) surfaced via interfaces.
 
 ## 5. Server & Transport Layer
-- [ ] Harden TCP listener lifecycle (graceful shutdown, restart, error handling).
-- [ ] Channel support (`process-channel-send/close`, MREPL channels) with exhaustive tests using the in-memory harness.
+- [x] Harden TCP listener lifecycle (graceful shutdown, restart, error handling).
+- [x] Channel support (`process-channel-send/close`, MREPL channels) with exhaustive tests using the in-memory harness.
 - [ ] Implement structured logging with verbosity levels and timestamps; expose toggles via RPC (`toggle-debug-on-slynk-error`).
 - [ ] Provide TLS or SSH tunnel guidance for remote connections.
 
 ## 6. Tooling & Testing
-- [ ] Migrate all legacy `judge` tests to `test-runner.janet`; ensure determinism.
-- [ ] Build fixture utilities under `test/support/` for fake module caches, network sockets, and filesystem sandboxes.
-- [ ] Add smoke tests for the CLI client (`slynet-client.janet`) using the in-memory server.
+- [x] Migrate all legacy `judge` tests to `test-runner.janet`; ensure determinism.
+- [x] Build fixture utilities under `test/support/` for fake module caches, network sockets, and filesystem sandboxes.
+- [x] Add smoke tests for the CLI client (`slynet-client.janet`) using the in-memory server (updated to exercise the MREPL handshake/results path).
 - [ ] Integrate a CI script (GitHub Actions or similar) running lint + tests.
-- [ ] Capture coverage on interface implementations—insist every RPC has at least one test.
+- [x] Capture coverage on interface implementations—insist every RPC has at least one test.
 
 ## 7. Developer Experience
 - [ ] Expose a high-level Janet API (`slynet/api.janet`) that hides registry plumbing and offers `start`, `stop`, `with-server` helpers.

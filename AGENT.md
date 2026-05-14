@@ -3,6 +3,8 @@
 ## Mission Brief
 - Maintain and extend the Janet port of the SLY/SLYNK backend. The goal is feature parity with the Common Lisp implementation while keeping Janet idioms.
 - Keep the developer experience smooth: fast feedback loops, reliable tests, and clear runtime separation between protocol/server plumbing and Janet runtime capabilities.
+- Handshake endpoints (`ping`, `connection-info`, `list-all-package-names`, `simple-completions`, `flex-completions`) are live—treat regressions here as stop-the-line issues.
+- Interactive editing RPCs (`set-package`, `interactive-eval-region`, `pprint-eval`, `value-for-editing`, `commit-edited-value`) now have Janet implementations; any changes here must be backed by tests under `test/project_core_tests.janet`.
 
 ## Environment Setup
 - **Janet**: Target Janet ≥ 1.28. Export `JANET_PATH="$JANET_PATH:$(pwd)"` when working locally so `import slynet/...` resolves.

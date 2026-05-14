@@ -47,10 +47,10 @@
           # We don't over-filter: just stringify the key so (require name) works.
           (array/push out (string k)))))
     ([err _] nil))
-  out)
+  (sorted out))
 
 # (optional) if you prefer a sorted, deterministic order:
-# (array/sort out string/compare) ; then return it
+# (sorted out)  ; then return it
 (defmacro if-let
   "([sym expr] then &opt else) – bind, test non-nil, choose branch."
   [[sym expr] then &opt else]
@@ -734,9 +734,8 @@ Example:
 (defn directory-exists?
   "Return true if PATH exists and is a directory."
   [path]
-  (try
-    (os/stat path)
-    ([err fib] false)))
+  (let [stat (try (os/stat path) ([_ fib] nil))]
+    (and stat (= (stat :type) :directory))))
 
 (inf/defimpl 'directory-exists? directory-exists?)
 
@@ -744,7 +743,7 @@ Example:
   "Read the contents of PATH as a string."
   [path]
   (try
-    (file/lines path)
+    (file/read path :all)
     ([err fib] [:error (string "Error reading file: " err)])))
 
 (inf/defimpl 'read-file read-file)

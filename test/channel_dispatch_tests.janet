@@ -1,4 +1,4 @@
-(use ../test-runner)
+(use ../mini-test)
 (import ../slynet/slynk :as slynk)
 (import ../slynet/rpc :as rpc)
 

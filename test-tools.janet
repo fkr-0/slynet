@@ -41,17 +41,27 @@
                           (= remote-id (conn :id)) conn
                           true nil))))
 
-  (defn await-one []
-    (match (ev/take ch)
-      [:return [:ok msg]] msg
-      _ nil))
+  (defn wait-for-replies [&opt timeout-ms]
+    (default timeout-ms 1000)
+    (var waited 0)
+    (while (and (= (length replies) 0)
+                (< waited timeout-ms))
+      (ev/sleep 0.01)
+      (set waited (+ waited 10)))
+    (> (length replies) 0))
 
-  (defn await-all [&opt idle-ms]
-    (default idle-ms 20)
-    (while true
-      (match (ev/take ch idle-ms)
-        [:ok _] nil
-        _ (break)))
+  (defn await-one [&opt timeout-ms]
+    (default timeout-ms 1000)
+    (when (not (wait-for-replies timeout-ms))
+      (error "timeout waiting for reply"))
+    (match (first replies)
+      [:return [:ok value] & _] value
+      [:return [:abort reason] & _] (error reason)
+      msg msg))
+
+  (defn await-all [&opt timeout-ms]
+    (default timeout-ms 1000)
+    (wait-for-replies timeout-ms)
     (array/slice replies))
 
   {:conn conn
@@ -67,14 +77,14 @@
      (default package pkg)
      (default thread nil)
      (default id 1)
-     (set replies @[])
+     (array/clear replies)
      (slynk/process-message conn (rpc/create-emacs-rex-message form package thread id))
      (await-one))
    :send!
    (fn [decoded-msg]
-     (set replies @[])
+     (array/clear replies)
      (slynk/process-message conn decoded-msg)
-     (await-all))})
+     (await-one))})
 
 (defmacro with-test-server [binding & body]
   (let [ms make-server
@@ -86,6 +96,3 @@
 
        ,;body
        (defer ((,name :dispose))))))
-
-(with-test-server [srv]
-  (print (= 6 ((srv :emacs-rex!) '(+ 1 2 3) :core nil 42))))

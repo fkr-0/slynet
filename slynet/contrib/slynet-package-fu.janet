@@ -153,8 +153,11 @@
   "Initialize the package-fu module."
   (print "Initializing SLYNET Package-Fu module")
   true)
-(definterface package= (package1 package2)
-  "Check if two packages are equal.")
+(defn package= [package1 package2]
+  "Check if two packages are equal."
+  (if (and (string? package1) (string? package2))
+    (= package1 package2)
+    false))
 
 (definterface export-symbol-for-emacs (symbol-name package-name)
   "Export a symbol for Emacs.")
@@ -171,4 +174,5 @@
     :list-exported-symbols list-exported-symbols
     :list-all-imports list-all-imports
     :list-depends list-depends
-    :import-module import-module})
+    :import-module import-module
+    :package= package=})

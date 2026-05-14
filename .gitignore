@@ -1,0 +1,36 @@
+# Local secrets
+.env
+.env.*
+
+# Logs and run output
+*.log
+test_results.log
+slynk-server.log
+slynet/slynk-server.log
+
+# Editor/AI/tool caches
+.aider.tags.cache.v4/
+\#
+tmp-*.janet
+check_impl*.janet
+check_list.janet
+
+# Local scratch/backups
+*_b
+oldpr
+slynet/test-server-macro.janet
+
+# Generated binaries / local executables
+exe
+mini-test-ex
+spork/test
+
+# Local vendored/reference checkouts not required by the runnable package
+# Keep sly_source tracked as the Common Lisp reference corpus for protocol inventory.
+o/
+spork/
+
+# Janet build/package artifacts
+build/
+dist/
+.janet/

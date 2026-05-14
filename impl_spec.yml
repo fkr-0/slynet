@@ -1,0 +1,44 @@
+api_spec:
+  - name: initialize-backend
+    description: "Initialize the backend with logging."
+    arguments:
+      - backend: "Backend instance"
+    return: "Confirmation message"
+
+  - name: initialize-rpc
+    description: "Initialize the RPC layer with logging."
+    arguments:
+      - rpc: "RPC instance"
+    return: "Confirmation message"
+
+  - name: definterface
+    description: "Define an interface function for the backend to implement."
+    arguments:
+      - name: "Symbol name of the interface"
+      - args: "Arguments for the interface"
+      - documentation: "Documentation string"
+      - default-body: "Optional default implementation"
+    return: "Symbol name of the interface"
+
+  - name: defimplementation
+    description: "Define an implementation for an interface function."
+    arguments:
+      - name: "Symbol name of the interface"
+      - args: "Arguments for the implementation"
+      - body: "Implementation body"
+    return: "Symbol name of the implementation"
+
+  - name: read-message
+    description: "Read a message from the stream."
+    arguments:
+      - stream: "Input stream"
+      - package: "Package context"
+    return: "Parsed message"
+
+  - name: write-message
+    description: "Write a message to the stream."
+    arguments:
+      - message: "Message to write"
+      - package: "Package context"
+      - stream: "Output stream"
+    return: "None"

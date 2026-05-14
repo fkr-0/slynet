@@ -166,6 +166,11 @@
   'slynet-apropos/describe-symbol-for-emacs
   describe-symbol-for-emacs)
 
+(defn slynet-apropos [string-or-pattern &opt external-only case-sensitive package]
+  "Apropos search for symbols."
+  [])
+(inf/defimpl 'slynet-apropos slynet-apropos)
+
 # Module initialization
 # Check for required backend functions
 
@@ -189,4 +194,5 @@
   @{:initialize-module initialize-module
     :search-symbols search-symbols
     :list-all-symbols list-all-symbols
-    :describe-symbol-for-emacs describe-symbol-for-emacs})
+    :describe-symbol-for-emacs describe-symbol-for-emacs
+    :slynet-apropos slynet-apropos})

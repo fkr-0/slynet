@@ -1,0 +1,26 @@
+version: 1
+
+commands:
+  test:
+    description: Run the Janet test suite
+    category: test
+    run:
+      - sh
+      - -lc
+      - export JANET_PATH="${JANET_PATH}:$(pwd)" && janet test/run_tests.janet
+
+  test-runner:
+    description: Run the Janet test runner entrypoint
+    category: test
+    run:
+      - sh
+      - -lc
+      - export JANET_PATH="${JANET_PATH}:$(pwd)" && janet test-runner.janet
+
+  smoke-client:
+    description: Run the CLI client in batch mode against a local server
+    category: test
+    run:
+      - sh
+      - -lc
+      - export JANET_PATH="${JANET_PATH}:$(pwd)" && janet slynet-client.janet --help

@@ -1,4 +1,4 @@
-(import ../test-runner :as runner)
+(import ../mini-test :as runner)
 
 # Load test files so they register with the runner
 (import ./project_core_tests)
@@ -9,4 +9,4 @@
 (import ./contrib_tests)
 
 (defn main [& args]
-  (apply runner/main args))
+  (apply runner/run-args args))

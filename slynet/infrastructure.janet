@@ -36,10 +36,12 @@
 (defn make-implementation-error
   "Create an error for missing or invalid implementations."
   [interface-name reason]
+  (eprintf "slynet implementation missing: %s (%s)\n" interface-name reason)
   @{:type :slynk-implementation-error
     :interface interface-name
     :reason reason
-    :message (string "Implementation error for " interface-name ": " reason)})
+    :message "Implementation error"
+    :detail @{:interface interface-name :reason reason}})
 
 (defn reset-interfaces []
   "Reset the interfaces registry."
@@ -94,12 +96,21 @@
 # Register interface via regular function (no macro)
 (defn slynet-definterface [rpc-name arglist-spec docstring]
   (unless (symbol? rpc-name)
-    (error (string "rpc-name must be symbol, got " (type rpc-name))))
+    (eprintf "slynet-definterface: rpc-name must be symbol, got %s\n" (type rpc-name))
+    (error "rpc-name"))
   (unless (or (tuple? arglist-spec) (array? arglist-spec))
-    (error "arglist-spec must be tuple or array"))
+    (eprintf "slynet-definterface: arglist-spec must be tuple or array (got %s)\n" (type arglist-spec))
+    (error "arglist-spec"))
   (unless (string? docstring)
-    (error "docstring must be string"))
+    (eprintf "slynet-definterface: docstring must be string (got %s)\n" (type docstring))
+    (error "docstring"))
   (slynet-register-interface-rt! rpc-name arglist-spec docstring)
+  true)
+
+(defn ensure-interfaces-initialized! []
+  (when (empty? *slynet-rpc-interfaces-registry*)
+    (i/define-core-interfaces slynet-definterface)
+    (slynet-sync-rpc-registries!))
   true)
 
 # Register all core interfaces from the interfaces module
@@ -141,13 +152,18 @@
   "Get the interface metadata for an RPC endpoint.
   Returns nil if the interface doesn't exist."
   [rpc-name]
-  (get (dyn *slynet-rpc-interfaces-registry*) rpc-name))
+  (ensure-interfaces-initialized!)
+  (let [dyn-reg (dyn slynet-rpc-interfaces-dyn-key)]
+    (or (and (table? dyn-reg) (get dyn-reg rpc-name))
+        (get *slynet-rpc-interfaces-registry* rpc-name))))
 
 (defn get-implementation
   "Get the implementation function for an RPC endpoint.
   Returns nil if the implementation doesn't exist."
   [rpc-name]
-  (get (dyn *slynet-rpc-implementations-registry*) rpc-name))
+  (let [dyn-reg (dyn slynet-rpc-implementations-dyn-key)]
+    (or (and (table? dyn-reg) (get dyn-reg rpc-name))
+        (get *slynet-rpc-implementations-registry* rpc-name))))
 
 (defn list-interfaces
   "List all registered RPC interfaces."
@@ -157,7 +173,9 @@
 (defn list-implementations
   "List all registered RPC implementations."
   []
-  (keys (dyn *slynet-rpc-implementations-registry*)))
+  (let [dyn-reg (dyn slynet-rpc-implementations-dyn-key)]
+    (keys (or (and (table? dyn-reg) dyn-reg)
+              *slynet-rpc-implementations-registry*))))
 (defn contains? [coll key]
   (not= (get coll key ::not-found) ::not-found))
 
@@ -191,6 +209,7 @@
     :register-interface-rt! slynet-register-interface-rt!
     :definterface slynet-definterface
     :defimpl defimpl
+    :ensure-interfaces-initialized! ensure-interfaces-initialized!
     :*implementations* *implementations*
     :*debug-slynk-backend* *debug-slynk-backend*
     :interfaces-registry *slynet-rpc-interfaces-registry*

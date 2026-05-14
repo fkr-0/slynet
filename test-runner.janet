@@ -120,6 +120,13 @@
        (test-assert! ok (or ,msg (string "predicate " (pp ',pred) " " (pp ,gx)))
                      {:type :pred :pred ',pred :arg ,gx}))))
 
+(defmacro assert-not-nil [x &opt msg]
+  (let [gx (gensym)]
+    ~(let [,gx ,x]
+       (test-assert! (not (= ,gx nil))
+                     (or ,msg (string (pp ',x) " is not nil"))
+                     {:type :not-nil :got ,gx}))))
+
 (defmacro assert-throws [& body]
   ~(do
      (var threw false)
@@ -233,52 +240,52 @@
     (->> (values *tests*)
          (filter (fn [t] (and (name-matches? (t :name) opts)
                               (tags-match? (t :tags) opts))))))
-    (when (empty? chosen)
-      (print (color :yellow "No tests selected.\n")))
+  (when (empty? chosen)
+    (print (color :yellow "No tests selected.\n")))
 
-    (var total-pass 0)
-    (var total-fail 0)
-    (var total-asserts 0)
+  (var total-pass 0)
+  (var total-fail 0)
+  (var total-asserts 0)
 
-    (each spec chosen
-      (def ctx (run-one spec opts))
-      (array/push *last-run* ctx)
-      (set total-pass (+ total-pass (ctx :pass)))
-      (set total-fail (+ total-fail (ctx :fail)))
-      (set total-asserts (+ total-asserts (+ (ctx :pass) (ctx :fail))))
+  (each spec chosen
+    (def ctx (run-one spec opts))
+    (array/push *last-run* ctx)
+    (set total-pass (+ total-pass (ctx :pass)))
+    (set total-fail (+ total-fail (ctx :fail)))
+    (set total-asserts (+ total-asserts (+ (ctx :pass) (ctx :fail))))
 
-      (case (get opts :stdout :on-failure)
-        :always
-        (when (not (= "" (ctx :stdout)))
-          (print (color :dim "----- stdout -----\n")
-                 (ctx :stdout)
-                 (color :dim "\n------------------\n")))
-        :on-failure
-        (when (and (> (ctx :fail) 0) (not (= "" (ctx :stdout))))
-          (print (color :dim "----- stdout (failed) -----\n")
-                 (ctx :stdout)
-                 (color :dim "\n---------------------------\n")))
-        :never nil))
+    (case (get opts :stdout :on-failure)
+      :always
+      (when (not (= "" (ctx :stdout)))
+        (print (color :dim "----- stdout -----\n")
+               (ctx :stdout)
+               (color :dim "\n------------------\n")))
+      :on-failure
+      (when (and (> (ctx :fail) 0) (not (= "" (ctx :stdout))))
+        (print (color :dim "----- stdout (failed) -----\n")
+               (ctx :stdout)
+               (color :dim "\n---------------------------\n")))
+      :never nil))
 
-    # Summary
-    (def total-tests (length chosen))
-    (print "\n")
-    (print (color (if (= total-fail 0) :green :red)
-                  (string "Summary: " total-tests " tests, "
-                          total-pass "/" total-asserts " asserts passed, "
-                          total-fail " failed"))
-           "\n")
+  # Summary
+  (def total-tests (length chosen))
+  (print "\n")
+  (print (color (if (= total-fail 0) :green :red)
+                (string "Summary: " total-tests " tests, "
+                        total-pass "/" total-asserts " asserts passed, "
+                        total-fail " failed"))
+         "\n")
 
-    # Group failing tests with brief lines
-    (when (> total-fail 0)
-      (print (color :red "Failing tests:\n"))
-      (each ctx *last-run*
-        (when (> (ctx :fail) 0)
-          (print "  " (color :red CROSS) " " (ctx :name)
-                 " [" (ctx :pass) "/" (+ (ctx :pass) (ctx :fail)) "]\n"))))
+  # Group failing tests with brief lines
+  (when (> total-fail 0)
+    (print (color :red "Failing tests:\n"))
+    (each ctx *last-run*
+      (when (> (ctx :fail) 0)
+        (print "  " (color :red CROSS) " " (ctx :name)
+               " [" (ctx :pass) "/" (+ (ctx :pass) (ctx :fail)) "]\n"))))
 
-    (when (> total-fail 0)
-      (error (string total-fail " test(s) failed"))))
+  (when (> total-fail 0)
+    (error (string total-fail " test(s) failed"))))
 
 ############################
 # Monkey-patching helpers + spies
@@ -397,5 +404,11 @@
                        (= (string/slice (args 0) 0 1) ":"))))
       (slice args 1)
       args))
+  (print (string/format "Test runner starting with args: %p" rest-args) "\n")
   (def opts (parse-cli-args rest-args))
+  (each f (os/dir "test")
+
+    (do (print "Loading test file: " f "\n")
+      (when (string/has-suffix? ".janet" (string "test/" f))
+        (pp (dofile (string "test/" f))))))
   (run-tests opts))

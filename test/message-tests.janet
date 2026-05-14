@@ -1,4 +1,4 @@
-(use ../test-runner)
+(use ../mini-test)
 (import ../test-tools :as tt)
 
 (register-test
