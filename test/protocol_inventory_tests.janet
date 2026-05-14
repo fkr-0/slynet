@@ -95,3 +95,17 @@
          (assert-true (contains clos-record "constraint_reason: Janet does not provide CLOS/MOP") "CLOS/MOP reason emitted")
          (assert-true (contains compile-record "constraint_reason: Janet diagnostics differ") "compiler-note reason emitted")
          (assert-true (contains thread-record "constraint_reason: Janet execution units/fibers") "thread reason emitted"))})
+
+(register-test
+  {:name "protocol inventory audits constraint coverage against tasks"
+   :tags [:inventory]
+   :fn (fn []
+         (run-inventory-generator)
+         (def text (inventory-text))
+         (assert-true (contains text "constraint_coverage_audit:") "audit section emitted")
+         (assert-true (contains text "  undocumented_constraints: []") "all used constraints are documented")
+         (assert-true (contains text "    - cl_packages") "cl_packages documented in audit")
+         (assert-true (contains text "    - conditions_restarts") "conditions_restarts documented in audit")
+         (assert-true (contains text "    - clos_mop") "clos_mop documented in audit")
+         (assert-true (contains text "    - compiler_notes") "compiler_notes documented in audit")
+         (assert-true (contains text "    - threads") "threads documented in audit"))})

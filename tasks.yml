@@ -538,12 +538,85 @@ task_groups:
                     status: todo
                     description: "Add YAML escaping/quoting for generated scalar fields before allowing arbitrary reason text from external config."
               - id: T01-3B-2_constraint_coverage_audit
-                status: todo
+                status: done
                 description: "Add a generator test that every non-none constraint id is documented in tasks.yml janet_design_constraints."
+                verification_log:
+                  - date: "2026-05-14"
+                    phase: red
+                    command: "JANET_PATH=$PWD janet test/run_tests.janet :report compact"
+                    result: "failed as intended: generated inventory lacked constraint_coverage_audit section and documented/used/undocumented constraint lists"
+                  - date: "2026-05-14"
+                    phase: green
+                    command: >-
+                      JANET_PATH=$PWD janet test/run_tests.janet :report compact && python3 -c 'import yaml, pathlib; yaml.safe_load(pathlib.Path("docs/generated/protocol-inventory.yml").read_text())'
+                    result: "passed: 51 tests, 177/177 asserts, compact stdout_lines=4, stderr empty; generated inventory parses as YAML"
+                  - date: "2026-05-14"
+                    phase: regression
+                    command: "bridge.yml:test"
+                    result: "passed: 51 tests, 177/177 asserts, stderr empty"
+                implemented_details:
+                  - "Generated inventory now includes constraint_coverage_audit with documented_constraints, used_constraints, and undocumented_constraints."
+                  - "Audit derives documented constraints from tasks.yml janet_design_constraints ids and used constraints from generated operation classifications."
+                  - "Fixed a generated YAML formatting bug in the audit header before committing."
+                emerging_tasks:
+                  - id: T01-3B-2A_fixture_unknown_constraint_failure
+                    status: todo
+                    description: "Add fixture-level generator tests proving an unknown emitted constraint fails the audit instead of merely listing it."
+                  - id: T01-3B-2B_yaml_parse_regression_test
+                    status: todo
+                    description: "Move generated-inventory YAML parsing into Janet or a stable test command so malformed YAML cannot pass string-only assertions."
+    reviewed_and_enhanced:
+      date: "2026-05-14"
+      findings:
+        - "The inventory generator now proves source extraction, evidence precision, and constraint reasons, but it still needs deterministic ordering and parser-level self-tests."
+        - "T01 should become the release gate that drives T02 stale-doc repair, T04 golden protocol fixtures, and T14 Emacs frontend coverage."
+        - "Generated inventory currently reports operation-level state, but not yet risk level, frontend exposure, or release milestone assignment."
+      added_subtasks:
+        - id: T01-4_inventory_release_gate
+          status: todo
+          description: "Turn docs/generated/protocol-inventory.yml into a CI/release gate: no undocumented constraints, no unknown states, and no implemented operations without either product tests or explicit rationale."
+          files:
+            update:
+              - tools/protocol_inventory.janet
+              - test/protocol_inventory_tests.janet
+              - .github/workflows/test.yml
+          tests:
+            red:
+              - "Inventory generated from a fixture with an unknown constraint must fail the audit."
+            green:
+              - "Current repo inventory passes the release gate and emits an audit summary."
+        - id: T01-5_frontend_surface_mapping
+          status: todo
+          description: "Add frontend_surface fields so each operation is mapped to Emacs UI areas: repl, eval, completion, inspector, debugger, contrib, transport, or backend-only."
+          files:
+            update:
+              - tools/protocol_inventory.janet
+              - docs/generated/protocol-inventory.yml
+              - test/protocol_inventory_tests.janet
+          tests:
+            red:
+              - "Representative operations ping, simple-completions, backtrace, inspect-nth-part, and create-mrepl lack frontend_surface."
+            green:
+              - "All generated records include frontend_surface and unknown surfaces are audited."
+        - id: T01-6_operation_state_model
+          status: todo
+          description: "Refine state from implemented/missing into implemented_tested, implemented_untested, emulated_not_equivalent, unsupported_by_janet_design, missing, and stale_doc_conflict."
+          files:
+            update:
+              - tools/protocol_inventory.janet
+              - docs/generated/protocol-inventory.yml
+              - tasks.yml
+          tests:
+            red:
+              - "Constrained CLOS/restart operations are not allowed to report plain implemented without emulation/unsupported nuance."
+            green:
+              - "Constraint-bearing operations include state_detail and evidence explaining the state."
     done_when:
       - "docs/generated/protocol-inventory.yml exists."
-      - "Every operation has state, source_files, janet_files, tests, and constraint fields."
+      - "Every operation has state, source_files, janet_files, tests, constraint, and constraint_reason when applicable."
+      - "Every non-none constraint id is documented in janet_design_constraints and audited by tests."
       - "No operation may be silently omitted."
+      - "Generated inventory is deterministic enough for clean diffs or explicitly sorted by a tested comparator."
 
   - id: T02_spec_normalization_and_stale_doc_repair
     title: "Normalize protocol specs and repair stale protocol documentation"
@@ -572,9 +645,50 @@ task_groups:
           command: "JANET_PATH=$PWD janet test/protocol_inventory_tests.janet --case normalized-spec"
       aggregate:
         - "make test"
+    implementation_slices:
+      - id: T02-1_normalized_operation_schema
+        status: todo
+        description: "Define a YAML schema for operation name, origin kind, CL lambda-list metadata, Janet arg model, state, constraint, and tests."
+        files:
+          create:
+            - docs/specs/operation-schema.yml
+            - test/spec_normalization_tests.janet
+          update:
+            - impl_spec.yml
+            - tools/protocol_inventory.janet
+        tests:
+          red:
+            - "Spec normalization rejects raw executable CL lambda-list syntax such as &optional in Janet code fields."
+          green:
+            - "Spec normalization preserves CL-origin metadata while emitting Janet-safe operation records."
+      - id: T02-2_reconcile_missing_protocol_docs
+        status: todo
+        description: "Generate or rewrite docs/missing_protocol.md from docs/generated/protocol-inventory.yml so implemented/tested operations are not listed as missing."
+        files:
+          update:
+            - docs/missing_protocol.md
+            - docs/generated/protocol-inventory.yml
+        tests:
+          red:
+            - "ping/simple-completions listed as implemented in inventory but missing in docs fail reconciliation."
+          green:
+            - "No implemented_tested inventory operation appears in missing docs without stale_doc_conflict metadata."
+      - id: T02-3_janet_forbidden_annotations
+        status: todo
+        description: "Promote constraint ids into explicit unsupported_by_janet_design or emulated_not_equivalent annotations where implementation cannot be faithful."
+        files:
+          update:
+            - docs/generated/protocol-inventory.yml
+            - tasks.yml
+        tests:
+          red:
+            - "CLOS/MOP and restart operations with constraints but no explicit behavior status fail."
+          green:
+            - "Every constrained operation has behavior_status and user-facing consequence text."
     done_when:
       - "Spec docs distinguish implemented, missing, emulated, and Janet-forbidden operations."
       - "Raw &optional/&rest appear only as CL-origin metadata, never as executable Janet syntax."
+      - "Stale protocol docs are generated or reconciled from the inventory instead of maintained by hand."
 
   - id: T03_test_runner_noise_gate
     title: "Make verification output trustworthy and quiet"
@@ -975,10 +1089,50 @@ task_groups:
         - "make test-emacs"
         - "make all-tests"
       environment_gate: "If Emacs is absent, make test-emacs must fail locally or skip only in CI with an explicit SKIP reason."
+    implementation_slices:
+      - id: T14-1_emacs_client_codec
+        status: todo
+        description: "Implement and ERT-test the Emacs-side length-prefixed S-expression client codec against protocol fixtures."
+        files:
+          create:
+            - emacs/slynet-client.el
+            - test/emacs/slynet-client-tests.el
+        tests:
+          red:
+            - "ERT fails because slynet-client-read-message/write-message do not exist."
+          green:
+            - "ERT fixtures round-trip ping, eval, completion, inspector, and error envelopes."
+      - id: T14-2_emacs_eval_completion_loop
+        status: todo
+        description: "Implement slynet-mode eval-region/eval-last-expression and completion-at-point backed by a fake process and optional real Janet server smoke test."
+        files:
+          create:
+            - emacs/slynet.el
+            - test/emacs/slynet-mode-tests.el
+        tests:
+          red:
+            - "ERT command tests fail before slynet-mode and process abstraction exist."
+          green:
+            - "Batch Emacs tests verify eval request construction, completion request construction, and response display."
+      - id: T14-3_emacs_repl_inspector_debugger_buffers
+        status: todo
+        description: "Implement REPL, inspector, and debugger buffers that render constraint/emulation metadata from the Janet backend."
+        files:
+          create:
+            - emacs/slynet-repl.el
+            - emacs/slynet-inspector.el
+            - emacs/slynet-debugger.el
+            - test/emacs/slynet-ui-tests.el
+        tests:
+          red:
+            - "ERT fixtures for constrained debugger/restart replies fail before UI handling exists."
+          green:
+            - "Buffers show values, inspector parts, and unsupported/emulated restart explanations without silent no-ops."
     done_when:
       - "M-x slynet-start launches or connects to a Janet server."
       - "Eval, completion, REPL, inspector, and basic debugger-status flows work from Emacs."
       - "Unsupported CL-only commands show clear messages, not silent no-ops."
+      - "Batch ERT tests cover client codec, eval/completion commands, and constrained debugger/inspector rendering."
 
   - id: T15_ci_and_release_readiness
     title: "Add CI, release checks, and migration documentation"

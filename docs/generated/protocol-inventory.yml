@@ -2,6 +2,21 @@
 project: slynet
 schema_version: 2
 operation_count: 249
+constraint_coverage_audit:
+  documented_constraints:
+    - cl_packages
+    - conditions_restarts
+    - clos_mop
+    - compiler_notes
+    - cl_lambda_lists
+    - threads
+  used_constraints:
+    - cl_packages
+    - conditions_restarts
+    - compiler_notes
+    - threads
+    - clos_mop
+  undocumented_constraints: []
 operations:
   - name: set-package
     kind: defslyfun

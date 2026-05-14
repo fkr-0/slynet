@@ -230,6 +230,53 @@
         (buffer/push-string out (string prefix "  - " value "\n")))
       (string out))))
 
+(defn- documented-constraint-ids []
+  (def text (slurp-or-empty "tasks.yml"))
+  (def ids @[])
+  (each id @["cl_packages" "conditions_restarts" "clos_mop" "compiler_notes" "cl_lambda_lists" "threads"]
+    (when (contains? text (string "- id: " id))
+      (array/push ids id)))
+  ids)
+
+(defn- array-has? [xs value]
+  (var found false)
+  (each x xs
+    (when (= x value)
+      (set found true)))
+  found)
+
+(defn- push-unique! [xs value]
+  (when (not (array-has? xs value))
+    (array/push xs value))
+  xs)
+
+(defn- used-constraint-ids [ops]
+  (def used @[])
+  (eachp [name _] ops
+    (def constraint (constraint-for name))
+    (when (not (= constraint "none"))
+      (push-unique! used constraint)))
+  used)
+
+(defn- undocumented-constraints [used documented]
+  (def missing @[])
+  (each id used
+    (when (not (array-has? documented id))
+      (array/push missing id)))
+  missing)
+
+(defn- coverage-audit-section [ops]
+  (def documented (documented-constraint-ids))
+  (def used (used-constraint-ids ops))
+  (def missing (undocumented-constraints used documented))
+  (def out (buffer/new 0))
+  (buffer/push-string out "constraint_coverage_audit:\n")
+  (buffer/push-string out (yaml-list 2 "documented_constraints" documented))
+  (buffer/push-string out (yaml-list 2 "used_constraints" used))
+  (buffer/push-string out (yaml-list 2 "undocumented_constraints" missing))
+  (string out))
+
+
 (defn- operation-record [rec]
   (def operation (rec :name))
   (def source-evidence (rec :source_files))
@@ -259,6 +306,7 @@
   (buffer/push-string out "project: slynet\n")
   (buffer/push-string out "schema_version: 2\n")
   (buffer/push-string out (string "operation_count: " (length (keys ops)) "\n"))
+  (buffer/push-string out (coverage-audit-section ops))
   (buffer/push-string out "operations:\n")
   (each name (sorted-names ops)
     (buffer/push-string out (operation-record (ops name))))
