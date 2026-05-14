@@ -16,6 +16,7 @@ operations:
       - test/project_core_tests.janet
       - test/protocol_inventory_tests.janet
     constraint: cl_packages
+    constraint_reason: Janet has modules/environments, not CL packages and reader package semantics.
     missing_protocol_state: stale_doc_lists_as_missing
     missing_protocol_files:
       - docs/missing_protocol.md
@@ -41,6 +42,7 @@ operations:
     test_files:
       - test/protocol_inventory_tests.janet
     constraint: conditions_restarts
+    constraint_reason: Janet exceptions/stack traces do not expose CL condition/restart semantics.
     missing_protocol_state: not_listed_missing
     missing_protocol_files: []
   - name: profile
@@ -120,6 +122,7 @@ operations:
     test_files:
       - test/protocol_inventory_tests.janet
     constraint: cl_packages
+    constraint_reason: Janet has modules/environments, not CL packages and reader package semantics.
     missing_protocol_state: stale_doc_lists_as_missing
     missing_protocol_files:
       - docs/missing_protocol.md
@@ -211,6 +214,7 @@ operations:
     test_files:
       - test/protocol_inventory_tests.janet
     constraint: compiler_notes
+    constraint_reason: Janet diagnostics differ from CL compiler note objects and source-note semantics.
     missing_protocol_state: not_listed_missing
     missing_protocol_files: []
   - name: make-lock
@@ -261,6 +265,7 @@ operations:
     test_files:
       - test/protocol_inventory_tests.janet
     constraint: cl_packages
+    constraint_reason: Janet has modules/environments, not CL packages and reader package semantics.
     missing_protocol_state: not_listed_missing
     missing_protocol_files: []
   - name: slynk-compile-string
@@ -272,6 +277,7 @@ operations:
     test_files:
       - test/protocol_inventory_tests.janet
     constraint: compiler_notes
+    constraint_reason: Janet diagnostics differ from CL compiler note objects and source-note semantics.
     missing_protocol_state: not_listed_missing
     missing_protocol_files: []
   - name: make-weak-key-hash-table
@@ -486,6 +492,7 @@ operations:
     test_files:
       - test/protocol_inventory_tests.janet
     constraint: threads
+    constraint_reason: Janet execution units/fibers do not map one-to-one to CL implementation thread APIs.
     missing_protocol_state: not_listed_missing
     missing_protocol_files: []
   - name: inspect-current-condition
@@ -516,6 +523,7 @@ operations:
     test_files:
       - test/protocol_inventory_tests.janet
     constraint: conditions_restarts
+    constraint_reason: Janet exceptions/stack traces do not expose CL condition/restart semantics.
     missing_protocol_state: stale_doc_lists_as_missing
     missing_protocol_files:
       - docs/missing_protocol.md
@@ -985,6 +993,7 @@ operations:
       - test/project_core_tests.janet
       - test/protocol_inventory_tests.janet
     constraint: compiler_notes
+    constraint_reason: Janet diagnostics differ from CL compiler note objects and source-note semantics.
     missing_protocol_state: stale_doc_lists_as_missing
     missing_protocol_files:
       - docs/missing_protocol.md
@@ -1009,6 +1018,7 @@ operations:
     test_files:
       - test/protocol_inventory_tests.janet
     constraint: cl_packages
+    constraint_reason: Janet has modules/environments, not CL packages and reader package semantics.
     missing_protocol_state: not_listed_missing
     missing_protocol_files: []
   - name: describe-primitive-type
@@ -1031,6 +1041,7 @@ operations:
     test_files:
       - test/protocol_inventory_tests.janet
     constraint: threads
+    constraint_reason: Janet execution units/fibers do not map one-to-one to CL implementation thread APIs.
     missing_protocol_state: not_listed_missing
     missing_protocol_files: []
   - name: inspector-call-nth-action
@@ -1061,6 +1072,7 @@ operations:
       - test/project_core_tests.janet
       - test/protocol_inventory_tests.janet
     constraint: compiler_notes
+    constraint_reason: Janet diagnostics differ from CL compiler note objects and source-note semantics.
     missing_protocol_state: stale_doc_lists_as_missing
     missing_protocol_files:
       - docs/missing_protocol.md
@@ -1154,6 +1166,7 @@ operations:
     test_files:
       - test/protocol_inventory_tests.janet
     constraint: conditions_restarts
+    constraint_reason: Janet exceptions/stack traces do not expose CL condition/restart semantics.
     missing_protocol_state: stale_doc_lists_as_missing
     missing_protocol_files:
       - docs/missing_protocol.md
@@ -1286,6 +1299,7 @@ operations:
     test_files:
       - test/protocol_inventory_tests.janet
     constraint: threads
+    constraint_reason: Janet execution units/fibers do not map one-to-one to CL implementation thread APIs.
     missing_protocol_state: not_listed_missing
     missing_protocol_files: []
   - name: export-structure
@@ -1313,6 +1327,7 @@ operations:
       - test/project_core_tests.janet
       - test/protocol_inventory_tests.janet
     constraint: conditions_restarts
+    constraint_reason: Janet exceptions/stack traces do not expose CL condition/restart semantics.
     missing_protocol_state: stale_doc_lists_as_missing
     missing_protocol_files:
       - docs/missing_protocol.md
@@ -1329,6 +1344,7 @@ operations:
     test_files:
       - test/protocol_inventory_tests.janet
     constraint: conditions_restarts
+    constraint_reason: Janet exceptions/stack traces do not expose CL condition/restart semantics.
     missing_protocol_state: stale_doc_lists_as_missing
     missing_protocol_files:
       - docs/missing_protocol.md
@@ -1346,6 +1362,7 @@ operations:
       - test/project_core_tests.janet
       - test/protocol_inventory_tests.janet
     constraint: threads
+    constraint_reason: Janet execution units/fibers do not map one-to-one to CL implementation thread APIs.
     missing_protocol_state: stale_doc_lists_as_missing
     missing_protocol_files:
       - docs/missing_protocol.md
@@ -1461,6 +1478,7 @@ operations:
     test_files:
       - test/protocol_inventory_tests.janet
     constraint: conditions_restarts
+    constraint_reason: Janet exceptions/stack traces do not expose CL condition/restart semantics.
     missing_protocol_state: not_listed_missing
     missing_protocol_files: []
   - name: compute-backtrace
@@ -1498,6 +1516,7 @@ operations:
     test_files:
       - test/protocol_inventory_tests.janet
     constraint: conditions_restarts
+    constraint_reason: Janet exceptions/stack traces do not expose CL condition/restart semantics.
     missing_protocol_state: not_listed_missing
     missing_protocol_files: []
   - name: close-socket
@@ -1546,6 +1565,7 @@ operations:
     test_files:
       - test/protocol_inventory_tests.janet
     constraint: threads
+    constraint_reason: Janet execution units/fibers do not map one-to-one to CL implementation thread APIs.
     missing_protocol_state: stale_doc_lists_as_missing
     missing_protocol_files:
       - docs/missing_protocol.md
@@ -1570,6 +1590,7 @@ operations:
     test_files:
       - test/protocol_inventory_tests.janet
     constraint: conditions_restarts
+    constraint_reason: Janet exceptions/stack traces do not expose CL condition/restart semantics.
     missing_protocol_state: not_listed_missing
     missing_protocol_files: []
   - name: inspector-reinspect
@@ -1600,6 +1621,7 @@ operations:
     test_files:
       - test/protocol_inventory_tests.janet
     constraint: conditions_restarts
+    constraint_reason: Janet exceptions/stack traces do not expose CL condition/restart semantics.
     missing_protocol_state: stale_doc_lists_as_missing
     missing_protocol_files:
       - docs/missing_protocol.md
@@ -1738,6 +1760,7 @@ operations:
     test_files:
       - test/protocol_inventory_tests.janet
     constraint: compiler_notes
+    constraint_reason: Janet diagnostics differ from CL compiler note objects and source-note semantics.
     missing_protocol_state: stale_doc_lists_as_missing
     missing_protocol_files:
       - docs/missing_protocol.md
@@ -1843,6 +1866,7 @@ operations:
     test_files:
       - test/protocol_inventory_tests.janet
     constraint: threads
+    constraint_reason: Janet execution units/fibers do not map one-to-one to CL implementation thread APIs.
     missing_protocol_state: not_listed_missing
     missing_protocol_files: []
   - name: find-definition-for-thing
@@ -1883,6 +1907,7 @@ operations:
     test_files:
       - test/protocol_inventory_tests.janet
     constraint: conditions_restarts
+    constraint_reason: Janet exceptions/stack traces do not expose CL condition/restart semantics.
     missing_protocol_state: stale_doc_lists_as_missing
     missing_protocol_files:
       - docs/missing_protocol.md
@@ -1988,6 +2013,7 @@ operations:
     test_files:
       - test/protocol_inventory_tests.janet
     constraint: conditions_restarts
+    constraint_reason: Janet exceptions/stack traces do not expose CL condition/restart semantics.
     missing_protocol_state: not_listed_missing
     missing_protocol_files: []
   - name: lisp-implementation-program
@@ -2096,6 +2122,7 @@ operations:
     test_files:
       - test/protocol_inventory_tests.janet
     constraint: cl_packages
+    constraint_reason: Janet has modules/environments, not CL packages and reader package semantics.
     missing_protocol_state: stale_doc_lists_as_missing
     missing_protocol_files:
       - docs/missing_protocol.md
@@ -2255,6 +2282,7 @@ operations:
     test_files:
       - test/protocol_inventory_tests.janet
     constraint: clos_mop
+    constraint_reason: Janet does not provide CLOS/MOP method metadata.
     missing_protocol_state: stale_doc_lists_as_missing
     missing_protocol_files:
       - docs/missing_protocol.md
@@ -2413,6 +2441,7 @@ operations:
     test_files:
       - test/protocol_inventory_tests.janet
     constraint: threads
+    constraint_reason: Janet execution units/fibers do not map one-to-one to CL implementation thread APIs.
     missing_protocol_state: not_listed_missing
     missing_protocol_files: []
   - name: default-readtable-alist
@@ -2504,6 +2533,7 @@ operations:
     test_files:
       - test/protocol_inventory_tests.janet
     constraint: conditions_restarts
+    constraint_reason: Janet exceptions/stack traces do not expose CL condition/restart semantics.
     missing_protocol_state: not_listed_missing
     missing_protocol_files: []
   - name: lisp-implementation-type-name
@@ -2563,6 +2593,7 @@ operations:
     test_files:
       - test/protocol_inventory_tests.janet
     constraint: conditions_restarts
+    constraint_reason: Janet exceptions/stack traces do not expose CL condition/restart semantics.
     missing_protocol_state: not_listed_missing
     missing_protocol_files: []
   - name: describe-inspector-part
@@ -2604,6 +2635,7 @@ operations:
     test_files:
       - test/protocol_inventory_tests.janet
     constraint: conditions_restarts
+    constraint_reason: Janet exceptions/stack traces do not expose CL condition/restart semantics.
     missing_protocol_state: stale_doc_lists_as_missing
     missing_protocol_files:
       - docs/missing_protocol.md
@@ -2689,6 +2721,7 @@ operations:
     test_files:
       - test/protocol_inventory_tests.janet
     constraint: clos_mop
+    constraint_reason: Janet does not provide CLOS/MOP method metadata.
     missing_protocol_state: stale_doc_lists_as_missing
     missing_protocol_files:
       - docs/missing_protocol.md
@@ -3230,6 +3263,7 @@ operations:
     test_files:
       - test/protocol_inventory_tests.janet
     constraint: threads
+    constraint_reason: Janet execution units/fibers do not map one-to-one to CL implementation thread APIs.
     missing_protocol_state: not_listed_missing
     missing_protocol_files: []
   - name: init-inspector
@@ -3258,6 +3292,7 @@ operations:
     test_files:
       - test/protocol_inventory_tests.janet
     constraint: compiler_notes
+    constraint_reason: Janet diagnostics differ from CL compiler note objects and source-note semantics.
     missing_protocol_state: stale_doc_lists_as_missing
     missing_protocol_files:
       - docs/missing_protocol.md

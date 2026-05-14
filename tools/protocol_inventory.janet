@@ -202,6 +202,16 @@
 
     true "none"))
 
+
+(defn- constraint-reason-for [constraint]
+  (case constraint
+    "cl_packages" "Janet has modules/environments, not CL packages and reader package semantics."
+    "conditions_restarts" "Janet exceptions/stack traces do not expose CL condition/restart semantics."
+    "clos_mop" "Janet does not provide CLOS/MOP method metadata."
+    "compiler_notes" "Janet diagnostics differ from CL compiler note objects and source-note semantics."
+    "threads" "Janet execution units/fibers do not map one-to-one to CL implementation thread APIs."
+    "none" ""))
+
 (defn- state-for [janet-evidence test-evidence]
   (cond
     (and (> (length janet-evidence) 0)
@@ -233,7 +243,10 @@
   (buffer/push-string out (yaml-list 4 "source_files" source-evidence))
   (buffer/push-string out (yaml-list 4 "janet_files" janet-evidence))
   (buffer/push-string out (yaml-list 4 "test_files" test-evidence))
-  (buffer/push-string out (string "    constraint: " (constraint-for operation) "\n"))
+  (def constraint (constraint-for operation))
+  (buffer/push-string out (string "    constraint: " constraint "\n"))
+  (when (not (= constraint "none"))
+    (buffer/push-string out (string "    constraint_reason: " (constraint-reason-for constraint) "\n")))
   (buffer/push-string out (string "    missing_protocol_state: " (stale-doc-state operation) "\n"))
   (buffer/push-string out (yaml-list 4 "missing_protocol_files" stale-files))
   (string out))

@@ -78,3 +78,20 @@
          (assert-true (contains compile-record "constraint: compiler_notes") "compiler diagnostics mark Janet-native approximation")
          (assert-true thread-record "list-threads record exists")
          (assert-true (contains thread-record "constraint: threads") "thread RPC marks Janet execution-unit limitation"))})
+
+(register-test
+  {:name "protocol inventory emits human-readable constraint reasons"
+   :tags [:inventory]
+   :fn (fn []
+         (run-inventory-generator)
+         (def text (inventory-text))
+         (def package-record (record-for text "set-package"))
+         (def restart-record (record-for text "invoke-nth-restart"))
+         (def clos-record (record-for text "generic-method-specs"))
+         (def compile-record (record-for text "compile-file-for-emacs"))
+         (def thread-record (record-for text "list-threads"))
+         (assert-true (contains package-record "constraint_reason: Janet has modules/environments") "CL package reason emitted")
+         (assert-true (contains restart-record "constraint_reason: Janet exceptions/stack traces") "restart reason emitted")
+         (assert-true (contains clos-record "constraint_reason: Janet does not provide CLOS/MOP") "CLOS/MOP reason emitted")
+         (assert-true (contains compile-record "constraint_reason: Janet diagnostics differ") "compiler-note reason emitted")
+         (assert-true (contains thread-record "constraint_reason: Janet execution units/fibers") "thread reason emitted"))})

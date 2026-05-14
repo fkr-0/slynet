@@ -514,8 +514,29 @@ task_groups:
                 reason: "Janet execution units/fibers do not map one-to-one to CL implementation thread APIs."
             emerging_tasks:
               - id: T01-3B-1_constraint_reason_field
-                status: todo
+                status: done
                 description: "Emit both constraint id and human-readable reason in generated inventory records, not just the id."
+                verification_log:
+                  - date: "2026-05-14"
+                    phase: red
+                    command: "JANET_PATH=$PWD janet test/run_tests.janet :report compact"
+                    result: "failed as intended: five representative constrained records lacked constraint_reason fields"
+                  - date: "2026-05-14"
+                    phase: green
+                    command: "JANET_PATH=$PWD janet test/run_tests.janet :report compact"
+                    result: "passed: 50 tests, 170/170 asserts, compact stdout_lines=4, stderr empty"
+                  - date: "2026-05-14"
+                    phase: regression
+                    command: "bridge.yml:test"
+                    result: "passed: 50 tests, 170/170 asserts, stderr empty"
+                implemented_details:
+                  - "Added constraint-reason-for in tools/protocol_inventory.janet."
+                  - "Generated inventory now emits constraint_reason for non-none constraints."
+                  - "Added protocol_inventory_tests coverage for all five representative constraint classes."
+                emerging_tasks:
+                  - id: T01-3B-1A_yaml_escape_constraint_reasons
+                    status: todo
+                    description: "Add YAML escaping/quoting for generated scalar fields before allowing arbitrary reason text from external config."
               - id: T01-3B-2_constraint_coverage_audit
                 status: todo
                 description: "Add a generator test that every non-none constraint id is documented in tasks.yml janet_design_constraints."
