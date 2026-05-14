@@ -15,7 +15,7 @@ operations:
     test_files:
       - test/project_core_tests.janet
       - test/protocol_inventory_tests.janet
-    constraint: null
+    constraint: cl_packages
     missing_protocol_state: stale_doc_lists_as_missing
     missing_protocol_files:
       - docs/missing_protocol.md
@@ -28,7 +28,7 @@ operations:
     janet_files: []
     test_files:
       - test/protocol_inventory_tests.janet
-    constraint: null
+    constraint: none
     missing_protocol_state: stale_doc_lists_as_missing
     missing_protocol_files:
       - docs/missing_protocol.md
@@ -40,7 +40,7 @@ operations:
     janet_files: []
     test_files:
       - test/protocol_inventory_tests.janet
-    constraint: null
+    constraint: conditions_restarts
     missing_protocol_state: not_listed_missing
     missing_protocol_files: []
   - name: profile
@@ -51,7 +51,7 @@ operations:
     janet_files: []
     test_files:
       - test/protocol_inventory_tests.janet
-    constraint: null
+    constraint: none
     missing_protocol_state: not_listed_missing
     missing_protocol_files: []
   - name: eval-for-inspector
@@ -64,7 +64,7 @@ operations:
       - slynet/contrib/slynet-fancy-inspector.janet
     test_files:
       - test/protocol_inventory_tests.janet
-    constraint: null
+    constraint: none
     missing_protocol_state: stale_doc_lists_as_missing
     missing_protocol_files:
       - docs/missing_protocol.md
@@ -78,7 +78,7 @@ operations:
       - slynet/interfaces.janet
     test_files:
       - test/protocol_inventory_tests.janet
-    constraint: null
+    constraint: none
     missing_protocol_state: stale_doc_lists_as_missing
     missing_protocol_files:
       - docs/missing_protocol_definterface.md
@@ -92,7 +92,7 @@ operations:
       - slynet/contrib/slynet-mrepl.janet
     test_files:
       - test/protocol_inventory_tests.janet
-    constraint: null
+    constraint: none
     missing_protocol_state: stale_doc_lists_as_missing
     missing_protocol_files:
       - docs/missing_protocol.md
@@ -105,7 +105,7 @@ operations:
     janet_files: []
     test_files:
       - test/protocol_inventory_tests.janet
-    constraint: null
+    constraint: none
     missing_protocol_state: not_listed_missing
     missing_protocol_files: []
   - name: list-all-package-names
@@ -119,7 +119,7 @@ operations:
       - slynet/proto/core.janet
     test_files:
       - test/protocol_inventory_tests.janet
-    constraint: null
+    constraint: cl_packages
     missing_protocol_state: stale_doc_lists_as_missing
     missing_protocol_files:
       - docs/missing_protocol.md
@@ -134,7 +134,7 @@ operations:
       - slynet/contrib/slynet-fancy-inspector.janet
     test_files:
       - test/protocol_inventory_tests.janet
-    constraint: null
+    constraint: none
     missing_protocol_state: stale_doc_lists_as_missing
     missing_protocol_files:
       - docs/missing_protocol.md
@@ -147,7 +147,7 @@ operations:
     janet_files: []
     test_files:
       - test/protocol_inventory_tests.janet
-    constraint: null
+    constraint: none
     missing_protocol_state: not_listed_missing
     missing_protocol_files: []
   - name: quit-thread-browser
@@ -160,7 +160,7 @@ operations:
       - slynet/proto/core.janet
     test_files:
       - test/protocol_inventory_tests.janet
-    constraint: null
+    constraint: none
     missing_protocol_state: stale_doc_lists_as_missing
     missing_protocol_files:
       - docs/missing_protocol.md
@@ -173,7 +173,7 @@ operations:
     janet_files: []
     test_files:
       - test/protocol_inventory_tests.janet
-    constraint: null
+    constraint: none
     missing_protocol_state: not_listed_missing
     missing_protocol_files: []
   - name: print-frame
@@ -184,7 +184,7 @@ operations:
     janet_files: []
     test_files:
       - test/protocol_inventory_tests.janet
-    constraint: null
+    constraint: none
     missing_protocol_state: not_listed_missing
     missing_protocol_files: []
   - name: start-slynk-server-in-thread
@@ -197,7 +197,7 @@ operations:
       - slynet/proto/core.janet
     test_files:
       - test/protocol_inventory_tests.janet
-    constraint: null
+    constraint: none
     missing_protocol_state: stale_doc_lists_as_missing
     missing_protocol_files:
       - docs/missing_protocol.md
@@ -210,7 +210,7 @@ operations:
     janet_files: []
     test_files:
       - test/protocol_inventory_tests.janet
-    constraint: null
+    constraint: compiler_notes
     missing_protocol_state: not_listed_missing
     missing_protocol_files: []
   - name: make-lock
@@ -223,7 +223,7 @@ operations:
       - slynet/interfaces.janet
     test_files:
       - test/protocol_inventory_tests.janet
-    constraint: null
+    constraint: none
     missing_protocol_state: not_listed_missing
     missing_protocol_files: []
   - name: call-with-compilation-hooks
@@ -236,7 +236,7 @@ operations:
       - slynet/interfaces.janet
     test_files:
       - test/protocol_inventory_tests.janet
-    constraint: null
+    constraint: none
     missing_protocol_state: not_listed_missing
     missing_protocol_files: []
   - name: gray-package-name
@@ -249,7 +249,7 @@ operations:
       - slynet/interfaces.janet
     test_files:
       - test/protocol_inventory_tests.janet
-    constraint: null
+    constraint: none
     missing_protocol_state: not_listed_missing
     missing_protocol_files: []
   - name: package-local-nicknames
@@ -260,7 +260,7 @@ operations:
     janet_files: []
     test_files:
       - test/protocol_inventory_tests.janet
-    constraint: null
+    constraint: cl_packages
     missing_protocol_state: not_listed_missing
     missing_protocol_files: []
   - name: slynk-compile-string
@@ -271,7 +271,7 @@ operations:
     janet_files: []
     test_files:
       - test/protocol_inventory_tests.janet
-    constraint: null
+    constraint: compiler_notes
     missing_protocol_state: not_listed_missing
     missing_protocol_files: []
   - name: make-weak-key-hash-table
@@ -282,7 +282,7 @@ operations:
     janet_files: []
     test_files:
       - test/protocol_inventory_tests.janet
-    constraint: null
+    constraint: none
     missing_protocol_state: not_listed_missing
     missing_protocol_files: []
   - name: inspector-eval
@@ -295,7 +295,7 @@ operations:
       - slynet/contrib/slynet-fancy-inspector.janet
     test_files:
       - test/protocol_inventory_tests.janet
-    constraint: null
+    constraint: none
     missing_protocol_state: stale_doc_lists_as_missing
     missing_protocol_files:
       - docs/missing_protocol.md
@@ -309,7 +309,7 @@ operations:
       - slynet/interfaces.janet
     test_files:
       - test/protocol_inventory_tests.janet
-    constraint: null
+    constraint: none
     missing_protocol_state: stale_doc_lists_as_missing
     missing_protocol_files:
       - docs/missing_protocol.md
@@ -322,7 +322,7 @@ operations:
     janet_files: []
     test_files:
       - test/protocol_inventory_tests.janet
-    constraint: null
+    constraint: none
     missing_protocol_state: not_listed_missing
     missing_protocol_files: []
   - name: undefine-function
@@ -335,7 +335,7 @@ operations:
       - slynet/proto/core.janet
     test_files:
       - test/protocol_inventory_tests.janet
-    constraint: null
+    constraint: none
     missing_protocol_state: stale_doc_lists_as_missing
     missing_protocol_files:
       - docs/missing_protocol.md
@@ -350,7 +350,7 @@ operations:
       - slynet/contrib/slynet-package-fu.janet
     test_files:
       - test/protocol_inventory_tests.janet
-    constraint: null
+    constraint: none
     missing_protocol_state: stale_doc_lists_as_missing
     missing_protocol_files:
       - docs/missing_protocol.md
@@ -363,7 +363,7 @@ operations:
     janet_files: []
     test_files:
       - test/protocol_inventory_tests.janet
-    constraint: null
+    constraint: none
     missing_protocol_state: not_listed_missing
     missing_protocol_files: []
   - name: find-registered
@@ -374,7 +374,7 @@ operations:
     janet_files: []
     test_files:
       - test/protocol_inventory_tests.janet
-    constraint: null
+    constraint: none
     missing_protocol_state: not_listed_missing
     missing_protocol_files: []
   - name: slynk-expand
@@ -387,7 +387,7 @@ operations:
       - slynet/proto/core.janet
     test_files:
       - test/protocol_inventory_tests.janet
-    constraint: null
+    constraint: none
     missing_protocol_state: stale_doc_lists_as_missing
     missing_protocol_files:
       - docs/missing_protocol.md
@@ -404,7 +404,7 @@ operations:
     test_files:
       - test/project_core_tests.janet
       - test/protocol_inventory_tests.janet
-    constraint: null
+    constraint: none
     missing_protocol_state: stale_doc_lists_as_missing
     missing_protocol_files:
       - docs/missing_protocol.md
@@ -419,7 +419,7 @@ operations:
       - slynet/proto/core.janet
     test_files:
       - test/protocol_inventory_tests.janet
-    constraint: null
+    constraint: none
     missing_protocol_state: stale_doc_lists_as_missing
     missing_protocol_files:
       - docs/missing_protocol.md
@@ -437,7 +437,7 @@ operations:
     test_files:
       - test/project_core_tests.janet
       - test/protocol_inventory_tests.janet
-    constraint: null
+    constraint: none
     missing_protocol_state: stale_doc_lists_as_missing
     missing_protocol_files:
       - docs/missing_protocol.md
@@ -452,7 +452,7 @@ operations:
       - slynet/interfaces.janet
     test_files:
       - test/protocol_inventory_tests.janet
-    constraint: null
+    constraint: none
     missing_protocol_state: not_listed_missing
     missing_protocol_files: []
   - name: thread-attributes
@@ -463,7 +463,7 @@ operations:
     janet_files: []
     test_files:
       - test/protocol_inventory_tests.janet
-    constraint: null
+    constraint: none
     missing_protocol_state: not_listed_missing
     missing_protocol_files: []
   - name: save-image
@@ -474,7 +474,7 @@ operations:
     janet_files: []
     test_files:
       - test/protocol_inventory_tests.janet
-    constraint: null
+    constraint: none
     missing_protocol_state: not_listed_missing
     missing_protocol_files: []
   - name: spawn
@@ -485,7 +485,7 @@ operations:
     janet_files: []
     test_files:
       - test/protocol_inventory_tests.janet
-    constraint: null
+    constraint: threads
     missing_protocol_state: not_listed_missing
     missing_protocol_files: []
   - name: inspect-current-condition
@@ -499,7 +499,7 @@ operations:
       - slynet/contrib/slynet-fancy-inspector.janet
     test_files:
       - test/protocol_inventory_tests.janet
-    constraint: null
+    constraint: none
     missing_protocol_state: stale_doc_lists_as_missing
     missing_protocol_files:
       - docs/missing_protocol.md
@@ -515,7 +515,7 @@ operations:
       - slynet/proto/core.janet
     test_files:
       - test/protocol_inventory_tests.janet
-    constraint: null
+    constraint: conditions_restarts
     missing_protocol_state: stale_doc_lists_as_missing
     missing_protocol_files:
       - docs/missing_protocol.md
@@ -530,7 +530,7 @@ operations:
       - slynet/contrib/slynet-fancy-inspector.janet
     test_files:
       - test/protocol_inventory_tests.janet
-    constraint: null
+    constraint: none
     missing_protocol_state: stale_doc_lists_as_missing
     missing_protocol_files:
       - docs/missing_protocol.md
@@ -544,7 +544,7 @@ operations:
       - slynet/interfaces.janet
     test_files:
       - test/protocol_inventory_tests.janet
-    constraint: null
+    constraint: none
     missing_protocol_state: stale_doc_lists_as_missing
     missing_protocol_files:
       - docs/missing_protocol.md
@@ -557,7 +557,7 @@ operations:
     janet_files: []
     test_files:
       - test/protocol_inventory_tests.janet
-    constraint: null
+    constraint: none
     missing_protocol_state: not_listed_missing
     missing_protocol_files: []
   - name: slynk-compiler-macroexpand-1
@@ -570,7 +570,7 @@ operations:
       - slynet/proto/core.janet
     test_files:
       - test/protocol_inventory_tests.janet
-    constraint: null
+    constraint: none
     missing_protocol_state: stale_doc_lists_as_missing
     missing_protocol_files:
       - docs/missing_protocol.md
@@ -583,7 +583,7 @@ operations:
     janet_files: []
     test_files:
       - test/protocol_inventory_tests.janet
-    constraint: null
+    constraint: none
     missing_protocol_state: not_listed_missing
     missing_protocol_files: []
   - name: package=
@@ -596,7 +596,7 @@ operations:
       - slynet/contrib/slynet-package-fu.janet
     test_files:
       - test/protocol_inventory_tests.janet
-    constraint: null
+    constraint: none
     missing_protocol_state: stale_doc_lists_as_missing
     missing_protocol_files:
       - docs/missing_protocol.md
@@ -611,7 +611,7 @@ operations:
       - slynet/proto/core.janet
     test_files:
       - test/protocol_inventory_tests.janet
-    constraint: null
+    constraint: none
     missing_protocol_state: stale_doc_lists_as_missing
     missing_protocol_files:
       - docs/missing_protocol.md
@@ -624,7 +624,7 @@ operations:
     janet_files: []
     test_files:
       - test/protocol_inventory_tests.janet
-    constraint: null
+    constraint: none
     missing_protocol_state: not_listed_missing
     missing_protocol_files: []
   - name: wrapped-p
@@ -635,7 +635,7 @@ operations:
     janet_files: []
     test_files:
       - test/protocol_inventory_tests.janet
-    constraint: null
+    constraint: none
     missing_protocol_state: not_listed_missing
     missing_protocol_files: []
   - name: who-references
@@ -647,7 +647,7 @@ operations:
       - slynet/xref.janet
     test_files:
       - test/protocol_inventory_tests.janet
-    constraint: null
+    constraint: none
     missing_protocol_state: not_listed_missing
     missing_protocol_files: []
   - name: update-indentation-information
@@ -660,7 +660,7 @@ operations:
       - slynet/proto/core.janet
     test_files:
       - test/protocol_inventory_tests.janet
-    constraint: null
+    constraint: none
     missing_protocol_state: stale_doc_lists_as_missing
     missing_protocol_files:
       - docs/missing_protocol.md
@@ -673,7 +673,7 @@ operations:
     janet_files: []
     test_files:
       - test/protocol_inventory_tests.janet
-    constraint: null
+    constraint: none
     missing_protocol_state: not_listed_missing
     missing_protocol_files: []
   - name: background-save-image
@@ -684,7 +684,7 @@ operations:
     janet_files: []
     test_files:
       - test/protocol_inventory_tests.janet
-    constraint: null
+    constraint: none
     missing_protocol_state: not_listed_missing
     missing_protocol_files: []
   - name: operator-arglist
@@ -699,7 +699,7 @@ operations:
     test_files:
       - test/project_core_tests.janet
       - test/protocol_inventory_tests.janet
-    constraint: null
+    constraint: none
     missing_protocol_state: stale_doc_lists_as_missing
     missing_protocol_files:
       - docs/missing_protocol.md
@@ -716,7 +716,7 @@ operations:
     test_files:
       - test/project_core_tests.janet
       - test/protocol_inventory_tests.janet
-    constraint: null
+    constraint: none
     missing_protocol_state: stale_doc_lists_as_missing
     missing_protocol_files:
       - docs/missing_protocol.md
@@ -729,7 +729,7 @@ operations:
     janet_files: []
     test_files:
       - test/protocol_inventory_tests.janet
-    constraint: null
+    constraint: none
     missing_protocol_state: not_listed_missing
     missing_protocol_files: []
   - name: find-source-location-for-emacs
@@ -742,7 +742,7 @@ operations:
       - slynet/proto/core.janet
     test_files:
       - test/protocol_inventory_tests.janet
-    constraint: null
+    constraint: none
     missing_protocol_state: stale_doc_lists_as_missing
     missing_protocol_files:
       - docs/missing_protocol.md
@@ -760,7 +760,7 @@ operations:
     test_files:
       - test/project_core_tests.janet
       - test/protocol_inventory_tests.janet
-    constraint: null
+    constraint: none
     missing_protocol_state: stale_doc_lists_as_missing
     missing_protocol_files:
       - docs/missing_protocol.md
@@ -777,7 +777,7 @@ operations:
     test_files:
       - test/project_core_tests.janet
       - test/protocol_inventory_tests.janet
-    constraint: null
+    constraint: none
     missing_protocol_state: stale_doc_lists_as_missing
     missing_protocol_files:
       - docs/missing_protocol.md
@@ -790,7 +790,7 @@ operations:
     janet_files: []
     test_files:
       - test/protocol_inventory_tests.janet
-    constraint: null
+    constraint: none
     missing_protocol_state: not_listed_missing
     missing_protocol_files: []
   - name: receive-if
@@ -801,7 +801,7 @@ operations:
     janet_files: []
     test_files:
       - test/protocol_inventory_tests.janet
-    constraint: null
+    constraint: none
     missing_protocol_state: not_listed_missing
     missing_protocol_files: []
   - name: inspector-next
@@ -814,7 +814,7 @@ operations:
       - slynet/contrib/slynet-fancy-inspector.janet
     test_files:
       - test/protocol_inventory_tests.janet
-    constraint: null
+    constraint: none
     missing_protocol_state: stale_doc_lists_as_missing
     missing_protocol_files:
       - docs/missing_protocol.md
@@ -829,7 +829,7 @@ operations:
       - slynet/proto/core.janet
     test_files:
       - test/protocol_inventory_tests.janet
-    constraint: null
+    constraint: none
     missing_protocol_state: stale_doc_lists_as_missing
     missing_protocol_files:
       - docs/missing_protocol.md
@@ -844,7 +844,7 @@ operations:
       - slynet/contrib/slynet-fancy-inspector.janet
     test_files:
       - test/protocol_inventory_tests.janet
-    constraint: null
+    constraint: none
     missing_protocol_state: stale_doc_lists_as_missing
     missing_protocol_files:
       - docs/missing_protocol.md
@@ -859,7 +859,7 @@ operations:
       - slynet/interfaces.janet
     test_files:
       - test/protocol_inventory_tests.janet
-    constraint: null
+    constraint: none
     missing_protocol_state: stale_doc_lists_as_missing
     missing_protocol_files:
       - docs/missing_protocol_definterface.md
@@ -871,7 +871,7 @@ operations:
     janet_files: []
     test_files:
       - test/protocol_inventory_tests.janet
-    constraint: null
+    constraint: none
     missing_protocol_state: not_listed_missing
     missing_protocol_files: []
   - name: sly-db-stepper-condition-p
@@ -882,7 +882,7 @@ operations:
     janet_files: []
     test_files:
       - test/protocol_inventory_tests.janet
-    constraint: null
+    constraint: none
     missing_protocol_state: not_listed_missing
     missing_protocol_files: []
   - name: sdlb-print-condition
@@ -895,7 +895,7 @@ operations:
       - slynet/proto/core.janet
     test_files:
       - test/protocol_inventory_tests.janet
-    constraint: null
+    constraint: none
     missing_protocol_state: stale_doc_lists_as_missing
     missing_protocol_files:
       - docs/missing_protocol.md
@@ -908,7 +908,7 @@ operations:
     janet_files: []
     test_files:
       - test/protocol_inventory_tests.janet
-    constraint: null
+    constraint: none
     missing_protocol_state: not_listed_missing
     missing_protocol_files: []
   - name: who-sets
@@ -920,7 +920,7 @@ operations:
       - slynet/xref.janet
     test_files:
       - test/protocol_inventory_tests.janet
-    constraint: null
+    constraint: none
     missing_protocol_state: not_listed_missing
     missing_protocol_files: []
   - name: compiler-macroexpand-1
@@ -931,7 +931,7 @@ operations:
     janet_files: []
     test_files:
       - test/protocol_inventory_tests.janet
-    constraint: null
+    constraint: none
     missing_protocol_state: not_listed_missing
     missing_protocol_files: []
   - name: current-thread
@@ -944,7 +944,7 @@ operations:
       - slynet/interfaces.janet
     test_files:
       - test/protocol_inventory_tests.janet
-    constraint: null
+    constraint: none
     missing_protocol_state: not_listed_missing
     missing_protocol_files: []
   - name: default-directory
@@ -957,7 +957,7 @@ operations:
       - slynet/interfaces.janet
     test_files:
       - test/protocol_inventory_tests.janet
-    constraint: null
+    constraint: none
     missing_protocol_state: not_listed_missing
     missing_protocol_files: []
   - name: string-to-utf8
@@ -969,7 +969,7 @@ operations:
       - slynet/backend.janet
     test_files:
       - test/protocol_inventory_tests.janet
-    constraint: null
+    constraint: none
     missing_protocol_state: not_listed_missing
     missing_protocol_files: []
   - name: compile-file-for-emacs
@@ -984,7 +984,7 @@ operations:
     test_files:
       - test/project_core_tests.janet
       - test/protocol_inventory_tests.janet
-    constraint: null
+    constraint: compiler_notes
     missing_protocol_state: stale_doc_lists_as_missing
     missing_protocol_files:
       - docs/missing_protocol.md
@@ -997,7 +997,7 @@ operations:
     janet_files: []
     test_files:
       - test/protocol_inventory_tests.janet
-    constraint: null
+    constraint: none
     missing_protocol_state: not_listed_missing
     missing_protocol_files: []
   - name: find-locally-nicknamed-package
@@ -1008,7 +1008,7 @@ operations:
     janet_files: []
     test_files:
       - test/protocol_inventory_tests.janet
-    constraint: null
+    constraint: cl_packages
     missing_protocol_state: not_listed_missing
     missing_protocol_files: []
   - name: describe-primitive-type
@@ -1019,7 +1019,7 @@ operations:
     janet_files: []
     test_files:
       - test/protocol_inventory_tests.janet
-    constraint: null
+    constraint: none
     missing_protocol_state: not_listed_missing
     missing_protocol_files: []
   - name: initialize-multiprocessing
@@ -1030,7 +1030,7 @@ operations:
     janet_files: []
     test_files:
       - test/protocol_inventory_tests.janet
-    constraint: null
+    constraint: threads
     missing_protocol_state: not_listed_missing
     missing_protocol_files: []
   - name: inspector-call-nth-action
@@ -1043,7 +1043,7 @@ operations:
       - slynet/contrib/slynet-fancy-inspector.janet
     test_files:
       - test/protocol_inventory_tests.janet
-    constraint: null
+    constraint: none
     missing_protocol_state: stale_doc_lists_as_missing
     missing_protocol_files:
       - docs/missing_protocol.md
@@ -1060,7 +1060,7 @@ operations:
     test_files:
       - test/project_core_tests.janet
       - test/protocol_inventory_tests.janet
-    constraint: null
+    constraint: compiler_notes
     missing_protocol_state: stale_doc_lists_as_missing
     missing_protocol_files:
       - docs/missing_protocol.md
@@ -1073,7 +1073,7 @@ operations:
     janet_files: []
     test_files:
       - test/protocol_inventory_tests.janet
-    constraint: null
+    constraint: none
     missing_protocol_state: not_listed_missing
     missing_protocol_files: []
   - name: preferred-communication-style
@@ -1084,7 +1084,7 @@ operations:
     janet_files: []
     test_files:
       - test/protocol_inventory_tests.janet
-    constraint: null
+    constraint: none
     missing_protocol_state: not_listed_missing
     missing_protocol_files: []
   - name: find-definitions
@@ -1097,7 +1097,7 @@ operations:
       - slynet/interfaces.janet
     test_files:
       - test/protocol_inventory_tests.janet
-    constraint: null
+    constraint: none
     missing_protocol_state: stale_doc_lists_as_missing
     missing_protocol_files:
       - docs/missing_protocol_definterface.md
@@ -1109,7 +1109,7 @@ operations:
     janet_files: []
     test_files:
       - test/protocol_inventory_tests.janet
-    constraint: null
+    constraint: none
     missing_protocol_state: not_listed_missing
     missing_protocol_files: []
   - name: toggle-debug-on-slynk-error
@@ -1123,7 +1123,7 @@ operations:
       - slynet/proto/core.janet
     test_files:
       - test/protocol_inventory_tests.janet
-    constraint: null
+    constraint: none
     missing_protocol_state: stale_doc_lists_as_missing
     missing_protocol_files:
       - docs/missing_protocol.md
@@ -1138,7 +1138,7 @@ operations:
       - slynet/contrib/slynet-mrepl.janet
     test_files:
       - test/protocol_inventory_tests.janet
-    constraint: null
+    constraint: none
     missing_protocol_state: stale_doc_lists_as_missing
     missing_protocol_files:
       - docs/missing_protocol.md
@@ -1153,7 +1153,7 @@ operations:
       - slynet/proto/core.janet
     test_files:
       - test/protocol_inventory_tests.janet
-    constraint: null
+    constraint: conditions_restarts
     missing_protocol_state: stale_doc_lists_as_missing
     missing_protocol_files:
       - docs/missing_protocol.md
@@ -1166,7 +1166,7 @@ operations:
     janet_files: []
     test_files:
       - test/protocol_inventory_tests.janet
-    constraint: null
+    constraint: none
     missing_protocol_state: not_listed_missing
     missing_protocol_files: []
   - name: call-with-debugging-environment
@@ -1177,7 +1177,7 @@ operations:
     janet_files: []
     test_files:
       - test/protocol_inventory_tests.janet
-    constraint: null
+    constraint: none
     missing_protocol_state: not_listed_missing
     missing_protocol_files: []
   - name: codepoint-length
@@ -1188,7 +1188,7 @@ operations:
     janet_files: []
     test_files:
       - test/protocol_inventory_tests.janet
-    constraint: null
+    constraint: none
     missing_protocol_state: not_listed_missing
     missing_protocol_files: []
   - name: exec-image
@@ -1199,7 +1199,7 @@ operations:
     janet_files: []
     test_files:
       - test/protocol_inventory_tests.janet
-    constraint: null
+    constraint: none
     missing_protocol_state: not_listed_missing
     missing_protocol_files: []
   - name: remove-sigio-handlers
@@ -1210,7 +1210,7 @@ operations:
     janet_files: []
     test_files:
       - test/protocol_inventory_tests.janet
-    constraint: null
+    constraint: none
     missing_protocol_state: not_listed_missing
     missing_protocol_files: []
   - name: eval-for-mrepl
@@ -1223,7 +1223,7 @@ operations:
       - slynet/contrib/slynet-mrepl.janet
     test_files:
       - test/protocol_inventory_tests.janet
-    constraint: null
+    constraint: none
     missing_protocol_state: stale_doc_lists_as_missing
     missing_protocol_files:
       - docs/missing_protocol.md
@@ -1237,7 +1237,7 @@ operations:
       - slynet/xref.janet
     test_files:
       - test/protocol_inventory_tests.janet
-    constraint: null
+    constraint: none
     missing_protocol_state: not_listed_missing
     missing_protocol_files: []
   - name: thread-alive-p
@@ -1248,7 +1248,7 @@ operations:
     janet_files: []
     test_files:
       - test/protocol_inventory_tests.janet
-    constraint: null
+    constraint: none
     missing_protocol_state: not_listed_missing
     missing_protocol_files: []
   - name: pprint-eval-string-in-frame
@@ -1261,7 +1261,7 @@ operations:
       - slynet/proto/core.janet
     test_files:
       - test/protocol_inventory_tests.janet
-    constraint: null
+    constraint: none
     missing_protocol_state: stale_doc_lists_as_missing
     missing_protocol_files:
       - docs/missing_protocol.md
@@ -1274,7 +1274,7 @@ operations:
     janet_files: []
     test_files:
       - test/protocol_inventory_tests.janet
-    constraint: null
+    constraint: none
     missing_protocol_state: not_listed_missing
     missing_protocol_files: []
   - name: thread-status
@@ -1285,7 +1285,7 @@ operations:
     janet_files: []
     test_files:
       - test/protocol_inventory_tests.janet
-    constraint: null
+    constraint: threads
     missing_protocol_state: not_listed_missing
     missing_protocol_files: []
   - name: export-structure
@@ -1296,7 +1296,7 @@ operations:
     janet_files: []
     test_files:
       - test/protocol_inventory_tests.janet
-    constraint: null
+    constraint: none
     missing_protocol_state: stale_doc_lists_as_missing
     missing_protocol_files:
       - docs/missing_protocol.md
@@ -1312,7 +1312,7 @@ operations:
     test_files:
       - test/project_core_tests.janet
       - test/protocol_inventory_tests.janet
-    constraint: null
+    constraint: conditions_restarts
     missing_protocol_state: stale_doc_lists_as_missing
     missing_protocol_files:
       - docs/missing_protocol.md
@@ -1328,7 +1328,7 @@ operations:
       - slynet/proto/core.janet
     test_files:
       - test/protocol_inventory_tests.janet
-    constraint: null
+    constraint: conditions_restarts
     missing_protocol_state: stale_doc_lists_as_missing
     missing_protocol_files:
       - docs/missing_protocol.md
@@ -1345,7 +1345,7 @@ operations:
     test_files:
       - test/project_core_tests.janet
       - test/protocol_inventory_tests.janet
-    constraint: null
+    constraint: threads
     missing_protocol_state: stale_doc_lists_as_missing
     missing_protocol_files:
       - docs/missing_protocol.md
@@ -1360,7 +1360,7 @@ operations:
       - slynet/contrib/slynet-mrepl.janet
     test_files:
       - test/protocol_inventory_tests.janet
-    constraint: null
+    constraint: none
     missing_protocol_state: stale_doc_lists_as_missing
     missing_protocol_files:
       - docs/missing_protocol.md
@@ -1373,7 +1373,7 @@ operations:
     janet_files: []
     test_files:
       - test/protocol_inventory_tests.janet
-    constraint: null
+    constraint: none
     missing_protocol_state: not_listed_missing
     missing_protocol_files: []
   - name: inspector-toggle-verbose
@@ -1386,7 +1386,7 @@ operations:
       - slynet/contrib/slynet-fancy-inspector.janet
     test_files:
       - test/protocol_inventory_tests.janet
-    constraint: null
+    constraint: none
     missing_protocol_state: stale_doc_lists_as_missing
     missing_protocol_files:
       - docs/missing_protocol.md
@@ -1399,7 +1399,7 @@ operations:
     janet_files: []
     test_files:
       - test/protocol_inventory_tests.janet
-    constraint: null
+    constraint: none
     missing_protocol_state: not_listed_missing
     missing_protocol_files: []
   - name: flow-control-test
@@ -1413,7 +1413,7 @@ operations:
     test_files:
       - test/project_core_tests.janet
       - test/protocol_inventory_tests.janet
-    constraint: null
+    constraint: none
     missing_protocol_state: stale_doc_lists_as_missing
     missing_protocol_files:
       - docs/missing_protocol.md
@@ -1427,7 +1427,7 @@ operations:
       - slynet/backend.janet
     test_files:
       - test/protocol_inventory_tests.janet
-    constraint: null
+    constraint: none
     missing_protocol_state: not_listed_missing
     missing_protocol_files: []
   - name: profile-reset
@@ -1438,7 +1438,7 @@ operations:
     janet_files: []
     test_files:
       - test/protocol_inventory_tests.janet
-    constraint: null
+    constraint: none
     missing_protocol_state: not_listed_missing
     missing_protocol_files: []
   - name: frame-arguments
@@ -1449,7 +1449,7 @@ operations:
     janet_files: []
     test_files:
       - test/protocol_inventory_tests.janet
-    constraint: null
+    constraint: none
     missing_protocol_state: not_listed_missing
     missing_protocol_files: []
   - name: sly-db-break-at-start
@@ -1460,7 +1460,7 @@ operations:
     janet_files: []
     test_files:
       - test/protocol_inventory_tests.janet
-    constraint: null
+    constraint: conditions_restarts
     missing_protocol_state: not_listed_missing
     missing_protocol_files: []
   - name: compute-backtrace
@@ -1471,7 +1471,7 @@ operations:
     janet_files: []
     test_files:
       - test/protocol_inventory_tests.janet
-    constraint: null
+    constraint: none
     missing_protocol_state: not_listed_missing
     missing_protocol_files: []
   - name: inspect-nth-part
@@ -1484,7 +1484,7 @@ operations:
       - slynet/contrib/slynet-fancy-inspector.janet
     test_files:
       - test/protocol_inventory_tests.janet
-    constraint: null
+    constraint: none
     missing_protocol_state: stale_doc_lists_as_missing
     missing_protocol_files:
       - docs/missing_protocol.md
@@ -1497,7 +1497,7 @@ operations:
     janet_files: []
     test_files:
       - test/protocol_inventory_tests.janet
-    constraint: null
+    constraint: conditions_restarts
     missing_protocol_state: not_listed_missing
     missing_protocol_files: []
   - name: close-socket
@@ -1508,7 +1508,7 @@ operations:
     janet_files: []
     test_files:
       - test/protocol_inventory_tests.janet
-    constraint: null
+    constraint: none
     missing_protocol_state: not_listed_missing
     missing_protocol_files: []
   - name: quit-lisp
@@ -1519,7 +1519,7 @@ operations:
     janet_files: []
     test_files:
       - test/protocol_inventory_tests.janet
-    constraint: null
+    constraint: none
     missing_protocol_state: not_listed_missing
     missing_protocol_files: []
   - name: who-calls
@@ -1531,7 +1531,7 @@ operations:
       - slynet/xref.janet
     test_files:
       - test/protocol_inventory_tests.janet
-    constraint: null
+    constraint: none
     missing_protocol_state: not_listed_missing
     missing_protocol_files: []
   - name: list-threads
@@ -1545,7 +1545,7 @@ operations:
       - slynet/proto/core.janet
     test_files:
       - test/protocol_inventory_tests.janet
-    constraint: null
+    constraint: threads
     missing_protocol_state: stale_doc_lists_as_missing
     missing_protocol_files:
       - docs/missing_protocol.md
@@ -1558,7 +1558,7 @@ operations:
     janet_files: []
     test_files:
       - test/protocol_inventory_tests.janet
-    constraint: null
+    constraint: none
     missing_protocol_state: not_listed_missing
     missing_protocol_files: []
   - name: restart-frame
@@ -1569,7 +1569,7 @@ operations:
     janet_files: []
     test_files:
       - test/protocol_inventory_tests.janet
-    constraint: null
+    constraint: conditions_restarts
     missing_protocol_state: not_listed_missing
     missing_protocol_files: []
   - name: inspector-reinspect
@@ -1583,7 +1583,7 @@ operations:
       - slynet/contrib/slynet-fancy-inspector.janet
     test_files:
       - test/protocol_inventory_tests.janet
-    constraint: null
+    constraint: none
     missing_protocol_state: stale_doc_lists_as_missing
     missing_protocol_files:
       - docs/missing_protocol.md
@@ -1599,7 +1599,7 @@ operations:
       - slynet/proto/core.janet
     test_files:
       - test/protocol_inventory_tests.janet
-    constraint: null
+    constraint: conditions_restarts
     missing_protocol_state: stale_doc_lists_as_missing
     missing_protocol_files:
       - docs/missing_protocol.md
@@ -1614,7 +1614,7 @@ operations:
       - slynet/contrib/slynet-mrepl.janet
     test_files:
       - test/protocol_inventory_tests.janet
-    constraint: null
+    constraint: none
     missing_protocol_state: stale_doc_lists_as_missing
     missing_protocol_files:
       - docs/missing_protocol.md
@@ -1629,7 +1629,7 @@ operations:
       - slynet/proto/core.janet
     test_files:
       - test/protocol_inventory_tests.janet
-    constraint: null
+    constraint: none
     missing_protocol_state: stale_doc_lists_as_missing
     missing_protocol_files:
       - docs/missing_protocol.md
@@ -1644,7 +1644,7 @@ operations:
       - slynet/proto/core.janet
     test_files:
       - test/protocol_inventory_tests.janet
-    constraint: null
+    constraint: none
     missing_protocol_state: stale_doc_lists_as_missing
     missing_protocol_files:
       - docs/missing_protocol.md
@@ -1657,7 +1657,7 @@ operations:
     janet_files: []
     test_files:
       - test/protocol_inventory_tests.janet
-    constraint: null
+    constraint: none
     missing_protocol_state: not_listed_missing
     missing_protocol_files: []
   - name: type-specifier-p
@@ -1668,7 +1668,7 @@ operations:
     janet_files: []
     test_files:
       - test/protocol_inventory_tests.janet
-    constraint: null
+    constraint: none
     missing_protocol_state: not_listed_missing
     missing_protocol_files: []
   - name: slynk-expand-1
@@ -1681,7 +1681,7 @@ operations:
       - slynet/proto/core.janet
     test_files:
       - test/protocol_inventory_tests.janet
-    constraint: null
+    constraint: none
     missing_protocol_state: stale_doc_lists_as_missing
     missing_protocol_files:
       - docs/missing_protocol.md
@@ -1696,7 +1696,7 @@ operations:
       - slynet/interfaces.janet
     test_files:
       - test/protocol_inventory_tests.janet
-    constraint: null
+    constraint: none
     missing_protocol_state: not_listed_missing
     missing_protocol_files: []
   - name: disassemble-frame
@@ -1707,7 +1707,7 @@ operations:
     janet_files: []
     test_files:
       - test/protocol_inventory_tests.janet
-    constraint: null
+    constraint: none
     missing_protocol_state: not_listed_missing
     missing_protocol_files: []
   - name: value-for-editing
@@ -1722,7 +1722,7 @@ operations:
     test_files:
       - test/project_core_tests.janet
       - test/protocol_inventory_tests.janet
-    constraint: null
+    constraint: none
     missing_protocol_state: stale_doc_lists_as_missing
     missing_protocol_files:
       - docs/missing_protocol.md
@@ -1737,7 +1737,7 @@ operations:
       - slynet/proto/core.janet
     test_files:
       - test/protocol_inventory_tests.janet
-    constraint: null
+    constraint: compiler_notes
     missing_protocol_state: stale_doc_lists_as_missing
     missing_protocol_files:
       - docs/missing_protocol.md
@@ -1750,7 +1750,7 @@ operations:
     janet_files: []
     test_files:
       - test/protocol_inventory_tests.janet
-    constraint: null
+    constraint: none
     missing_protocol_state: not_listed_missing
     missing_protocol_files: []
   - name: describe-function
@@ -1765,7 +1765,7 @@ operations:
     test_files:
       - test/project_core_tests.janet
       - test/protocol_inventory_tests.janet
-    constraint: null
+    constraint: none
     missing_protocol_state: stale_doc_lists_as_missing
     missing_protocol_files:
       - docs/missing_protocol.md
@@ -1782,7 +1782,7 @@ operations:
     test_files:
       - test/project_core_tests.janet
       - test/protocol_inventory_tests.janet
-    constraint: null
+    constraint: none
     missing_protocol_state: stale_doc_lists_as_missing
     missing_protocol_files:
       - docs/missing_protocol.md
@@ -1798,7 +1798,7 @@ operations:
       - slynet/contrib/slynet-apropos.janet
     test_files:
       - test/protocol_inventory_tests.janet
-    constraint: null
+    constraint: none
     missing_protocol_state: not_listed_missing
     missing_protocol_files: []
   - name: globally-save-object
@@ -1811,7 +1811,7 @@ operations:
       - slynet/contrib/slynet-mrepl.janet
     test_files:
       - test/protocol_inventory_tests.janet
-    constraint: null
+    constraint: none
     missing_protocol_state: stale_doc_lists_as_missing
     missing_protocol_files:
       - docs/missing_protocol.md
@@ -1826,7 +1826,7 @@ operations:
       - slynet/proto/core.janet
     test_files:
       - test/protocol_inventory_tests.janet
-    constraint: null
+    constraint: none
     missing_protocol_state: stale_doc_lists_as_missing
     missing_protocol_files:
       - docs/missing_protocol.md
@@ -1842,7 +1842,7 @@ operations:
       - slynet/contrib/slynet-mrepl.janet
     test_files:
       - test/protocol_inventory_tests.janet
-    constraint: null
+    constraint: threads
     missing_protocol_state: not_listed_missing
     missing_protocol_files: []
   - name: find-definition-for-thing
@@ -1855,7 +1855,7 @@ operations:
       - slynet/proto/core.janet
     test_files:
       - test/protocol_inventory_tests.janet
-    constraint: null
+    constraint: none
     missing_protocol_state: stale_doc_lists_as_missing
     missing_protocol_files:
       - docs/missing_protocol.md
@@ -1868,7 +1868,7 @@ operations:
     janet_files: []
     test_files:
       - test/protocol_inventory_tests.janet
-    constraint: null
+    constraint: none
     missing_protocol_state: not_listed_missing
     missing_protocol_files: []
   - name: backtrace
@@ -1882,7 +1882,7 @@ operations:
       - slynet/proto/core.janet
     test_files:
       - test/protocol_inventory_tests.janet
-    constraint: null
+    constraint: conditions_restarts
     missing_protocol_state: stale_doc_lists_as_missing
     missing_protocol_files:
       - docs/missing_protocol.md
@@ -1897,7 +1897,7 @@ operations:
       - slynet/proto/core.janet
     test_files:
       - test/protocol_inventory_tests.janet
-    constraint: null
+    constraint: none
     missing_protocol_state: stale_doc_lists_as_missing
     missing_protocol_files:
       - docs/missing_protocol.md
@@ -1912,7 +1912,7 @@ operations:
       - slynet/proto/core.janet
     test_files:
       - test/protocol_inventory_tests.janet
-    constraint: null
+    constraint: none
     missing_protocol_state: stale_doc_lists_as_missing
     missing_protocol_files:
       - docs/missing_protocol.md
@@ -1925,7 +1925,7 @@ operations:
     janet_files: []
     test_files:
       - test/protocol_inventory_tests.janet
-    constraint: null
+    constraint: none
     missing_protocol_state: not_listed_missing
     missing_protocol_files: []
   - name: mop
@@ -1937,7 +1937,7 @@ operations:
       - slynet/interfaces.janet
     test_files:
       - test/protocol_inventory_tests.janet
-    constraint: null
+    constraint: none
     missing_protocol_state: stale_doc_lists_as_missing
     missing_protocol_files:
       - docs/missing_protocol.md
@@ -1950,7 +1950,7 @@ operations:
     janet_files: []
     test_files:
       - test/protocol_inventory_tests.janet
-    constraint: null
+    constraint: none
     missing_protocol_state: not_listed_missing
     missing_protocol_files: []
   - name: sly-db-break
@@ -1963,7 +1963,7 @@ operations:
       - slynet/proto/core.janet
     test_files:
       - test/protocol_inventory_tests.janet
-    constraint: null
+    constraint: none
     missing_protocol_state: stale_doc_lists_as_missing
     missing_protocol_files:
       - docs/missing_protocol.md
@@ -1976,7 +1976,7 @@ operations:
     janet_files: []
     test_files:
       - test/protocol_inventory_tests.janet
-    constraint: null
+    constraint: none
     missing_protocol_state: not_listed_missing
     missing_protocol_files: []
   - name: sly-db-step-next
@@ -1987,7 +1987,7 @@ operations:
     janet_files: []
     test_files:
       - test/protocol_inventory_tests.janet
-    constraint: null
+    constraint: conditions_restarts
     missing_protocol_state: not_listed_missing
     missing_protocol_files: []
   - name: lisp-implementation-program
@@ -1998,7 +1998,7 @@ operations:
     janet_files: []
     test_files:
       - test/protocol_inventory_tests.janet
-    constraint: null
+    constraint: none
     missing_protocol_state: not_listed_missing
     missing_protocol_files: []
   - name: sly-db-return-from-frame
@@ -2011,7 +2011,7 @@ operations:
       - slynet/proto/core.janet
     test_files:
       - test/protocol_inventory_tests.janet
-    constraint: null
+    constraint: none
     missing_protocol_state: stale_doc_lists_as_missing
     missing_protocol_files:
       - docs/missing_protocol.md
@@ -2024,7 +2024,7 @@ operations:
     janet_files: []
     test_files:
       - test/protocol_inventory_tests.janet
-    constraint: null
+    constraint: none
     missing_protocol_state: not_listed_missing
     missing_protocol_files: []
   - name: list-callees
@@ -2035,7 +2035,7 @@ operations:
     janet_files: []
     test_files:
       - test/protocol_inventory_tests.janet
-    constraint: null
+    constraint: none
     missing_protocol_state: not_listed_missing
     missing_protocol_files: []
   - name: inspect-frame-var
@@ -2048,7 +2048,7 @@ operations:
       - slynet/contrib/slynet-fancy-inspector.janet
     test_files:
       - test/protocol_inventory_tests.janet
-    constraint: null
+    constraint: none
     missing_protocol_state: stale_doc_lists_as_missing
     missing_protocol_files:
       - docs/missing_protocol.md
@@ -2063,7 +2063,7 @@ operations:
       - slynet/proto/core.janet
     test_files:
       - test/protocol_inventory_tests.janet
-    constraint: null
+    constraint: none
     missing_protocol_state: stale_doc_lists_as_missing
     missing_protocol_files:
       - docs/missing_protocol.md
@@ -2080,7 +2080,7 @@ operations:
     test_files:
       - test/project_core_tests.janet
       - test/protocol_inventory_tests.janet
-    constraint: null
+    constraint: none
     missing_protocol_state: stale_doc_lists_as_missing
     missing_protocol_files:
       - docs/missing_protocol.md
@@ -2095,7 +2095,7 @@ operations:
       - slynet/proto/core.janet
     test_files:
       - test/protocol_inventory_tests.janet
-    constraint: null
+    constraint: cl_packages
     missing_protocol_state: stale_doc_lists_as_missing
     missing_protocol_files:
       - docs/missing_protocol.md
@@ -2110,7 +2110,7 @@ operations:
       - slynet/interfaces.janet
     test_files:
       - test/protocol_inventory_tests.janet
-    constraint: null
+    constraint: none
     missing_protocol_state: not_listed_missing
     missing_protocol_files: []
   - name: complete-form
@@ -2122,7 +2122,7 @@ operations:
       - slynet/interfaces.janet
     test_files:
       - test/protocol_inventory_tests.janet
-    constraint: null
+    constraint: none
     missing_protocol_state: stale_doc_lists_as_missing
     missing_protocol_files:
       - docs/missing_protocol.md
@@ -2139,7 +2139,7 @@ operations:
     test_files:
       - test/project_core_tests.janet
       - test/protocol_inventory_tests.janet
-    constraint: null
+    constraint: none
     missing_protocol_state: stale_doc_lists_as_missing
     missing_protocol_files:
       - docs/missing_protocol.md
@@ -2152,7 +2152,7 @@ operations:
     janet_files: []
     test_files:
       - test/protocol_inventory_tests.janet
-    constraint: null
+    constraint: none
     missing_protocol_state: not_listed_missing
     missing_protocol_files: []
   - name: calls-who
@@ -2163,7 +2163,7 @@ operations:
     janet_files: []
     test_files:
       - test/protocol_inventory_tests.janet
-    constraint: null
+    constraint: none
     missing_protocol_state: not_listed_missing
     missing_protocol_files: []
   - name: who-specializes
@@ -2174,7 +2174,7 @@ operations:
     janet_files: []
     test_files:
       - test/protocol_inventory_tests.janet
-    constraint: null
+    constraint: none
     missing_protocol_state: not_listed_missing
     missing_protocol_files: []
   - name: interactive-eval
@@ -2188,7 +2188,7 @@ operations:
       - slynet/interfaces.janet
     test_files:
       - test/protocol_inventory_tests.janet
-    constraint: null
+    constraint: none
     missing_protocol_state: stale_doc_lists_as_missing
     missing_protocol_files:
       - docs/missing_protocol_definterface.md
@@ -2200,7 +2200,7 @@ operations:
     janet_files: []
     test_files:
       - test/protocol_inventory_tests.janet
-    constraint: null
+    constraint: none
     missing_protocol_state: not_listed_missing
     missing_protocol_files: []
   - name: pprint-inspector-part
@@ -2213,7 +2213,7 @@ operations:
       - slynet/contrib/slynet-fancy-inspector.janet
     test_files:
       - test/protocol_inventory_tests.janet
-    constraint: null
+    constraint: none
     missing_protocol_state: stale_doc_lists_as_missing
     missing_protocol_files:
       - docs/missing_protocol.md
@@ -2226,7 +2226,7 @@ operations:
     janet_files: []
     test_files:
       - test/protocol_inventory_tests.janet
-    constraint: null
+    constraint: none
     missing_protocol_state: not_listed_missing
     missing_protocol_files: []
   - name: slynk-macroexpand-1
@@ -2239,7 +2239,7 @@ operations:
       - slynet/proto/core.janet
     test_files:
       - test/protocol_inventory_tests.janet
-    constraint: null
+    constraint: none
     missing_protocol_state: stale_doc_lists_as_missing
     missing_protocol_files:
       - docs/missing_protocol.md
@@ -2254,7 +2254,7 @@ operations:
       - slynet/proto/core.janet
     test_files:
       - test/protocol_inventory_tests.janet
-    constraint: null
+    constraint: clos_mop
     missing_protocol_state: stale_doc_lists_as_missing
     missing_protocol_files:
       - docs/missing_protocol.md
@@ -2269,7 +2269,7 @@ operations:
       - slynet/proto/core.janet
     test_files:
       - test/protocol_inventory_tests.janet
-    constraint: null
+    constraint: none
     missing_protocol_state: stale_doc_lists_as_missing
     missing_protocol_files:
       - docs/missing_protocol.md
@@ -2285,7 +2285,7 @@ operations:
       - slynet/proto/core.janet
     test_files:
       - test/protocol_inventory_tests.janet
-    constraint: null
+    constraint: none
     missing_protocol_state: stale_doc_lists_as_missing
     missing_protocol_files:
       - docs/missing_protocol.md
@@ -2300,7 +2300,7 @@ operations:
       - slynet/proto/core.janet
     test_files:
       - test/protocol_inventory_tests.janet
-    constraint: null
+    constraint: none
     missing_protocol_state: stale_doc_lists_as_missing
     missing_protocol_files:
       - docs/missing_protocol.md
@@ -2315,7 +2315,7 @@ operations:
       - slynet/contrib/slynet-mrepl.janet
     test_files:
       - test/protocol_inventory_tests.janet
-    constraint: null
+    constraint: none
     missing_protocol_state: stale_doc_lists_as_missing
     missing_protocol_files:
       - docs/missing_protocol.md
@@ -2328,7 +2328,7 @@ operations:
     janet_files: []
     test_files:
       - test/protocol_inventory_tests.janet
-    constraint: null
+    constraint: none
     missing_protocol_state: not_listed_missing
     missing_protocol_files: []
   - name: inspector-pop
@@ -2342,7 +2342,7 @@ operations:
       - slynet/contrib/slynet-fancy-inspector.janet
     test_files:
       - test/protocol_inventory_tests.janet
-    constraint: null
+    constraint: none
     missing_protocol_state: stale_doc_lists_as_missing
     missing_protocol_files:
       - docs/missing_protocol.md
@@ -2357,7 +2357,7 @@ operations:
       - slynet/contrib/slynet-mrepl.janet
     test_files:
       - test/protocol_inventory_tests.janet
-    constraint: null
+    constraint: none
     missing_protocol_state: stale_doc_lists_as_missing
     missing_protocol_files:
       - docs/missing_protocol.md
@@ -2372,7 +2372,7 @@ operations:
       - slynet/interfaces.janet
     test_files:
       - test/protocol_inventory_tests.janet
-    constraint: null
+    constraint: none
     missing_protocol_state: not_listed_missing
     missing_protocol_files: []
   - name: slynk-macroexpand-all
@@ -2385,7 +2385,7 @@ operations:
       - slynet/proto/core.janet
     test_files:
       - test/protocol_inventory_tests.janet
-    constraint: null
+    constraint: none
     missing_protocol_state: stale_doc_lists_as_missing
     missing_protocol_files:
       - docs/missing_protocol.md
@@ -2399,7 +2399,7 @@ operations:
       - slynet/xref.janet
     test_files:
       - test/protocol_inventory_tests.janet
-    constraint: null
+    constraint: none
     missing_protocol_state: not_listed_missing
     missing_protocol_files: []
   - name: thread-name
@@ -2412,7 +2412,7 @@ operations:
       - slynet/interfaces.janet
     test_files:
       - test/protocol_inventory_tests.janet
-    constraint: null
+    constraint: threads
     missing_protocol_state: not_listed_missing
     missing_protocol_files: []
   - name: default-readtable-alist
@@ -2423,7 +2423,7 @@ operations:
     janet_files: []
     test_files:
       - test/protocol_inventory_tests.janet
-    constraint: null
+    constraint: none
     missing_protocol_state: not_listed_missing
     missing_protocol_files: []
   - name: make-auto-flush-thread
@@ -2434,7 +2434,7 @@ operations:
     janet_files: []
     test_files:
       - test/protocol_inventory_tests.janet
-    constraint: null
+    constraint: none
     missing_protocol_state: not_listed_missing
     missing_protocol_files: []
   - name: frame-locals
@@ -2448,7 +2448,7 @@ operations:
       - slynet/interfaces.janet
     test_files:
       - test/protocol_inventory_tests.janet
-    constraint: null
+    constraint: none
     missing_protocol_state: stale_doc_lists_as_missing
     missing_protocol_files:
       - docs/missing_protocol_definterface.md
@@ -2460,7 +2460,7 @@ operations:
     janet_files: []
     test_files:
       - test/protocol_inventory_tests.janet
-    constraint: null
+    constraint: none
     missing_protocol_state: not_listed_missing
     missing_protocol_files: []
   - name: guess-and-set-package
@@ -2473,7 +2473,7 @@ operations:
       - slynet/contrib/slynet-mrepl.janet
     test_files:
       - test/protocol_inventory_tests.janet
-    constraint: null
+    constraint: none
     missing_protocol_state: stale_doc_lists_as_missing
     missing_protocol_files:
       - docs/missing_protocol.md
@@ -2490,7 +2490,7 @@ operations:
     test_files:
       - test/project_core_tests.janet
       - test/protocol_inventory_tests.janet
-    constraint: null
+    constraint: none
     missing_protocol_state: stale_doc_lists_as_missing
     missing_protocol_files:
       - docs/missing_protocol.md
@@ -2503,7 +2503,7 @@ operations:
     janet_files: []
     test_files:
       - test/protocol_inventory_tests.janet
-    constraint: null
+    constraint: conditions_restarts
     missing_protocol_state: not_listed_missing
     missing_protocol_files: []
   - name: lisp-implementation-type-name
@@ -2514,7 +2514,7 @@ operations:
     janet_files: []
     test_files:
       - test/protocol_inventory_tests.janet
-    constraint: null
+    constraint: none
     missing_protocol_state: not_listed_missing
     missing_protocol_files: []
   - name: quit-inspector
@@ -2527,7 +2527,7 @@ operations:
       - slynet/contrib/slynet-fancy-inspector.janet
     test_files:
       - test/protocol_inventory_tests.janet
-    constraint: null
+    constraint: none
     missing_protocol_state: stale_doc_lists_as_missing
     missing_protocol_files:
       - docs/missing_protocol.md
@@ -2540,7 +2540,7 @@ operations:
     janet_files: []
     test_files:
       - test/protocol_inventory_tests.janet
-    constraint: null
+    constraint: none
     missing_protocol_state: not_listed_missing
     missing_protocol_files: []
   - name: condition-extras
@@ -2551,7 +2551,7 @@ operations:
     janet_files: []
     test_files:
       - test/protocol_inventory_tests.janet
-    constraint: null
+    constraint: none
     missing_protocol_state: not_listed_missing
     missing_protocol_files: []
   - name: sly-db-break-on-return
@@ -2562,7 +2562,7 @@ operations:
     janet_files: []
     test_files:
       - test/protocol_inventory_tests.janet
-    constraint: null
+    constraint: conditions_restarts
     missing_protocol_state: not_listed_missing
     missing_protocol_files: []
   - name: describe-inspector-part
@@ -2575,7 +2575,7 @@ operations:
       - slynet/contrib/slynet-fancy-inspector.janet
     test_files:
       - test/protocol_inventory_tests.janet
-    constraint: null
+    constraint: none
     missing_protocol_state: stale_doc_lists_as_missing
     missing_protocol_files:
       - docs/missing_protocol.md
@@ -2589,7 +2589,7 @@ operations:
       - slynet/slynk.janet
     test_files:
       - test/protocol_inventory_tests.janet
-    constraint: null
+    constraint: none
     missing_protocol_state: not_listed_missing
     missing_protocol_files: []
   - name: invoke-nth-restart
@@ -2603,7 +2603,7 @@ operations:
       - slynet/proto/core.janet
     test_files:
       - test/protocol_inventory_tests.janet
-    constraint: null
+    constraint: conditions_restarts
     missing_protocol_state: stale_doc_lists_as_missing
     missing_protocol_files:
       - docs/missing_protocol.md
@@ -2619,7 +2619,7 @@ operations:
       - slynet/interfaces.janet
     test_files:
       - test/protocol_inventory_tests.janet
-    constraint: null
+    constraint: none
     missing_protocol_state: not_listed_missing
     missing_protocol_files: []
   - name: import-symbol-for-emacs
@@ -2632,7 +2632,7 @@ operations:
       - slynet/contrib/slynet-package-fu.janet
     test_files:
       - test/protocol_inventory_tests.janet
-    constraint: null
+    constraint: none
     missing_protocol_state: stale_doc_lists_as_missing
     missing_protocol_files:
       - docs/missing_protocol.md
@@ -2647,7 +2647,7 @@ operations:
       - slynet/contrib/slynet-package-fu.janet
     test_files:
       - test/protocol_inventory_tests.janet
-    constraint: null
+    constraint: none
     missing_protocol_state: stale_doc_lists_as_missing
     missing_protocol_files:
       - docs/missing_protocol.md
@@ -2662,7 +2662,7 @@ operations:
       - slynet/proto/core.janet
     test_files:
       - test/protocol_inventory_tests.janet
-    constraint: null
+    constraint: none
     missing_protocol_state: stale_doc_lists_as_missing
     missing_protocol_files:
       - docs/missing_protocol.md
@@ -2675,7 +2675,7 @@ operations:
     janet_files: []
     test_files:
       - test/protocol_inventory_tests.janet
-    constraint: null
+    constraint: none
     missing_protocol_state: not_listed_missing
     missing_protocol_files: []
   - name: generic-method-specs
@@ -2688,7 +2688,7 @@ operations:
       - slynet/proto/core.janet
     test_files:
       - test/protocol_inventory_tests.janet
-    constraint: null
+    constraint: clos_mop
     missing_protocol_state: stale_doc_lists_as_missing
     missing_protocol_files:
       - docs/missing_protocol.md
@@ -2702,7 +2702,7 @@ operations:
       - slynet/contrib/slynet-apropos.janet
     test_files:
       - test/protocol_inventory_tests.janet
-    constraint: null
+    constraint: none
     missing_protocol_state: not_listed_missing
     missing_protocol_files: []
   - name: pprint-eval
@@ -2717,7 +2717,7 @@ operations:
     test_files:
       - test/project_core_tests.janet
       - test/protocol_inventory_tests.janet
-    constraint: null
+    constraint: none
     missing_protocol_state: stale_doc_lists_as_missing
     missing_protocol_files:
       - docs/missing_protocol.md
@@ -2732,7 +2732,7 @@ operations:
       - slynet/contrib/slynet-fancy-inspector.janet
     test_files:
       - test/protocol_inventory_tests.janet
-    constraint: null
+    constraint: none
     missing_protocol_state: stale_doc_lists_as_missing
     missing_protocol_files:
       - docs/missing_protocol.md
@@ -2745,7 +2745,7 @@ operations:
     janet_files: []
     test_files:
       - test/protocol_inventory_tests.janet
-    constraint: null
+    constraint: none
     missing_protocol_state: not_listed_missing
     missing_protocol_files: []
   - name: make-apropos-matcher
@@ -2756,7 +2756,7 @@ operations:
     janet_files: []
     test_files:
       - test/protocol_inventory_tests.janet
-    constraint: null
+    constraint: none
     missing_protocol_state: not_listed_missing
     missing_protocol_files: []
   - name: slynk-add-load-paths
@@ -2769,7 +2769,7 @@ operations:
       - slynet/proto/core.janet
     test_files:
       - test/protocol_inventory_tests.janet
-    constraint: null
+    constraint: none
     missing_protocol_state: stale_doc_lists_as_missing
     missing_protocol_files:
       - docs/missing_protocol.md
@@ -2782,7 +2782,7 @@ operations:
     janet_files: []
     test_files:
       - test/protocol_inventory_tests.janet
-    constraint: null
+    constraint: none
     missing_protocol_state: not_listed_missing
     missing_protocol_files: []
   - name: inspector-history
@@ -2795,7 +2795,7 @@ operations:
       - slynet/contrib/slynet-fancy-inspector.janet
     test_files:
       - test/protocol_inventory_tests.janet
-    constraint: null
+    constraint: none
     missing_protocol_state: stale_doc_lists_as_missing
     missing_protocol_files:
       - docs/missing_protocol.md
@@ -2808,7 +2808,7 @@ operations:
     janet_files: []
     test_files:
       - test/protocol_inventory_tests.janet
-    constraint: null
+    constraint: none
     missing_protocol_state: not_listed_missing
     missing_protocol_files: []
   - name: documentation-symbol
@@ -2821,7 +2821,7 @@ operations:
       - slynet/proto/core.janet
     test_files:
       - test/protocol_inventory_tests.janet
-    constraint: null
+    constraint: none
     missing_protocol_state: stale_doc_lists_as_missing
     missing_protocol_files:
       - docs/missing_protocol.md
@@ -2836,7 +2836,7 @@ operations:
       - slynet/proto/core.janet
     test_files:
       - test/protocol_inventory_tests.janet
-    constraint: null
+    constraint: none
     missing_protocol_state: stale_doc_lists_as_missing
     missing_protocol_files:
       - docs/missing_protocol.md
@@ -2849,7 +2849,7 @@ operations:
     janet_files: []
     test_files:
       - test/protocol_inventory_tests.janet
-    constraint: null
+    constraint: none
     missing_protocol_state: not_listed_missing
     missing_protocol_files: []
   - name: slynk-format-string-expand
@@ -2862,7 +2862,7 @@ operations:
       - slynet/proto/core.janet
     test_files:
       - test/protocol_inventory_tests.janet
-    constraint: null
+    constraint: none
     missing_protocol_state: stale_doc_lists_as_missing
     missing_protocol_files:
       - docs/missing_protocol.md
@@ -2876,7 +2876,7 @@ operations:
       - slynet/interfaces.janet
     test_files:
       - test/protocol_inventory_tests.janet
-    constraint: null
+    constraint: none
     missing_protocol_state: stale_doc_lists_as_missing
     missing_protocol_files:
       - docs/missing_protocol_definterface.md
@@ -2888,7 +2888,7 @@ operations:
     janet_files: []
     test_files:
       - test/protocol_inventory_tests.janet
-    constraint: null
+    constraint: none
     missing_protocol_state: not_listed_missing
     missing_protocol_files: []
   - name: set-default-initial-binding
@@ -2899,7 +2899,7 @@ operations:
     janet_files: []
     test_files:
       - test/protocol_inventory_tests.janet
-    constraint: null
+    constraint: none
     missing_protocol_state: not_listed_missing
     missing_protocol_files: []
   - name: accept-connection
@@ -2910,7 +2910,7 @@ operations:
     janet_files: []
     test_files:
       - test/protocol_inventory_tests.janet
-    constraint: null
+    constraint: none
     missing_protocol_state: not_listed_missing
     missing_protocol_files: []
   - name: sly-db-disassemble
@@ -2923,7 +2923,7 @@ operations:
       - slynet/proto/core.janet
     test_files:
       - test/protocol_inventory_tests.janet
-    constraint: null
+    constraint: none
     missing_protocol_state: stale_doc_lists_as_missing
     missing_protocol_files:
       - docs/missing_protocol.md
@@ -2938,7 +2938,7 @@ operations:
     test_files:
       - test/project_core_tests.janet
       - test/protocol_inventory_tests.janet
-    constraint: null
+    constraint: none
     missing_protocol_state: not_listed_missing
     missing_protocol_files: []
   - name: eval-and-grab-output
@@ -2949,7 +2949,7 @@ operations:
     janet_files: []
     test_files:
       - test/protocol_inventory_tests.janet
-    constraint: null
+    constraint: none
     missing_protocol_state: not_listed_missing
     missing_protocol_files: []
   - name: buffer-first-change
@@ -2960,7 +2960,7 @@ operations:
     janet_files: []
     test_files:
       - test/protocol_inventory_tests.janet
-    constraint: null
+    constraint: none
     missing_protocol_state: not_listed_missing
     missing_protocol_files: []
   - name: float-nan-p
@@ -2971,7 +2971,7 @@ operations:
     janet_files: []
     test_files:
       - test/protocol_inventory_tests.janet
-    constraint: null
+    constraint: none
     missing_protocol_state: not_listed_missing
     missing_protocol_files: []
   - name: arglist
@@ -2988,7 +2988,7 @@ operations:
     test_files:
       - test/project_core_tests.janet
       - test/protocol_inventory_tests.janet
-    constraint: null
+    constraint: none
     missing_protocol_state: not_listed_missing
     missing_protocol_files: []
   - name: unprofile-all
@@ -2999,7 +2999,7 @@ operations:
     janet_files: []
     test_files:
       - test/protocol_inventory_tests.janet
-    constraint: null
+    constraint: none
     missing_protocol_state: not_listed_missing
     missing_protocol_files: []
   - name: unwrap
@@ -3010,7 +3010,7 @@ operations:
     janet_files: []
     test_files:
       - test/protocol_inventory_tests.janet
-    constraint: null
+    constraint: none
     missing_protocol_state: not_listed_missing
     missing_protocol_files: []
   - name: sly-db-break-with-default-debugger
@@ -3021,7 +3021,7 @@ operations:
     janet_files: []
     test_files:
       - test/protocol_inventory_tests.janet
-    constraint: null
+    constraint: none
     missing_protocol_state: stale_doc_lists_as_missing
     missing_protocol_files:
       - docs/missing_protocol.md
@@ -3035,7 +3035,7 @@ operations:
       - slynet/proto/core.janet
     test_files:
       - test/protocol_inventory_tests.janet
-    constraint: null
+    constraint: none
     missing_protocol_state: stale_doc_lists_as_missing
     missing_protocol_files:
       - docs/missing_protocol.md
@@ -3048,7 +3048,7 @@ operations:
     janet_files: []
     test_files:
       - test/protocol_inventory_tests.janet
-    constraint: null
+    constraint: none
     missing_protocol_state: not_listed_missing
     missing_protocol_files: []
   - name: macroexpand-all
@@ -3060,7 +3060,7 @@ operations:
       - slynet/slynk.janet
     test_files:
       - test/protocol_inventory_tests.janet
-    constraint: null
+    constraint: none
     missing_protocol_state: not_listed_missing
     missing_protocol_files: []
   - name: all-threads
@@ -3071,7 +3071,7 @@ operations:
     janet_files: []
     test_files:
       - test/protocol_inventory_tests.janet
-    constraint: null
+    constraint: none
     missing_protocol_state: not_listed_missing
     missing_protocol_files: []
   - name: install-debugger-globally
@@ -3082,7 +3082,7 @@ operations:
     janet_files: []
     test_files:
       - test/protocol_inventory_tests.janet
-    constraint: null
+    constraint: none
     missing_protocol_state: not_listed_missing
     missing_protocol_files: []
   - name: inspector-nth-part
@@ -3097,7 +3097,7 @@ operations:
     test_files:
       - test/project_core_tests.janet
       - test/protocol_inventory_tests.janet
-    constraint: null
+    constraint: none
     missing_protocol_state: stale_doc_lists_as_missing
     missing_protocol_files:
       - docs/missing_protocol.md
@@ -3112,7 +3112,7 @@ operations:
       - slynet/contrib/slynet-fancy-inspector.janet
     test_files:
       - test/protocol_inventory_tests.janet
-    constraint: null
+    constraint: none
     missing_protocol_state: stale_doc_lists_as_missing
     missing_protocol_files:
       - docs/missing_protocol.md
@@ -3126,7 +3126,7 @@ operations:
       - slynet/interfaces.janet
     test_files:
       - test/protocol_inventory_tests.janet
-    constraint: null
+    constraint: none
     missing_protocol_state: stale_doc_lists_as_missing
     missing_protocol_files:
       - docs/missing_protocol.md
@@ -3142,7 +3142,7 @@ operations:
     test_files:
       - test/project_core_tests.janet
       - test/protocol_inventory_tests.janet
-    constraint: null
+    constraint: none
     missing_protocol_state: stale_doc_lists_as_missing
     missing_protocol_files:
       - docs/missing_protocol.md
@@ -3155,7 +3155,7 @@ operations:
     janet_files: []
     test_files:
       - test/protocol_inventory_tests.janet
-    constraint: null
+    constraint: none
     missing_protocol_state: not_listed_missing
     missing_protocol_files: []
   - name: print-condition
@@ -3166,7 +3166,7 @@ operations:
     janet_files: []
     test_files:
       - test/protocol_inventory_tests.janet
-    constraint: null
+    constraint: none
     missing_protocol_state: not_listed_missing
     missing_protocol_files: []
   - name: untrace-all
@@ -3179,7 +3179,7 @@ operations:
       - slynet/proto/core.janet
     test_files:
       - test/protocol_inventory_tests.janet
-    constraint: null
+    constraint: none
     missing_protocol_state: stale_doc_lists_as_missing
     missing_protocol_files:
       - docs/missing_protocol.md
@@ -3194,7 +3194,7 @@ operations:
       - slynet/contrib/slynet-fancy-inspector.janet
     test_files:
       - test/protocol_inventory_tests.janet
-    constraint: null
+    constraint: none
     missing_protocol_state: stale_doc_lists_as_missing
     missing_protocol_files:
       - docs/missing_protocol.md
@@ -3207,7 +3207,7 @@ operations:
     janet_files: []
     test_files:
       - test/protocol_inventory_tests.janet
-    constraint: null
+    constraint: none
     missing_protocol_state: not_listed_missing
     missing_protocol_files: []
   - name: make-weak-value-hash-table
@@ -3218,7 +3218,7 @@ operations:
     janet_files: []
     test_files:
       - test/protocol_inventory_tests.janet
-    constraint: null
+    constraint: none
     missing_protocol_state: not_listed_missing
     missing_protocol_files: []
   - name: kill-thread
@@ -3229,7 +3229,7 @@ operations:
     janet_files: []
     test_files:
       - test/protocol_inventory_tests.janet
-    constraint: null
+    constraint: threads
     missing_protocol_state: not_listed_missing
     missing_protocol_files: []
   - name: init-inspector
@@ -3242,7 +3242,7 @@ operations:
       - slynet/contrib/slynet-fancy-inspector.janet
     test_files:
       - test/protocol_inventory_tests.janet
-    constraint: null
+    constraint: none
     missing_protocol_state: stale_doc_lists_as_missing
     missing_protocol_files:
       - docs/missing_protocol.md
@@ -3257,7 +3257,7 @@ operations:
       - slynet/proto/core.janet
     test_files:
       - test/protocol_inventory_tests.janet
-    constraint: null
+    constraint: compiler_notes
     missing_protocol_state: stale_doc_lists_as_missing
     missing_protocol_files:
       - docs/missing_protocol.md
@@ -3270,7 +3270,7 @@ operations:
     janet_files: []
     test_files:
       - test/protocol_inventory_tests.janet
-    constraint: null
+    constraint: none
     missing_protocol_state: not_listed_missing
     missing_protocol_files: []
   - name: frame-var-value
@@ -3281,7 +3281,7 @@ operations:
     janet_files: []
     test_files:
       - test/protocol_inventory_tests.janet
-    constraint: null
+    constraint: none
     missing_protocol_state: not_listed_missing
     missing_protocol_files: []
   - name: function-name
@@ -3292,6 +3292,6 @@ operations:
     janet_files: []
     test_files:
       - test/protocol_inventory_tests.janet
-    constraint: null
+    constraint: none
     missing_protocol_state: not_listed_missing
     missing_protocol_files: []

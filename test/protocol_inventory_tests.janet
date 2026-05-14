@@ -56,3 +56,25 @@
          (assert-true (contains ping-record "slynet/slynk.janet") "ping implementation file retained")
          (assert-false (contains ping-record "slynet/backend.janet") "unrelated backend mention excluded")
          (assert-false (contains ping-record "slynet/contrib/slynet-fancy-inspector.janet") "unrelated substring mention excluded"))})
+
+(register-test
+  {:name "protocol inventory classifies Janet design constraints"
+   :tags [:inventory]
+   :fn (fn []
+         (run-inventory-generator)
+         (def text (inventory-text))
+         (def package-record (record-for text "set-package"))
+         (def restart-record (record-for text "invoke-nth-restart"))
+         (def clos-record (record-for text "generic-method-specs"))
+         (def compile-record (record-for text "compile-file-for-emacs"))
+         (def thread-record (record-for text "list-threads"))
+         (assert-true package-record "set-package record exists")
+         (assert-true (contains package-record "constraint: cl_packages") "set-package marks CL package non-equivalence")
+         (assert-true restart-record "invoke-nth-restart record exists")
+         (assert-true (contains restart-record "constraint: conditions_restarts") "restart RPC marks Janet restart limitation")
+         (assert-true clos-record "generic-method-specs record exists")
+         (assert-true (contains clos-record "constraint: clos_mop") "CLOS/MOP RPC marks unsupported Janet model")
+         (assert-true compile-record "compile-file-for-emacs record exists")
+         (assert-true (contains compile-record "constraint: compiler_notes") "compiler diagnostics mark Janet-native approximation")
+         (assert-true thread-record "list-threads record exists")
+         (assert-true (contains thread-record "constraint: threads") "thread RPC marks Janet execution-unit limitation"))})

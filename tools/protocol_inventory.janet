@@ -149,6 +149,59 @@
     "stale_doc_lists_as_missing"
     "not_listed_missing"))
 
+
+(defn- constraint-for [operation]
+  (cond
+    (or (= operation "set-package")
+        (= operation "frame-package-name")
+        (= operation "package-local-nicknames")
+        (= operation "find-locally-nicknamed-package")
+        (= operation "list-all-package-names"))
+    "cl_packages"
+
+    (or (= operation "invoke-nth-restart")
+        (= operation "invoke-nth-restart-for-emacs")
+        (= operation "sly-db-abort")
+        (= operation "sly-db-continue")
+        (= operation "debugger-info-for-emacs")
+        (= operation "backtrace")
+        (= operation "frame-locals-and-catch-tags")
+        (= operation "return-from-frame")
+        (= operation "restart-frame")
+        (= operation "sly-db-break-on-return")
+        (= operation "sly-db-break-at-start")
+        (= operation "sly-db-step-into")
+        (= operation "sly-db-step-next")
+        (= operation "sly-db-step-out"))
+    "conditions_restarts"
+
+    (or (= operation "generic-method-specs")
+        (= operation "generic-method-lambda-list")
+        (= operation "methods-by-applicability")
+        (= operation "method-specializers")
+        (= operation "remove-method-by-name"))
+    "clos_mop"
+
+    (or (= operation "compile-file-for-emacs")
+        (= operation "compile-string-for-emacs")
+        (= operation "compile-multiple-strings-for-emacs")
+        (= operation "compile-file-if-needed")
+        (= operation "slynk-compile-string")
+        (= operation "slynk-compile-file"))
+    "compiler_notes"
+
+    (or (= operation "list-threads")
+        (= operation "thread-name")
+        (= operation "thread-status")
+        (= operation "thread-id")
+        (= operation "kill-thread")
+        (= operation "debug-nth-thread")
+        (= operation "spawn")
+        (= operation "initialize-multiprocessing"))
+    "threads"
+
+    true "none"))
+
 (defn- state-for [janet-evidence test-evidence]
   (cond
     (and (> (length janet-evidence) 0)
@@ -180,7 +233,7 @@
   (buffer/push-string out (yaml-list 4 "source_files" source-evidence))
   (buffer/push-string out (yaml-list 4 "janet_files" janet-evidence))
   (buffer/push-string out (yaml-list 4 "test_files" test-evidence))
-  (buffer/push-string out "    constraint: null\n")
+  (buffer/push-string out (string "    constraint: " (constraint-for operation) "\n"))
   (buffer/push-string out (string "    missing_protocol_state: " (stale-doc-state operation) "\n"))
   (buffer/push-string out (yaml-list 4 "missing_protocol_files" stale-files))
   (string out))
