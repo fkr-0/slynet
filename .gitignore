@@ -34,3 +34,6 @@ spork/
 build/
 dist/
 .janet/
+
+# local worktrees
+.worktrees/
