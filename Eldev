@@ -1,0 +1,10 @@
+; -*- mode: emacs-lisp; lexical-binding: t -*-
+
+;; Eldev project configuration for the Emacs-side SLYNET client library.
+
+(setf eldev-project-source-dirs '("emacs"))
+(setf eldev-project-main-file "slynet.el")
+(setf eldev-main-fileset '("./emacs/slynet.el" "./emacs/slynet-client.el"))
+(setf eldev-files-to-package '("./emacs/slynet.el" "./emacs/slynet-client.el"))
+(setf eldev-test-fileset '("./test/emacs/"))
+(setf eldev-test-ert-fileset '("./test/emacs/"))
