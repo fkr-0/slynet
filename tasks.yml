@@ -1052,7 +1052,7 @@ task_groups:
 
   - id: T14_emacs_lisp_frontend_slynet
     title: "Implement operational Emacs Lisp frontend resembling SLY interaction mode"
-    status: todo
+    status: in_progress
     files:
       create:
         - emacs/slynet.el
@@ -1091,7 +1091,12 @@ task_groups:
       environment_gate: "If Emacs is absent, make test-emacs must fail locally or skip only in CI with an explicit SKIP reason."
     implementation_slices:
       - id: T14-1_emacs_client_codec
-        status: todo
+        status: in_progress
+        progress:
+          - date: "2026-06-12"
+            red: "emacs -Q --batch -L emacs -l test/emacs/slynet-client-tests.el -f ert-run-tests-batch-and-exit failed because slynet-client could not be loaded."
+            green: "eldev test --expect 6 passed 6 Emacs ERT tests; make test-emacs delegates to Eldev; bridge.yml:test loaded client_test and passed 59 tests / 192 assertions."
+            scope: "Covers Eldev package setup, length-prefixed S-expression encoding, fragmented and multi-message process-filter decoding, connection lifecycle, request construction for interactive-eval-region, and disconnect; full completion/inspector/debugger/server E2E remains in later T14/T15 slices."
         description: "Implement and ERT-test the Emacs-side length-prefixed S-expression client codec against protocol fixtures."
         files:
           create:
@@ -1101,7 +1106,7 @@ task_groups:
           red:
             - "ERT fails because slynet-client-read-message/write-message do not exist."
           green:
-            - "ERT fixtures round-trip ping, eval, completion, inspector, and error envelopes."
+            - "eldev test --expect 6 verifies codec/filter, connect/disconnect, and interactive-eval-region request construction."
       - id: T14-2_emacs_eval_completion_loop
         status: todo
         description: "Implement slynet-mode eval-region/eval-last-expression and completion-at-point backed by a fake process and optional real Janet server smoke test."

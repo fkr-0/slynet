@@ -16,6 +16,9 @@
   (rpc/write-message msg nil stream)
   (net/flush stream))
 
+(defn read-message [stream]
+  (rpc/read-message stream nil))
+
 (defn make-state []
   @{:pending @{}
     :next-id 1
@@ -31,7 +34,7 @@
     (set base (string base "[" condition "] ")))
   base)
 
-(defn wait-loop [pred timeout-ms]
+(defn wait-loop [pred &opt timeout-ms]
   (default timeout-ms 1000)
   (var waited 0)
   (while (and (not (pred)) (< waited timeout-ms))
@@ -56,13 +59,13 @@
     (let [kind (payload 0)]
       (case kind
         :write-string
-        (do (printf "%s" (payload 1)) (flush stdout))
+        (do (printf "%s" (payload 1)) (flush))
 
         :write-values
         (do (let [values (payload 1)]
               (each entry values
                 (printf "%s\n" (entry 0)))
-              (flush stdout)
+              (flush)
               (notify-eval state [:ok values])))
 
         :evaluation-aborted
@@ -79,7 +82,7 @@
           (put state :prompt-string (format-prompt pkg nick pending history condition)))
 
         :describe-entry
-        (do (printf "%s\n" (payload 1)) (flush stdout))
+        (do (printf "%s\n" (payload 1)) (flush))
 
         :clear-history nil
 
@@ -96,12 +99,12 @@
     [:channel-close channel]
     (when (= channel (state :channel-id))
       (printf "Channel %s closed by server.\n" channel)
-      (flush stdout)
+      (flush)
       (put state :running false))
 
     [:slynk-disconnect reason]
     (do (printf "Disconnected: %s\n" reason)
-        (flush stdout)
+        (flush)
         (put state :running false))
 
     msg
@@ -114,7 +117,7 @@
 
   (var handshake nil)
   (while (nil? handshake)
-    (def msg (rpc/read-message stream))
+    (def msg (read-message stream))
     (when (nil? msg)
       (error "Connection closed during handshake"))
     (match msg
@@ -145,7 +148,7 @@
       (fn []
         (while (state :running)
           (try
-            (let [msg (rpc/read-message stream)]
+            (let [msg (read-message stream)]
               (if (nil? msg)
                 (put state :running false)
                 (handle-message state msg)))
@@ -179,16 +182,16 @@
 
 (defn interactive-loop [state stream]
   (printf "Type Janet code and press Enter to evaluate. Type :quit to exit.\n")
-  (flush stdout)
+  (flush)
   (wait-for-prompt state)
   (while (state :running)
     (printf "%s" (state :prompt-string))
-    (flush stdout)
+    (flush)
     (def line (file/read stdin :line))
     (if (or (nil? line) (= line ":quit"))
       (do
         (printf "Exiting.\n")
-        (flush stdout)
+        (flush)
         (send-teardown state stream)
         (put state :running false))
       (do
@@ -198,7 +201,7 @@
             (send-eval state stream code false)
             ([err _]
               (eprintf "Error sending evaluation: %s\n" err)
-              (flush stderr))))))))
+              (file/flush stderr))))))))
 
 (defn run-batch [state stream forms]
   (each form forms
@@ -206,9 +209,15 @@
       (send-eval state stream form true)
       ([err _]
         (eprintf "Evaluation error: %s\n" err)
-        (flush stderr))))
+        (file/flush stderr))))
   (send-teardown state stream)
   (put state :running false))
+
+(defn- option-value [args i option]
+  (def value-index (+ i 1))
+  (when (>= value-index (length args))
+    (error (string "Missing value for " option)))
+  (args value-index))
 
 (defn parse-args [args]
   (var host default-host)
@@ -217,9 +226,25 @@
   (var i 0)
   (while (< i (length args))
     (match (args i)
-      "--host" (do (++ i) (set host (args i)))
-      "--port" (do (++ i) (set port (scan-number (args i))))
-      "--eval" (do (++ i) (array/push eval-forms (args i)))
+      "--host"
+      (do
+        (set host (option-value args i "--host"))
+        (++ i))
+
+      "--port"
+      (do
+        (def port-text (option-value args i "--port"))
+        (def parsed-port (scan-number port-text))
+        (when (nil? parsed-port)
+          (error (string "Invalid --port value: " port-text)))
+        (set port parsed-port)
+        (++ i))
+
+      "--eval"
+      (do
+        (array/push eval-forms (option-value args i "--eval"))
+        (++ i))
+
       "--help" (do
                  (printf "Usage: janet slynet-client.janet [--host HOST] [--port PORT] [--eval FORM]\n")
                  (os/exit 0))
@@ -228,7 +253,10 @@
   {:host host :port port :eval eval-forms})
 
 (defn main [& args]
-  (let [opts (parse-args args)
+  (let [args (if (and (pos? (length args)) (string/has-suffix? "slynet-client.janet" (args 0)))
+               (slice args 1)
+               args)
+        opts (parse-args args)
         host (opts :host)
         port (opts :port)
         forms (opts :eval)
@@ -237,7 +265,7 @@
       (os/exit 1)
       (let [state (make-state)]
         (printf "Connected to SLYNET server at %s:%d\n" host port)
-        (flush stdout)
+        (flush)
         (try
           (perform-handshake! state stream)
           ([err _]
@@ -253,4 +281,7 @@
         (net/close stream)
         (os/exit 0)))))
 
-(main ;args)
+(let [args (dyn :args)]
+  (when (and (pos? (length args))
+             (string/has-suffix? "slynet-client.janet" (args 0)))
+    (apply main args)))

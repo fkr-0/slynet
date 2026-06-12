@@ -17,6 +17,14 @@ commands:
       - -lc
       - export JANET_PATH="${JANET_PATH}:$(pwd)" && janet test-runner.janet
 
+  test-emacs:
+    description: Run the Eldev-backed Emacs client ERT suite
+    category: test
+    run:
+      - sh
+      - -lc
+      - eldev test --expect 6
+
   smoke-client:
     description: Run the CLI client in batch mode against a local server
     category: test

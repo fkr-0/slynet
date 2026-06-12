@@ -1,4 +1,4 @@
-.PHONY: test clean lint core-tests contrib-tests all-tests install
+.PHONY: test clean lint core-tests contrib-tests all-tests test-emacs install
 
 # Default Janet executable
 JANET ?= janet
@@ -41,6 +41,15 @@ core-tests:
 contrib-tests:
 	@echo "Running SLYNET contrib module tests..."
 	$(JANET) $(CONTRIB_TEST_FILE)
+
+# Run Emacs batch ERT tests through Eldev for package-aware load paths.
+test-emacs:
+	@if ! command -v eldev >/dev/null 2>&1; then \
+		echo "SKIP: eldev not available; frontend ERT tests not run"; \
+		exit 77; \
+	fi
+	@echo "Running SLYNET Emacs ERT tests through Eldev..."
+	eldev test --expect 6
 
 # Lint Janet code (using janet-format if available)
 lint:

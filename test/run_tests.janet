@@ -9,6 +9,7 @@
 (import ./contrib_tests)
 (import ./runner_self_tests)
 (import ./protocol_inventory_tests)
+(import ./client_test)
 
 (defn main [& args]
   (apply runner/run-args args))
