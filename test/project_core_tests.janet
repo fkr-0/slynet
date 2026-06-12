@@ -4,6 +4,7 @@
 (import ../slynet/init :as init)
 (import ../slynet/slynk :as slynk)
 (import ../slynet/rpc :as rpc)
+(import ../slynet/backend :as backend)
 
 (defn- wipe-registries! []
   (inf/reset-interfaces)
@@ -163,6 +164,16 @@
                               (def values (table :values))
                               (assert= @["3" "5"] values)))})
 
+
+(register-test
+  {:name "backend interactive-eval reports aborts without shadowing string"
+   :tags [:unit :backend :eval]
+   :fn (fn []
+         (def result (backend/interactive-eval "(definitely-missing-function 1)"))
+         (assert= :abort (result 0))
+         (assert-true (string? (result 1)))
+         (assert-true (not (nil? (string/find "Interactive evaluation error" (result 1))))))})
+
 (register-test
   {:name "pprint-eval prints last value"
    :tags [:integration :server]
@@ -192,12 +203,17 @@
    :tags [:integration :server :xref]
    :fn (fn []
          (tt/with-test-server [srv]
-                              (def res ((srv :emacs-rex!) '(find-definitions-for-emacs "debugger-info-for-emacs") :core nil 54))
-                              (assert-true (array? res))
-                              (assert-true (> (length res) 0))
-                              (def first-hit (plist->table (res 0)))
-                              (assert-true (string? (first-hit :snippet)))
-                              (assert= "(defn debugger-info-for-emacs [& args])" (first-hit :snippet))))})
+           (def res ((srv :emacs-rex!) '(find-definitions-for-emacs "debugger-info-for-emacs") :core nil 54))
+           (assert-true (array? res))
+           (assert-true (> (length res) 0))
+           (var function-hit nil)
+           (each hit res
+             (def table (plist->table hit))
+             (when (and (nil? function-hit) (= :function (table :kind)))
+               (set function-hit table)))
+           (assert-not-nil function-hit)
+           (assert-true (string? (function-hit :snippet)))
+           (assert= "(defn debugger-info-for-emacs []" (function-hit :snippet))))})
 
 (register-test
   {:name "find-definitions-for-emacs finds repo symbol"

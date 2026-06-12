@@ -34,7 +34,6 @@
   "test/channel_dispatch_tests.janet"
   "test/contrib_tests.janet"
   "test/suite-slynet.janet"
-  "test/protocol_inventory_tests.janet"
 ])
 
 (def stale-doc-files [
@@ -219,6 +218,114 @@
     (> (length janet-evidence) 0) "implemented_untested"
     true "missing"))
 
+(defn- operation-in? [operation names]
+  (var found false)
+  (each name names
+    (when (= operation name)
+      (set found true)))
+  found)
+
+(defn- operation-has-prefix? [operation prefixes]
+  (var found false)
+  (each prefix prefixes
+    (when (string/has-prefix? prefix operation)
+      (set found true)))
+  found)
+
+(defn- operation-contains-any? [operation needles]
+  (var found false)
+  (each needle needles
+    (when (contains? operation needle)
+      (set found true)))
+  found)
+
+(defn- frontend-surface-for [operation]
+  (cond
+    (operation-in? operation @["ping" "connection-info" "io-speed-test" "flow-control-test" "emacs-connected" "preferred-communication-style"])
+    "transport"
+
+    (or (operation-in? operation @["create-mrepl" "eval-for-mrepl" "interactive-eval-region" "pprint-eval" "pprint-entry" "sync-package-and-default-directory"])
+        (operation-contains-any? operation @["mrepl" "eval"]))
+    "repl"
+
+    (or (operation-contains-any? operation @["completion" "completions" "arglist" "autodoc" "apropos" "documentation-symbol"])
+        (operation-in? operation @["describe-function" "describe-symbol" "describe-definition-for-emacs"]))
+    "completion"
+
+    (or (operation-has-prefix? operation @["inspector-"])
+        (operation-contains-any? operation @["inspect" "inspector"]))
+    "inspector"
+
+    (or (operation-has-prefix? operation @["xref" "who-"])
+        (operation-contains-any? operation @["definition" "definitions" "source-location" "source-file" "callers" "callees" "references"])
+        (operation-in? operation @["find-definitions-for-emacs" "find-source-location-for-emacs"]))
+    "xref"
+
+    (or (operation-contains-any? operation @["debug" "backtrace" "restart" "condition" "frame" "thread"])
+        (operation-has-prefix? operation @["sly-db-"]))
+    "debugger"
+
+    (operation-contains-any? operation @["compile" "load-file" "macroexpand"])
+    "compile_load"
+
+    (operation-contains-any? operation @["package" "symbol" "module"])
+    "namespace"
+
+    true "backend"))
+
+
+(defn- owning-spec-for [operation frontend-surface constraint]
+  (cond
+    (= constraint "threads") "docs/specs/threading-execution-units.md"
+    (= constraint "conditions_restarts") "docs/specs/debugger-condition-restarts.md"
+    (= frontend-surface "debugger") "docs/specs/debugger-condition-restarts.md"
+    (or (= frontend-surface "inspector") (= frontend-surface "xref")) "docs/specs/inspector-xref-source-index.md"
+    true "docs/specs/emacs-client-contract.md"))
+
+(defn- validation-stage-for [operation frontend-surface constraint]
+  (cond
+    (= constraint "threads") "P3_thread_debugger_condition_facade"
+    (= constraint "conditions_restarts") "P3_thread_debugger_condition_facade"
+    (= frontend-surface "transport") "P1_transport_session_protocol"
+    (= operation "create-mrepl") "P2_eval_mrepl_first_real_e2e"
+    (= frontend-surface "repl") "P6_emacs_repl_buffer_ui"
+    (= frontend-surface "completion") "P7_completion_autodoc_capf"
+    (= frontend-surface "inspector") "P8_inspector_xref_emacs_ui"
+    (= frontend-surface "xref") "P8_inspector_xref_emacs_ui"
+    (= frontend-surface "compile_load") "P13_diagnostics_ui"
+    (= frontend-surface "namespace") "P14_project_connection_management"
+    true "P0_inventory_truth"))
+
+(defn- support-rationale-for [support-class constraint state-detail]
+  (case support-class
+    "native" "Supported directly by Janet behavior with protocol adaptation."
+    "emulated" (string "Supported through SLYNET emulation because " (constraint-reason-for constraint))
+    "unsupported" (string "Not currently supported because " (constraint-reason-for constraint))
+    "pending_design" (string "Pending staged design; current state is " state-detail ".")
+    (string "Support class " support-class " requires explicit review.")))
+
+(defn- support-class-for [constraint]
+  (case constraint
+    "none" "native"
+    "clos_mop" "unsupported"
+    "cl_packages" "emulated"
+    "conditions_restarts" "emulated"
+    "compiler_notes" "emulated"
+    "threads" "emulated"
+    "pending_design" "pending_design"
+    "emulated"))
+
+(defn- state-detail-for [janet-evidence test-evidence constraint support-class]
+  (def has-janet (> (length janet-evidence) 0))
+  (def has-tests (> (length test-evidence) 0))
+  (cond
+    (and has-janet has-tests (= support-class "native")) "implemented_native_tested"
+    (and has-janet (= support-class "native")) "implemented_native_untested"
+    (and has-janet has-tests (= support-class "emulated")) "implemented_emulated_tested"
+    (and has-janet (= support-class "emulated")) "implemented_emulated_untested"
+    (not has-janet) (if (= constraint "none") "missing_unconstrained" "missing_constrained")
+    true "implemented_untested"))
+
 (defn- yaml-list [indent key values]
   (def prefix (string/repeat " " indent))
   (if (empty? values)
@@ -286,14 +393,24 @@
   (def out (buffer/new 0))
   (buffer/push-string out (string "  - name: " operation "\n"))
   (buffer/push-string out (string "    kind: " (string/join (rec :kinds) ",") "\n"))
+  (def frontend-surface (frontend-surface-for operation))
+  (buffer/push-string out (string "    frontend_surface: " frontend-surface "\n"))
+  (def constraint (constraint-for operation))
+  (def support-class (support-class-for constraint))
+  (def state-detail (state-detail-for janet-evidence test-evidence constraint support-class))
+  (buffer/push-string out (string "    support_class: " support-class "\n"))
   (buffer/push-string out (string "    state: " (state-for janet-evidence test-evidence) "\n"))
+  (buffer/push-string out (string "    state_detail: " state-detail "\n"))
+  (buffer/push-string out (string "    validation_stage: " (validation-stage-for operation frontend-surface constraint) "\n"))
+  (buffer/push-string out (string "    owning_spec: " (owning-spec-for operation frontend-surface constraint) "\n"))
   (buffer/push-string out (yaml-list 4 "source_files" source-evidence))
   (buffer/push-string out (yaml-list 4 "janet_files" janet-evidence))
   (buffer/push-string out (yaml-list 4 "test_files" test-evidence))
-  (def constraint (constraint-for operation))
   (buffer/push-string out (string "    constraint: " constraint "\n"))
   (when (not (= constraint "none"))
     (buffer/push-string out (string "    constraint_reason: " (constraint-reason-for constraint) "\n")))
+  (when (not (= support-class "native"))
+    (buffer/push-string out (string "    support_rationale: " (support-rationale-for support-class constraint state-detail) "\n")))
   (buffer/push-string out (string "    missing_protocol_state: " (stale-doc-state operation) "\n"))
   (buffer/push-string out (yaml-list 4 "missing_protocol_files" stale-files))
   (string out))
@@ -304,7 +421,7 @@
   (def out (buffer/new 0))
   (buffer/push-string out "# Generated by tools/protocol_inventory.janet. Do not edit by hand.\n")
   (buffer/push-string out "project: slynet\n")
-  (buffer/push-string out "schema_version: 2\n")
+  (buffer/push-string out "schema_version: 4\n")
   (buffer/push-string out (string "operation_count: " (length (keys ops)) "\n"))
   (buffer/push-string out (coverage-audit-section ops))
   (buffer/push-string out "operations:\n")

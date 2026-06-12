@@ -281,6 +281,57 @@
         pkg (if (string? package) package (or (*package* :name) "core"))]
     (completion/flex-completions pat pkg)))
 
+
+(defn source-aware-eval [code path line column]
+  (default code "")
+  (default path "<buffer>")
+  (default line 1)
+  (default column 0)
+  (let [forms (gray/read-forms-from-string code)
+        outputs @[]]
+    (each form forms
+      (array/push outputs
+                  (print-for-emacs/prin1-to-string-for-emacs (eval form) *package*)))
+    @[:status :ok
+      :values outputs
+      :source-context @[:path path
+                        :line line
+                        :column column
+                        :source-aware-eval true
+                        :runtime-instrumentation :source-aware-eval]]))
+
+(var *debugger-state* @{:active false :condition nil :condition-record nil :condition-type nil :thread nil :restarts @[] :frames @[] :level 0})
+
+(defn list-restart-scopes []
+  (let [state *debugger-state*
+        restarts (if (and (table? state) (array? (state :restarts)))
+                   (state :restarts)
+                   @[])
+        scopes @[]]
+    (var index 0)
+    (each restart restarts
+      (array/push scopes
+                  (array/concat @[:scope-id (string "restart-scope-" index)
+                                  :index index]
+                                restart))
+      (++ index))
+    scopes))
+
+(defn interrupt-execution-unit [unit-id]
+  @[:status :requested
+    :unit-id unit-id
+    :cooperative true
+    :thread-model :slynet-execution-unit
+    :support-class :emulated
+    :cl-thread-interrupt-equivalent false])
+
+(defn debugger-step-checkpoint [frame-index]
+  @[:status :pending
+    :frame-index frame-index
+    :support-class :emulated
+    :checkpoint-kind :cooperative-step
+    :cl-step-equivalent false])
+
 (defn- register-core-implementations! []
   (inf/defimpl 'ping ping)
   (inf/defimpl 'connection-info connection-info)
@@ -291,7 +342,11 @@
   (inf/defimpl 'commit-edited-value commit-edited-value)
   (inf/defimpl 'list-all-package-names list-all-package-names)
   (inf/defimpl 'simple-completions simple-completions)
-  (inf/defimpl 'flex-completions flex-completions))
+  (inf/defimpl 'flex-completions flex-completions)
+  (inf/defimpl 'source-aware-eval source-aware-eval)
+  (inf/defimpl 'list-restart-scopes list-restart-scopes)
+  (inf/defimpl 'interrupt-execution-unit interrupt-execution-unit)
+  (inf/defimpl 'debugger-step-checkpoint debugger-step-checkpoint))
 
 
 (defn- callable-symbol [thing]
@@ -415,6 +470,7 @@
 
 (var *inspector-stack* @[])
 (var *inspector-counter* 0)
+(var *inspector-object-counter* 0)
 
 (defn- join-path [base name]
   (if (or (= base "") (= base "/"))
@@ -429,9 +485,9 @@
             stat (try (os/stat path) ([_ _] nil))]
         (when stat
           (cond
-            (= (stat :type) :directory) (unless (or (= entry ".git") (= entry "o") (= entry "bundle"))
+            (= (stat :mode) :directory) (unless (or (= entry ".git") (= entry ".worktrees") (= entry "o") (= entry "bundle"))
                                            (walk path))
-            (and (= (stat :type) :file) (string/has-suffix? path ".janet")) (array/push out path))))))
+            (and (= (stat :mode) :file) (string/has-suffix? ".janet" path)) (array/push out path))))))
   (walk root)
   out)
 
@@ -456,25 +512,80 @@
               "slynet/completion.janet"
               "slynet/interfaces.janet"
               "test/project_core_tests.janet"
-              "test/server_integration_tests.janet"]
+              "test/server_integration_tests.janet"
+              "test/fixtures/xref/sample_a.janet"
+              "test/fixtures/xref/sample_b.janet"]
     (add! (join-path (os/cwd) rel)))
   out)
 
 (defn- xref-kind-for-line [line sym-name]
   (cond
-    (string/find line (string "(defn " sym-name)) :function
-    (string/find line (string "(defmacro " sym-name)) :macro
-    (string/find line (string "(var " sym-name)) :var
-    (string/find line (string "(definterface " sym-name)) :interface
-    (string/find line (string "(def " sym-name)) :value
+    (string/find (string "(defn " sym-name) line) :function
+    (string/find (string "(defmacro " sym-name) line) :macro
+    (string/find (string "(var " sym-name) line) :var
+    (string/find (string "(definterface " sym-name) line) :interface
+    (string/find (string "(def " sym-name) line) :value
     :else :unknown))
 
-(defn- make-xref-hit [sym-name path line-no line-text]
+(defn- xref-symbol-delimiter? [ch]
+  (or (nil? ch)
+      (= ch 9)
+      (= ch 10)
+      (= ch 13)
+      (= ch 32)
+      (= ch 40)
+      (= ch 41)
+      (= ch 91)
+      (= ch 93)
+      (= ch 123)
+      (= ch 125)
+      (= ch 34)
+      (= ch 59)))
+
+(defn- xref-definition-forms []
+  @[@{:prefix "(defn " :kind :function}
+    @{:prefix "(defmacro " :kind :macro}
+    @{:prefix "(definterface " :kind :interface}
+    @{:prefix "(var " :kind :var}
+    @{:prefix "(def " :kind :value}])
+
+(defn- first-non-space [line]
+  (var i 0)
+  (while (and (< i (length line))
+              (or (= (line i) 9) (= (line i) 32)))
+    (++ i))
+  i)
+
+(defn- definition-match [line sym-name]
+  (def start (first-non-space line))
+  (if (or (>= start (length line))
+          (= (line start) 35)
+          (= (line start) 59)
+          (= (line start) 34))
+    nil
+    (let [tail (string/slice line start)]
+      (var found nil)
+      (each form (xref-definition-forms)
+        (def prefix (string (form :prefix) sym-name))
+        (def after (+ start (length prefix)))
+        (when (and (nil? found)
+                   (string/has-prefix? prefix tail)
+                   (xref-symbol-delimiter? (if (< after (length line)) (line after) nil)))
+          (set found @{:kind (form :kind)
+                       :column (+ start (length (form :prefix)) 1)})))
+      found)))
+
+(defn- make-xref-hit [sym-name path line-no line-text &opt kind column]
+  (default kind (xref-kind-for-line line-text sym-name))
+  (def symbol-offset (string/find sym-name line-text))
+  (default column (if (nil? symbol-offset) 1 (+ symbol-offset 1)))
   @[:name sym-name
     :file path
     :line line-no
-    :column 1
-    :kind (xref-kind-for-line line-text sym-name)
+    :column column
+    :kind kind
+    :xref-kind :definition
+    :source-index :slynet-source-index
     :match sym-name
     :snippet (string/trim line-text)])
 
@@ -484,29 +595,28 @@
                   (let [fh (file/open path :r)
                         text (file/read fh :all)]
                     (file/close fh)
-                    text)
+                    (string text))
                   ([_ _] nil))]
     (when (string? content)
-      (def patterns (symbol-definition-patterns sym-name))
-      (def lines (string/split content "\n"))
+      (def lines (string/split "\n" content))
       (for i 0 (length lines)
-        (let [line (lines i)]
-          (when (some (fn [pat] (not (nil? (string/find line pat)))) patterns)
-            (array/push hits (make-xref-hit sym-name path (+ i 1) line)))))))
+        (let [line (lines i)
+              match (definition-match line sym-name)]
+          (when match
+            (array/push hits (make-xref-hit sym-name path (+ i 1) line (match :kind) (match :column))))))))
   hits)
 
 (defn find-definitions-for-emacs [thing]
-  (let [sym (callable-symbol thing)
-        sym-name (if (symbol? sym) (string sym) (string thing))
+  (let [sym-name (if (symbol? thing) (string thing) (string thing))
         exact-hits @[]
         other-hits @[]
         seen @{}]
     (defn push-hit! [hit]
       (let [key (string (hit 1) ":" (hit 3) ":" (hit 5))
-            snippet (or (get hit 11) "")]
+            snippet (or (get hit 17) "")]
         (when (nil? (get seen key))
           (put seen key true)
-          (if (not (nil? (string/find snippet sym-name)))
+          (if (not (nil? (string/find sym-name snippet)))
             (array/push exact-hits hit)
             (array/push other-hits hit)))))
     (each path (xref-candidate-files)
@@ -566,9 +676,28 @@
     (table? obj) (length (pairs obj))
     :else 0))
 
-(defn- render-inspector [obj]
+(defn- inspector-entry? [entry]
+  (and (table? entry) (string? (entry :object-id))))
+
+(defn- make-inspector-entry [obj &opt parent-object-id part-key]
+  (++ *inspector-object-counter*)
+  @{:object obj
+    :object-id (string "object-" *inspector-object-counter*)
+    :parent-object-id parent-object-id
+    :part-key part-key})
+
+(defn- inspector-entry-object [entry]
+  (if (inspector-entry? entry)
+    (entry :object)
+    entry))
+
+(defn- render-inspector [entry]
+  (def obj (inspector-entry-object entry))
   (++ *inspector-counter*)
   @[:id *inspector-counter*
+    :object-id (if (inspector-entry? entry) (entry :object-id) (string "object-" *inspector-counter*))
+    :parent-object-id (if (inspector-entry? entry) (entry :parent-object-id) nil)
+    :part-key (if (inspector-entry? entry) (entry :part-key) nil)
     :title (inspector-title obj)
     :type (type obj)
     :content (inspector-content obj)
@@ -576,25 +705,27 @@
     :can-pop (> (length *inspector-stack*) 1)])
 
 (defn inspect-for-emacs [thing]
-  (array/push *inspector-stack* thing)
-  (render-inspector thing))
+  (let [entry (make-inspector-entry thing)]
+    (array/push *inspector-stack* entry)
+    (render-inspector entry)))
 
 (defn inspector-pop []
   (when (> (length *inspector-stack*) 1)
     (array/pop *inspector-stack*))
   (if (> (length *inspector-stack*) 0)
     (render-inspector (get *inspector-stack* (- (length *inspector-stack*) 1)))
-    @[:id 0 :title "" :type nil :content @[] :can-pop false]))
+    @[:id 0 :object-id nil :parent-object-id nil :part-key nil :title "" :type nil :content @[] :can-pop false]))
 
 (defn inspector-reinspect []
   (if (> (length *inspector-stack*) 0)
     (render-inspector (get *inspector-stack* (- (length *inspector-stack*) 1)))
-    @[:id 0 :title "" :type nil :content @[] :can-pop false]))
+    @[:id 0 :object-id nil :parent-object-id nil :part-key nil :title "" :type nil :content @[] :can-pop false]))
 
 (defn inspector-nth-part [n]
   (unless (> (length *inspector-stack*) 0)
     (error "inspector is empty"))
-  (def obj (get *inspector-stack* (- (length *inspector-stack*) 1)))
+  (def parent-entry (get *inspector-stack* (- (length *inspector-stack*) 1)))
+  (def obj (inspector-entry-object parent-entry))
   (def idx (if (number? n) n 0))
   (def child
     (cond
@@ -605,7 +736,11 @@
       :else nil))
   (when (nil? child)
     (error "inspector part out of range"))
-  (inspect-for-emacs child))
+  (let [child-entry (make-inspector-entry child
+                                          (if (inspector-entry? parent-entry) (parent-entry :object-id) nil)
+                                          (string idx))]
+    (array/push *inspector-stack* child-entry)
+    (render-inspector child-entry)))
 
 (defn- parse-form-or-string [thing]
   (cond
@@ -622,6 +757,37 @@
     (var current (try (macex form) ([_ _] form)))
     (print-for-emacs/prin1-to-string-for-emacs current *package*)))
 
+(defn- make-janet-diagnostic [severity phase message &opt path]
+  (def diagnostic @[:severity severity
+                    :phase phase
+                    :message (string message)
+                    :diagnostic-model :janet-diagnostics
+                    :cl-compiler-note-equivalent false])
+  (when path
+    (array/push diagnostic :path)
+    (array/push diagnostic path))
+  diagnostic)
+
+(defn- diagnostic-result-fields [diagnostics]
+  @[:diagnostics diagnostics
+    :diagnostic-model :janet-diagnostics
+    :cl-compiler-note-equivalent false])
+
+(defn- append-plist [base extra]
+  (def out @[])
+  (each item base (array/push out item))
+  (each item extra (array/push out item))
+  out)
+
+(defn- plist-value [plist key]
+  (var out nil)
+  (var i 0)
+  (while (< i (length plist))
+    (when (= key (plist i))
+      (set out (plist (+ i 1))))
+    (set i (+ i 2)))
+  out)
+
 (defn compile-string-for-emacs [code]
   (default code "")
   (try
@@ -632,17 +798,22 @@
       (var last-value nil)
       (each form forms
         (set last-value (eval form)))
-      @[:success true
-        :value (print-for-emacs/prin1-to-string-for-emacs last-value *package*)
-        :notes @[]
-        :forms (length forms)])
+      (append-plist
+        @[:success true
+          :value (print-for-emacs/prin1-to-string-for-emacs last-value *package*)
+          :notes @[]
+          :forms (length forms)]
+        (diagnostic-result-fields @[])))
     ([err fib]
-      @[:success false
-        :value nil
-        :notes @[(string err)]
-        :forms 0])))
+      (def diagnostics @[(make-janet-diagnostic :error :compile-string err)])
+      (append-plist
+        @[:success false
+          :value nil
+          :notes @[(string err)]
+          :forms 0]
+        (diagnostic-result-fields diagnostics)))))
 
-(var *debugger-state* @{:active false :condition nil :condition-type nil :thread nil :restarts @[] :frames @[] :level 0})
+(var *condition-counter* 0)
 
 (defn- current-thread-table []
   (let [conn (current-connection)]
@@ -650,31 +821,156 @@
       :name (or (and conn (conn :addr)) "current")
       :status :running
       :kind :connection
+      :execution-unit true
+      :execution-unit-kind :connection
+      :thread-model :slynet-execution-unit
+      :cl-thread-equivalent false
       :current true
       :debugging (*debugger-state* :active)}))
 
-(defn- make-debugger-frame [idx description]
+(defn- xref-hit-value [hit key]
+  (plist-value hit key))
+
+(defn- source-snippet-line [path line-no]
+  (try
+    (let [fh (file/open path :r)
+          text (file/read fh :all)]
+      (file/close fh)
+      (def lines (string/split "\n" (string text)))
+      (if (and (> line-no 0) (<= line-no (length lines)))
+        (string/trim (lines (- line-no 1)))
+        nil))
+    ([_ _] nil)))
+
+(defn- source-index-location-for-symbol [sym-name]
+  (when sym-name
+    (def hits (find-definitions-for-emacs sym-name))
+    (when (> (length hits) 0)
+      (let [hit (hits 0)]
+        @{:file (xref-hit-value hit :file)
+          :line (xref-hit-value hit :line)
+          :column (xref-hit-value hit :column)
+          :name (xref-hit-value hit :name)
+          :kind (xref-hit-value hit :kind)
+          :snippet (xref-hit-value hit :snippet)
+          :synthetic-location false
+          :source-kind :source-index
+          :source-index (xref-hit-value hit :source-index)}))))
+
+(defn- synthetic-debugger-location [idx]
+  @{:file (join-path (os/cwd) "slynet/slynk.janet")
+    :line (+ 600 idx)
+    :column 1
+    :synthetic-location true
+    :source-kind :synthetic-facade})
+
+(defn- janet-debug-frame-location [stack-frame status]
+  (when (and (table? stack-frame)
+             (string? (stack-frame :source))
+             (number? (stack-frame :source-line))
+             (number? (stack-frame :source-column)))
+    (def source (stack-frame :source))
+    (def line (stack-frame :source-line))
+    @{:file source
+      :line line
+      :column (stack-frame :source-column)
+      :name (stack-frame :name)
+      :kind :function
+      :snippet (source-snippet-line source line)
+      :synthetic-location false
+      :source-kind :janet-debug-stack
+      :janet-pc (stack-frame :pc)
+      :janet-status status
+      :janet-name (stack-frame :name)
+      :janet-function-present (not (nil? (stack-frame :function)))
+      :janet-slots-count (length (or (stack-frame :slots) @[]))
+      :tail-call (or (stack-frame :tail) false)
+      :c-frame (or (stack-frame :c) false)}))
+
+(defn- frame-locals-from-janet [stack-frame]
+  (def locals @[])
+  (when (table? (stack-frame :locals))
+    (eachp [name value] (stack-frame :locals)
+      (array/push locals @{:name (string name) :value (string value)})))
+  (when (= 0 (length locals))
+    (array/push locals @{:name "*package*" :value (or (*package* :name) "core")}))
+  locals)
+
+(defn- make-native-debugger-frame [idx stack-frame status]
+  (let [location (janet-debug-frame-location stack-frame status)]
+    (when location
+      (def callable (stack-frame :name))
+      @{:index idx
+        :description (if callable (string "Janet frame: " callable) "Janet frame")
+        :callable callable
+        :janet-frame true
+        :locals (frame-locals-from-janet stack-frame)
+        :location location})))
+
+(defn- native-debugger-frames [fib]
+  (def frames @[])
+  (when fib
+    (def status (try (fiber/status fib) ([_ _] nil)))
+    (def stack (try (debug/stack fib) ([_ _] @[])))
+    (when (array? stack)
+      (for i 0 (length stack)
+        (when-let [frame (make-native-debugger-frame i (stack i) status)]
+          (array/push frames frame)))))
+  frames)
+
+(defn- make-debugger-frame [idx description &opt sym-name]
+  (default sym-name nil)
   @{:index idx
     :description description
+    :callable sym-name
     :locals @[@{:name "*package*" :value (or (*package* :name) "core")}]
-    :location @{:file (join-path (os/cwd) "slynet/slynk.janet")
-                :line (+ 600 idx)
-                :column 1}})
+    :location (or (source-index-location-for-symbol sym-name)
+                  (synthetic-debugger-location idx))})
 
-(defn- make-debugger-state [condition]
-  @{:active true
-    :condition (string condition)
-    :condition-type :evaluation-error
-    :thread (current-thread-table)
-    :level 1
-    :restarts @[@[:name "abort" :description "Abort current operation"]
-                @[:name "continue" :description "Continue current operation"]]
-    :frames @[(make-debugger-frame 0 "SLYNET top frame")
-              (make-debugger-frame 1 "Evaluation dispatch") ]})
+(defn- make-condition-record [condition]
+  (++ *condition-counter*)
+  @{:id (string "condition-" *condition-counter*)
+    :kind :evaluation-error
+    :message (string condition)
+    :support-class :emulated
+    :cl-condition-equivalent false})
 
-(defn trigger-debugger [condition]
-  (set *debugger-state* (make-debugger-state condition))
+(defn- make-debugger-state [condition &opt fib]
+  (default fib nil)
+  (let [condition-record (make-condition-record condition)
+        native-frames (native-debugger-frames fib)]
+    @{:active true
+      :condition (condition-record :message)
+      :condition-record condition-record
+      :condition-type :evaluation-error
+      :thread (current-thread-table)
+      :level 1
+      :restarts @[@[:name "abort-to-repl"
+                    :description "Abort current operation and return to the SLYNET REPL"
+                    :restart-kind :synthetic
+                    :support-class :emulated
+                    :cl-restart-equivalent false]
+                  @[:name "continue"
+                    :description "Continue current operation where Janet can resume"
+                    :restart-kind :synthetic
+                    :support-class :emulated
+                    :cl-restart-equivalent false]]
+      :frames (if (> (length native-frames) 0)
+                (do
+                  (def fallback-start (length native-frames))
+                  (array/push native-frames (make-debugger-frame fallback-start "SLYNET source-index fallback" "trigger-debugger"))
+                  (array/push native-frames (make-debugger-frame (+ fallback-start 1) "Evaluation dispatch"))
+                  native-frames)
+                @[(make-debugger-frame 0 "SLYNET top frame" "trigger-debugger")
+                  (make-debugger-frame 1 "Evaluation dispatch")])}))
+
+(defn trigger-debugger [condition &opt fib]
+  (default fib nil)
+  (set *debugger-state* (make-debugger-state condition fib))
   *debugger-state*)
+
+(defn- debugger-activation-message []
+  @[:debug-activate *debugger-state*])
 
 
 (defn inspect-current-condition []
@@ -725,10 +1021,7 @@
 
 
 (defn- read-file-text [path]
-  (def fh (file/open path :r))
-  (def content (file/read fh :all))
-  (file/close fh)
-  content)
+  (string (slurp path)))
 (defn- file-exists? [path]
   (not (nil? (try (os/stat path) ([_ _] nil)))))
 
@@ -749,12 +1042,22 @@
   (try
     (let [code (read-file-text path)
           result (compile-string-for-emacs code)]
-      @[:success (result 1)
+      @[:success (plist-value result :success)
         :path path
-        :value (result 3)
-        :notes (result 5)])
+        :value (plist-value result :value)
+        :notes (plist-value result :notes)
+        :diagnostics (plist-value result :diagnostics)
+        :diagnostic-model :janet-diagnostics
+        :cl-compiler-note-equivalent false])
     ([err fib]
-      @[:success false :path path :value nil :notes @[(string err)]])))
+      (def diagnostics @[(make-janet-diagnostic :error :compile-file err path)])
+      @[:success false
+        :path path
+        :value nil
+        :notes @[(string err)]
+        :diagnostics diagnostics
+        :diagnostic-model :janet-diagnostics
+        :cl-compiler-note-equivalent false])))
 
 (defn load-file [path]
   (default path "")
@@ -766,9 +1069,22 @@
       (var last-value nil)
       (each form forms
         (set last-value (eval form)))
-      @[:success true :path path :value (print-for-emacs/prin1-to-string-for-emacs last-value *package*)])
+      @[:success true
+        :path path
+        :value (print-for-emacs/prin1-to-string-for-emacs last-value *package*)
+        :notes @[]
+        :diagnostics @[]
+        :diagnostic-model :janet-diagnostics
+        :cl-compiler-note-equivalent false])
     ([err fib]
-      @[:success false :path path :value nil :notes @[(string err)]])))
+      (def diagnostics @[(make-janet-diagnostic :error :load-file err path)])
+      @[:success false
+        :path path
+        :value nil
+        :notes @[(string err)]
+        :diagnostics diagnostics
+        :diagnostic-model :janet-diagnostics
+        :cl-compiler-note-equivalent false])))
 
 (defn slynk-require [module-name]
   (let [name (string module-name)]
@@ -788,6 +1104,10 @@
                               :name name
                               :status :running
                               :kind :connection
+                              :execution-unit true
+                              :execution-unit-kind :connection
+                              :thread-model :slynet-execution-unit
+                              :cl-thread-equivalent false
                               :current current?
                               :debugging (and (*debugger-state* :active)
                                               (= id (debugger-thread-id)))])))
@@ -922,8 +1242,8 @@
       [:ok result])
     ([err fib]
       (when *slynk-debug-p*
-        (trigger-debugger err))
-      [:error (string "Evaluation error: " err)])))
+        (trigger-debugger err fib))
+      [:error (string "Evaluation error: " err) *debugger-state*])))
 # in slynk.janet
 (defn send-to-emacs [arg1 &opt arg2]
   (var conn nil) (var message nil)
@@ -1039,6 +1359,11 @@ Usage: (with-file f \"log.txt\" true (file/write f \"message\"))"
             (match res
               [:ok v]
               (send-to-emacs connection (rpc/create-return-message v id))
+              [:error e dbg]
+              (do
+                (send-to-emacs connection (rpc/create-return-error-message e id))
+                (when (and dbg (dbg :active))
+                  (send-to-emacs connection (debugger-activation-message))))
               [:error e]
               (send-to-emacs connection (rpc/create-return-error-message e id))
               _ #defensive: unknown shape
@@ -1083,28 +1408,36 @@ Usage: (with-file f \"log.txt\" true (file/write f \"message\"))"
           (def op (get data 0))
           (case op
             :process (do
-                       (when (function? (obj :mrepl-channel-process))
-                         ((obj :mrepl-channel-process) (get data 1))
+                       (def handler (obj :mrepl-channel-process))
+                       (when (function? handler)
+                         (handler (get data 1))
                          (set handled true)))
             :inspect-object (do
-                              (when (function? (obj :mrepl-channel-inspect-object))
-                                ((obj :mrepl-channel-inspect-object) (get data 1) (get data 2))
+                              (def handler (obj :mrepl-channel-inspect-object))
+                              (when (function? handler)
+                                (handler (get data 1) (get data 2))
                                 (set handled true)))
             :teardown (do
-                        (when (function? (obj :mrepl-channel-teardown))
-                          ((obj :mrepl-channel-teardown))
+                        (def handler (obj :mrepl-channel-teardown))
+                        (when (function? handler)
+                          (handler)
                           (rpc/close-channel channel-id)
                           (set handled true)))
             :clear-history (do
-                             (when (function? (obj :mrepl-channel-clear-history))
-                               ((obj :mrepl-channel-clear-history))
+                             (def handler (obj :mrepl-channel-clear-history))
+                             (when (function? handler)
+                               (handler)
                                (set handled true)))
             (set handled false)))))
     ([err fib]
-      (do (eprintf "SLYNET: Channel handler error: %s" err)
-        (server-logger "SLYNET: Channel handler error: %s" err))))
+      (do
+        (eprintf "SLYNET: Channel handler error: %s\n" (string err))
+        (server-logger "SLYNET: Channel handler error: %s" (string err))
+        (when (= "1" (os/getenv "SLYNET_TEST_VERBOSE"))
+          (debug/stacktrace fib))
+        (set handled true))))
   (unless handled
-    (eprintf "SLYNET: Channel send unhandled. Channel %s, data: %j" channel-id data)))
+    (eprintf "SLYNET: Channel send unhandled. Channel %s, data: %j\n" (string channel-id) data)))
 
 (defn process-channel-close
   "Process a channel-close message."

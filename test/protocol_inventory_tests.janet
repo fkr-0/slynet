@@ -109,3 +109,154 @@
          (assert-true (contains text "    - clos_mop") "clos_mop documented in audit")
          (assert-true (contains text "    - compiler_notes") "compiler_notes documented in audit")
          (assert-true (contains text "    - threads") "threads documented in audit"))})
+
+(register-test
+  {:name "protocol inventory emits precise support fields"
+   :tags [:inventory :phase0]
+   :fn (fn []
+         (run-inventory-generator)
+         (def text (inventory-text))
+         (def ping-record (record-for text "ping"))
+         (def restart-record (record-for text "invoke-nth-restart"))
+         (assert-true (contains text "schema_version: 4") "schema advanced for P10 ownership fields")
+         (assert-true (contains ping-record "support_class: native") "unconstrained tested implementation is native")
+         (assert-true (contains ping-record "state_detail: implemented_native_tested") "tested native implementation has precise state")
+         (assert-true (contains restart-record "support_class: emulated") "restart operations are staged emulation targets")
+         (assert-true (contains restart-record "state_detail: implemented_emulated_untested") "implemented but unproduct-tested restart emulation is precise"))})
+
+(register-test
+  {:name "protocol inventory maps operations to frontend surfaces"
+   :tags [:inventory :phase0]
+   :fn (fn []
+         (run-inventory-generator)
+         (def text (inventory-text))
+         (def ping-record (record-for text "ping"))
+         (def create-mrepl-record (record-for text "create-mrepl"))
+         (def completion-record (record-for text "simple-completions"))
+         (def backtrace-record (record-for text "backtrace"))
+         (def inspector-record (record-for text "inspector-nth-part"))
+         (def xref-record (record-for text "find-definitions-for-emacs"))
+         (assert-true (contains ping-record "frontend_surface: transport") "ping maps to transport")
+         (assert-true (contains create-mrepl-record "frontend_surface: repl") "create-mrepl maps to repl")
+         (assert-true (contains completion-record "frontend_surface: completion") "simple-completions maps to completion")
+         (assert-true (contains backtrace-record "frontend_surface: debugger") "backtrace maps to debugger")
+         (assert-true (contains inspector-record "frontend_surface: inspector") "inspector-nth-part maps to inspector")
+         (assert-true (contains xref-record "frontend_surface: xref") "find-definitions-for-emacs maps to xref"))})
+
+(defn- support-matrix-text []
+  (slurp "docs/specs/support-matrix.yml"))
+
+(defn- spec-index-text []
+  (slurp "docs/specs/README.md"))
+
+(defn- gap-analysis-text []
+  (slurp "docs/specs/slynk-backend-gap-analysis.md"))
+
+(defn- yaml-file-parses? [path]
+  (= 0 (os/execute ["python3" "-c" "import sys, yaml; yaml.safe_load(open(sys.argv[1]))" path] :p)))
+
+(defn- all-records [text]
+  (def rest-start (string/find "operations:\n" text))
+  (if (nil? rest-start)
+    @[]
+    (let [rest (string/slice text (+ rest-start (length "operations:\n")))]
+      (array/slice (string/split "\n  - name: " rest) 1))))
+
+(defn- record-field [record field]
+  (def marker (string "    " field ": "))
+  (def start (string/find marker record))
+  (when start
+    (def value-start (+ start (length marker)))
+    (def line-end (or (string/find "\n" record value-start) (length record)))
+    (string/slice record value-start line-end)))
+
+(register-test
+  {:name "support matrix exists parses and indexes current phases"
+   :tags [:inventory :phase10 :support-matrix]
+   :fn (fn []
+         (assert-true (yaml-file-parses? "docs/specs/support-matrix.yml") "support matrix parses as YAML")
+         (def text (support-matrix-text))
+         (each phase @["P0_inventory_truth"
+                       "P1_transport_session_protocol"
+                       "P2_eval_mrepl_first_real_e2e"
+                       "P3_thread_debugger_condition_facade"
+                       "P4_inspector_xref_source_index"
+                       "P5_compile_load_diagnostics"
+                       "P6_emacs_repl_buffer_ui"
+                       "P7_completion_autodoc_capf"
+                       "P8_inspector_xref_emacs_ui"
+                       "P9_debugger_execution_unit_emacs_ui"
+                       "P10_spec_consolidation_support_matrix"
+                       "P11_interactive_inspector_xref"
+                       "P12_interactive_debugger_controls"
+                       "P13_diagnostics_ui"
+                       "P14_project_connection_management"
+                       "P15_completion_parity_deepening"
+                       "P16_runtime_instrumentation"]
+           (assert-true (contains text phase) (string "support matrix contains " phase))))})
+
+(register-test
+  {:name "equivalence spec index references split specs and phase table"
+   :tags [:inventory :phase10 :spec-index]
+   :fn (fn []
+         (def index (spec-index-text))
+         (each spec @["support-matrix.yml"
+                      "threading-execution-units.md"
+                      "debugger-condition-restarts.md"
+                      "inspector-xref-source-index.md"
+                      "emacs-client-contract.md"
+                      "cl-janet-equivalence-contracts.md"
+                      "slynk-backend-gap-analysis.md"]
+           (assert-true (contains index spec) (string "spec index references " spec)))
+         (def overview (slurp "docs/specs/cl-janet-equivalence-contracts.md"))
+         (assert-false (contains overview "Status: working draft") "overview no longer presents itself as draft journal")
+         (each phase @["P0" "P1" "P2" "P3" "P4" "P5" "P6" "P7" "P8" "P9" "P10" "P11" "P12" "P13" "P14" "P15" "P16"]
+           (assert-true (contains overview (string "| " phase " |")) (string "overview table contains " phase))))})
+
+(register-test
+  {:name "slynk backend gap analysis records scope extension and workaround decisions"
+   :tags [:inventory :phase10 :spec-index :gap-analysis]
+   :fn (fn []
+         (def index (spec-index-text))
+         (def overview (slurp "docs/specs/cl-janet-equivalence-contracts.md"))
+         (def text (gap-analysis-text))
+         (assert-true (contains index "slynk-backend-gap-analysis.md") "spec index references backend gap analysis")
+         (assert-true (contains overview "slynk-backend-gap-analysis.md") "overview references backend gap analysis")
+         (each token @[
+                       "native"
+                       "emulated"
+                       "workaround"
+                       "needs-janet-extension"
+                       "out-of-scope"
+                       "pending-design"
+                       "CLOS/MOP"
+                       "conditions and restarts"
+                       "source-index"
+                       "debug/stack"]
+           (assert-true (contains text token) (string "gap analysis mentions " token)))
+         (assert-true (contains text "The acceptable claim") "gap analysis states release claim boundary")
+         (assert-true (contains text "The unacceptable claim") "gap analysis states non-goal boundary"))})
+
+(register-test
+  {:name "protocol inventory records validation stage and owning spec"
+   :tags [:inventory :phase10]
+   :fn (fn []
+         (run-inventory-generator)
+         (def text (inventory-text))
+         (each operation @["ping" "create-mrepl" "simple-completions" "list-threads" "debugger-info-for-emacs" "inspector-nth-part" "find-definitions-for-emacs" "compile-string-for-emacs"]
+           (def rec (record-for text operation))
+           (assert-true rec (string operation " record exists"))
+           (assert-true (contains rec "    validation_stage: P") (string operation " has validation stage"))
+           (assert-true (contains rec "    owning_spec: docs/specs/") (string operation " has owning spec"))))})
+
+(register-test
+  {:name "protocol inventory support rationale required for constrained support"
+   :tags [:inventory :phase10]
+   :fn (fn []
+         (run-inventory-generator)
+         (def text (inventory-text))
+         (each rec (all-records text)
+           (def support (record-field rec "support_class"))
+           (when (or (= support "emulated") (= support "unsupported") (= support "pending_design"))
+             (assert-true (contains rec "    constraint_reason: ") "constrained record has constraint reason")
+             (assert-true (contains rec "    support_rationale: ") "constrained record has support rationale"))))})

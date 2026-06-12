@@ -61,7 +61,7 @@
                    (length (mrepl :history))]]
     (when condition
       (array/push payload condition))
-    (send-channel mrepl (array/concat [:prompt] payload))
+    (send-channel mrepl (array/concat @[:prompt] payload))
     (put mrepl :mode :eval)
     true))
 
@@ -142,7 +142,7 @@
                  :history @[]
                  :pending-errors @[]
                  :mode :eval
-                 :thread-id (fiber/current)})
+                 :thread-id "slynet-mrepl"})
         channel-id (register-mrepl! mrepl)]
     (send-channel mrepl
                   [:write-string

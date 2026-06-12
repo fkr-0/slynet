@@ -24,9 +24,21 @@
   port
   (buffer "")
   on-message
+  (pending-requests (make-hash-table :test 'eql))
   (next-id 1)
   (package "core")
-  thread)
+  thread
+  channel-id
+  mrepl-thread
+  prompt-string
+  last-values
+  (repl-output "")
+  repl-buffer
+  mrepl-eval-callback)
+
+(defvar slynet-client-after-channel-message-functions nil
+  "Abnormal hook run after a decoded channel message updates CONNECTION state.
+Each function receives CONNECTION, CHANNEL-ID, and PAYLOAD.")
 
 (defun slynet-client--open-network-stream (name buffer host service)
   "Open a network process NAME using BUFFER, HOST, and SERVICE."
@@ -94,8 +106,12 @@ are passed to `open-network-stream'."
          (connection (make-slynet-client-connection
                       :process process
                       :host host
-                      :port port
-                      :on-message on-message)))
+                      :port port)))
+    (setf (slynet-client-connection-on-message connection)
+          (lambda (message)
+            (slynet-client-handle-message connection message)
+            (when on-message
+              (funcall on-message message))))
     (slynet-client--set-process-filter
      process
      (lambda (_process chunk)
@@ -122,17 +138,126 @@ are passed to `open-network-stream'."
     (setf (slynet-client-connection-next-id connection) (1+ id))
     id))
 
+(defun slynet-client--complete-request (connection request-id payload)
+  "Complete REQUEST-ID on CONNECTION with PAYLOAD."
+  (let* ((pending (slynet-client-connection-pending-requests connection))
+         (callback (gethash request-id pending)))
+    (when callback
+      (remhash request-id pending)
+      (funcall callback payload))))
+
+(defun slynet-client--append-output (connection text)
+  "Append TEXT to CONNECTION's accumulated MREPL output."
+  (setf (slynet-client-connection-repl-output connection)
+        (concat (slynet-client-connection-repl-output connection) text)))
+
+(defun slynet-client--payload-op (payload)
+  "Return the operation symbol or keyword at the head of PAYLOAD."
+  (when (consp payload)
+    (car payload)))
+
+(defun slynet-client--op= (actual keyword symbol)
+  "Return non-nil when ACTUAL names the same protocol op as KEYWORD or SYMBOL."
+  (or (eq actual keyword) (eq actual symbol)))
+
+(defun slynet-client--handle-channel-message (connection _channel-id payload)
+  "Handle a channel PAYLOAD for CONNECTION."
+  (let ((op (slynet-client--payload-op payload)))
+    (cond
+     ((slynet-client--op= op :write-string 'write-string)
+      (slynet-client--append-output connection (cadr payload)))
+     ((slynet-client--op= op :prompt 'prompt)
+      (let ((package-name (cadr payload))
+            (condition (nthcdr 5 payload)))
+        (setf (slynet-client-connection-package connection) package-name)
+        (setf (slynet-client-connection-prompt-string connection)
+              (if condition
+                  (format "%s> [%s] " package-name (car condition))
+                (format "%s> " package-name)))))
+     ((slynet-client--op= op :write-values 'write-values)
+      (let ((values (cadr payload)))
+        (setf (slynet-client-connection-last-values connection) values)
+        (when-let ((callback (slynet-client-connection-mrepl-eval-callback connection)))
+          (setf (slynet-client-connection-mrepl-eval-callback connection) nil)
+          (funcall callback values))))
+     ((slynet-client--op= op :evaluation-aborted 'evaluation-aborted)
+      (when-let ((callback (slynet-client-connection-mrepl-eval-callback connection)))
+        (setf (slynet-client-connection-mrepl-eval-callback connection) nil)
+        (funcall callback (list :abort (cadr payload)))))
+     ((slynet-client--op= op :server-side-repl-close 'server-side-repl-close)
+      (setf (slynet-client-connection-channel-id connection) nil))
+     (t nil))
+    (run-hook-with-args 'slynet-client-after-channel-message-functions
+                        connection _channel-id payload)))
+
+(defun slynet-client-handle-message (connection message)
+  "Dispatch decoded MESSAGE for CONNECTION."
+  (let ((op (slynet-client--payload-op message)))
+    (cond
+     ((slynet-client--op= op :return 'return)
+      (let ((status (cadr message))
+            (request-id (caddr message)))
+        (pcase status
+          (`(:ok ,value)
+           (slynet-client--complete-request connection request-id value))
+          (`(ok ,value)
+           (slynet-client--complete-request connection request-id value))
+          (`(:abort ,reason)
+           (slynet-client--complete-request connection request-id (list :abort reason)))
+          (`(abort ,reason)
+           (slynet-client--complete-request connection request-id (list :abort reason))))))
+     ((slynet-client--op= op :channel-send 'channel-send)
+      (slynet-client--handle-channel-message connection (cadr message) (caddr message)))
+     ((slynet-client--op= op :channel-close 'channel-close)
+      (let ((channel-id (cadr message)))
+        (when (equal channel-id (slynet-client-connection-channel-id connection))
+          (setf (slynet-client-connection-channel-id connection) nil))))
+     (t nil))))
+
+(defun slynet-client-send-rex-async (connection form callback &optional package thread)
+  "Send FORM over CONNECTION and call CALLBACK with the :return payload.
+Return the request id used for the message."
+  (let ((request-id (slynet-client-next-id connection)))
+    (when callback
+      (puthash request-id callback
+               (slynet-client-connection-pending-requests connection)))
+    (slynet-client-send connection
+                        (list :emacs-rex
+                              form
+                              (or package (slynet-client-connection-package connection))
+                              (or thread (slynet-client-connection-thread connection))
+                              request-id))
+    request-id))
+
 (defun slynet-client-send-rex (connection form &optional package thread)
   "Send FORM as an :emacs-rex request over CONNECTION.
 Return the request id used for the message."
-  (let* ((request-id (slynet-client-next-id connection))
-         (message (list :emacs-rex
-                        form
-                        (or package (slynet-client-connection-package connection))
-                        (or thread (slynet-client-connection-thread connection))
-                        request-id)))
-    (slynet-client-send connection message)
-    request-id))
+  (slynet-client-send-rex-async connection form nil package thread))
+
+(defun slynet-client-create-mrepl (connection callback)
+  "Create an MREPL on CONNECTION and call CALLBACK with the backend result."
+  (slynet-client-send-rex-async
+   connection
+   '(create-mrepl)
+   (lambda (result)
+     (when (consp result)
+       (setf (slynet-client-connection-channel-id connection) (car result))
+       (setf (slynet-client-connection-mrepl-thread connection) (cadr result))
+       (setf (slynet-client-connection-thread connection) (cadr result)))
+     (when callback
+       (funcall callback result)))))
+
+(defun slynet-client-send-channel (connection channel-id payload)
+  "Send PAYLOAD over CHANNEL-ID on CONNECTION."
+  (slynet-client-send connection (list :channel-send channel-id payload)))
+
+(defun slynet-client-eval-mrepl-string (connection string callback)
+  "Evaluate STRING on CONNECTION's active MREPL and call CALLBACK with values."
+  (let ((channel-id (slynet-client-connection-channel-id connection)))
+    (unless channel-id
+      (error "SLYNET MREPL channel not initialized"))
+    (setf (slynet-client-connection-mrepl-eval-callback connection) callback)
+    (slynet-client-send-channel connection channel-id (list :process string))))
 
 (defun slynet-client-disconnect (connection)
   "Close CONNECTION's process if it is live."

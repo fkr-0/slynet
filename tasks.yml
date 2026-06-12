@@ -586,8 +586,17 @@ task_groups:
             green:
               - "Current repo inventory passes the release gate and emits an audit summary."
         - id: T01-5_frontend_surface_mapping
-          status: todo
+          status: done
           description: "Add frontend_surface fields so each operation is mapped to Emacs UI areas: repl, eval, completion, inspector, debugger, contrib, transport, or backend-only."
+          verification_log:
+            - date: "2026-06-12"
+              phase: red
+              command: "JANET_PATH=$PWD janet tmp-protocol-red-runner.janet"
+              result: "failed as intended: representative operation records lacked frontend_surface/support_class/state_detail fields. Temporary runner removed after verification."
+            - date: "2026-06-12"
+              phase: green
+              command: "JANET_PATH=$PWD janet tmp-protocol-red-runner.janet"
+              result: "passed: 8 tests, 48/48 asserts; representative transport/repl/completion/debugger/inspector/xref surfaces emitted."
           files:
             update:
               - tools/protocol_inventory.janet
@@ -599,8 +608,17 @@ task_groups:
             green:
               - "All generated records include frontend_surface and unknown surfaces are audited."
         - id: T01-6_operation_state_model
-          status: todo
+          status: done
           description: "Refine state from implemented/missing into implemented_tested, implemented_untested, emulated_not_equivalent, unsupported_by_janet_design, missing, and stale_doc_conflict."
+          verification_log:
+            - date: "2026-06-12"
+              phase: red
+              command: "JANET_PATH=$PWD janet tmp-protocol-red-runner.janet"
+              result: "failed as intended before generator update: schema_version remained 2 and support_class/state_detail were absent."
+            - date: "2026-06-12"
+              phase: green
+              command: "JANET_PATH=$PWD janet tmp-protocol-red-runner.janet"
+              result: "passed: schema_version 3; ping is implemented_native_tested; invoke-nth-restart is implemented_emulated_untested after inventory tests stopped counting themselves as product tests."
           files:
             update:
               - tools/protocol_inventory.janet
@@ -787,7 +805,7 @@ task_groups:
 
   - id: T04_core_wire_protocol_and_message_codec
     title: "Harden SLY wire message read/write compatibility"
-    status: todo
+    status: in_progress
     files:
       update:
         - slynet/rpc.janet
@@ -809,6 +827,31 @@ task_groups:
           command: "JANET_PATH=$PWD janet test/message-tests.janet"
       aggregate:
         - "JANET_PATH=$PWD janet test/run_tests.janet"
+
+    implementation_slices:
+      - id: T04-1_transport_frame_helpers
+        status: done
+        description: "Add deterministic pure transport helpers for six-byte length-prefixed payload frames and explicit fragmented/malformed buffer decoding."
+        files:
+          updated:
+            - slynet/rpc.janet
+            - test/message-tests.janet
+            - tasks.yml
+          created:
+            - docs/specs/cl-janet-equivalence-contracts.md
+            - phases.yml
+        verification_log:
+          - date: "2026-06-12"
+            phase: red
+            command: "JANET_PATH=$PWD janet test/run_tests.janet :match 'transport frame' :report compact"
+            result: "failed as intended: rpc/encode-packet and rpc/read-packet-from-buffer did not exist."
+          - date: "2026-06-12"
+            phase: green
+            command: "JANET_PATH=$PWD janet test/run_tests.janet :match 'transport frame' :report compact"
+            result: "passed as part of current 65-test suite: 216/216 assertions passed."
+        remaining:
+          - "Round-trip complete SLY message envelopes, not just raw payload frames."
+          - "Add live socket EOF/error tests once real Emacs/Janet E2E harness is in place."
 
   - id: T05_core_eval_repl_package_model
     title: "Complete Janet eval/edit/MREPL behavior with explicit package limitations"
@@ -1181,3 +1224,33 @@ iteration_policy:
   blocked_rule: >-
     A blocked task must include the evidence command that revealed the block and either a Janet design constraint
     or an external dependency such as Emacs/CI environment availability.
+
+p10_spec_consolidation_support_matrix:
+  status: done
+  date: "2026-06-13"
+  scope:
+    - split the equivalence overview into owning spec files
+    - add docs/specs/support-matrix.yml as the machine-readable phase/surface/constraint matrix
+    - add owning_spec and validation_stage to generated protocol inventory records
+    - require support_rationale for emulated, unsupported, and pending-design records
+    - keep phases.yml focused on status and verification while docs/specs owns conceptual contracts
+  files:
+    created:
+      - docs/specs/README.md
+      - docs/specs/support-matrix.yml
+      - docs/specs/threading-execution-units.md
+      - docs/specs/debugger-condition-restarts.md
+      - docs/specs/inspector-xref-source-index.md
+      - docs/specs/emacs-client-contract.md
+    updated:
+      - docs/specs/cl-janet-equivalence-contracts.md
+      - phases.yml
+      - tasks.yml
+      - tools/protocol_inventory.janet
+      - test/protocol_inventory_tests.janet
+      - docs/generated/protocol-inventory.yml
+  red:
+    - "JANET_PATH=$PWD janet test/run_tests.janet :match 'support matrix' :report compact failed on missing support-matrix.yml and spec index files."
+    - "JANET_PATH=$PWD janet test/run_tests.janet :match 'phase10' :report compact failed on missing owning_spec, validation_stage, and support_rationale inventory fields."
+  green:
+    - "JANET_PATH=$PWD janet test/run_tests.janet :match 'protocol inventory' :report compact passed 89 tests / 499 assertions; full verification pending final gate."

@@ -17,6 +17,8 @@
   (def timeout (or (opts :timeout) 1.0))
 
   (ensure-send-handler)
+  (def prev-debug slynk/*slynk-debug-p*)
+  (set slynk/*slynk-debug-p* true)
 
   (def ch (ev/chan 32))
   (var replies @[])
@@ -66,6 +68,7 @@
 
   {:conn conn
    :dispose (fn []
+              (set slynk/*slynk-debug-p* prev-debug)
               (when prev-send (rpc/set-send-handler prev-send))
               (when prev-resolve (rpc/set-conn-resolver prev-resolve)))
    :chan ch

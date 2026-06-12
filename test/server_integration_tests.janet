@@ -4,6 +4,7 @@
 (import ../slynet/infrastructure :as inf)
 (import ../slynet/init :as init)
 (import ../slynet/slynk :as slynk)
+(import ../slynet/cli :as cli)
 
 (defn- reset-all! []
   (inf/reset-interfaces)
@@ -49,3 +50,17 @@
          (assert= "test" (first (first entries)))
          (slynk/close-connection conn "testing")
          (assert= 0 (length (slynk/list-connections))))})
+
+(register-test
+  {:name "cli rpc initialization handles implementation key listings"
+   :tags [:unit :server :cli]
+   :fn (fn []
+         (assert-true (boolean? (cli/initialize-rpc))))})
+
+(register-test
+  {:name "cli contrib initialization loads MREPL module"
+   :tags [:unit :server :cli :mrepl]
+   :fn (fn []
+         (def results (cli/initialize-contrib-modules))
+         (assert= :ok (get-in results [:mrepl :status]))
+         (assert= :ok (get-in results [:arglists :status])))})

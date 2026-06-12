@@ -78,22 +78,22 @@
   #   (set all-implementations-found false)
   #   (break "RPC registries not tables"))
   (let [interfaces (inf/list-interfaces)
-        implementations (inf/list-implementations)]
+        implementation-names (inf/list-implementations)]
     (eachp [rpc-name interface-meta] interfaces
-      (unless (get implementations rpc-name)
+      (unless (inf/get-implementation rpc-name)
         (eprintf "Warning: SLYNET RPC interface '%s' (Doc: \"%s\") is declared but not implemented.\n"
-                 rpc-name (get interface-meta :doc "no docstring"))
+                 (string rpc-name) (get interface-meta :doc "no docstring"))
         (set all-implementations-found false)))
-    (eachp [rpc-name impl] implementations
+    (each rpc-name implementation-names
       (unless (get interfaces rpc-name)
         (eprintf "Warning: SLYNET RPC implementation for '%s' has no corresponding interface declaration.\n"
-                 rpc-name)
+                 (string rpc-name))
         (set all-implementations-found false)))
     all-implementations-found))
 
 (defn initialize-contrib-modules [&opt modules]
   (default modules nil)
-  (if (and (module/cache "./contrib") contrib/export-api)
+  (if contrib/export-api
     (do
       (def results (contrib/initialize-contrib modules))
       (log "INFO" "SLYNET: Contrib modules initialized:\n")
@@ -253,6 +253,8 @@
                     (when (nil? msg) (break))
                     (handle-decoded! conn msg))
                   (net/close sock)
+                  (when (= slynk/*emacs-io* conn)
+                    (set slynk/*emacs-io* nil))
                   (log "INFO" "client disconnected\n"))))
             ([e _]
               (when alive
@@ -275,8 +277,7 @@
   (default on-conn nil)
   (def mk-conn
     (fn [conn]
-      (when (nil? (slynk/*emacs-io*))
-        (set slynk/*emacs-io* conn))
+      (set slynk/*emacs-io* conn)
       (when (function? on-conn) (on-conn conn))
       true))
   (var base @{:state :none})

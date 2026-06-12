@@ -4,6 +4,8 @@
 (import ./types)
 (import ./infrastructure :as inf)
 
+(def *interactive-eval-env* (table/clone (fiber/getenv (fiber/current))))
+
 (defn eval-in-context [form ctx]
   (eval form))
 # SLYNK Backend Interface for Janet
@@ -782,11 +784,11 @@ Example:
   (string "Janet-Thread-" thread))
 (inf/defimpl 'thread-name thread-name)
 
-(defn interactive-eval [string]
-  "Evaluate STRING interactively."
+(defn interactive-eval [source]
+  "Evaluate SOURCE interactively."
   (try
-    (do (def form (parse string))
-      (def result (eval form))
+    (do (def form (parse source))
+      (def result (eval form *interactive-eval-env*))
       [:ok result])
     ([err fib]
       [:abort (string "Interactive evaluation error: " err)])))

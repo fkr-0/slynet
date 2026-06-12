@@ -23,7 +23,7 @@ commands:
     run:
       - sh
       - -lc
-      - eldev test --expect 6
+      - eldev test --expect 28
 
   smoke-client:
     description: Run the CLI client in batch mode against a local server

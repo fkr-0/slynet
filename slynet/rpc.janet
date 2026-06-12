@@ -138,6 +138,32 @@
 #     (parse-int str base)
 #     ([err fib]
 #       (error (string "Invalid number format: " str " in base " base)))))
+(defn encode-packet [payload]
+  "Return PAYLOAD framed with a SLYNK-compatible six-byte hexadecimal length prefix."
+  (def bytes (if (= *current-encoding* "utf-8")
+               (backend/string-to-utf8 payload)
+               (backend/string-to-bytes payload)))
+  (string (string/format "%06x" (length bytes)) (string bytes)))
+
+(defn read-packet-from-buffer [buffer]
+  "Decode one complete framed packet from BUFFER or report explicit incomplete/error state."
+  (def available-total (length buffer))
+  (if (< available-total 6)
+    {:status :incomplete :needed 6 :available available-total}
+    (do
+      (def header (string/slice buffer 0 6))
+      (def payload-length (scan-number header 16))
+      (if (nil? payload-length)
+        {:status :error :type :malformed-length-prefix :header header}
+        (do
+          (def available-payload (- available-total 6))
+          (def frame-end (+ 6 payload-length))
+          (if (< available-payload payload-length)
+            {:status :incomplete :needed payload-length :available available-payload}
+            {:status :complete
+             :payload (string/slice buffer 6 frame-end)
+             :remaining (string/slice buffer frame-end)}))))))
+
 (defn- recv-exact [stream n]
   (def out @"")
   (var got 0)
@@ -247,14 +273,14 @@
   (scan-number s)) # ;robust number scanner from stdlib
 
 (defn A:string
-  "Return the string contents (capture already assembled by PEG)."
+  "Return string contents without surrounding Common Lisp quotes."
   [s]
-  s)
+  (string/slice s 1 (- (length s) 1)))
 
 (defn A:keyword
-  "Convert \":foo\" (already captured including the leading :) into a keyword."
+  "Convert a Common Lisp keyword token like :foo into a Janet keyword."
   [s]
-  (keyword s))
+  (keyword (string/slice s 1 (length s))))
 
 (defn A:symbol
   "Map special symbols and otherwise make a symbol."
@@ -431,6 +457,10 @@
     (-> message
         decode-special-form) package))
 
+(defn encode-message-packet [message package]
+  "Serialize MESSAGE for Emacs and return a length-prefixed packet string."
+  (encode-packet (process-outgoing-message message package)))
+
 (defn write-header [stream len]
   "Write a 6-byte hex length header."
   (net/write stream (string/format "%06x" len)))
@@ -508,6 +538,9 @@
 (def export-api
   @{:read-message read-message
     :write-message write-message
+    :encode-packet encode-packet
+    :read-packet-from-buffer read-packet-from-buffer
+    :encode-message-packet encode-message-packet
     :register-channel-object register-channel-object
     :find-channel-id-for-object find-channel-id-for-object
     :get-channel-object get-channel-object
