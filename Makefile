@@ -49,7 +49,7 @@ test-emacs:
 		exit 77; \
 	fi
 	@echo "Running SLYNET Emacs ERT tests through Eldev..."
-	eldev test --expect 35
+	eldev test --expect 38
 
 # Lint Janet code (using janet-format if available)
 lint:

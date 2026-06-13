@@ -92,6 +92,7 @@
           (fake-server (list :fake-server)))
       (should (eq (lookup-key slynet-mode-map (kbd "C-c C-s c")) #'slynet-connect))
       (should (eq (lookup-key slynet-mode-map (kbd "C-c C-s h")) #'slynet-health))
+      (should (eq (lookup-key slynet-mode-map (kbd "C-c C-s D")) #'slynet-doc-symbol))
       (cl-letf (((symbol-function 'process-live-p)
                  (lambda (process) (eq process fake-server)))
                 ((symbol-function 'delete-process)

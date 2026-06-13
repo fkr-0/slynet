@@ -57,5 +57,63 @@
       (should (eq (plist-get received :frontend-surface) 'autodoc))
       (should (eq (plist-get received :support-class) 'native)))))
 
+
+(ert-deftest slynet-doc-symbol-renders-scrollable-doc-buffer ()
+  (let ((slynet-current-connection (slynet-completion-test--connection))
+        (requested nil))
+    (cl-letf (((symbol-function 'slynet-client-send-rex-async)
+               (lambda (_connection form callback &rest _ignored)
+                 (setq requested form)
+                 (funcall callback
+                          '(:status :ok
+                            :operator "connection-info"
+                            :frontend-surface :autodoc
+                            :support-class :workaround
+                            :cl-autodoc-equivalent nil
+                            :arglist "()"
+                            :documentation "Return connection metadata."
+                            :source-locations ((:file "slynet/slynk.janet"
+                                                :line 170
+                                                :column 7
+                                                :source-index :slynet-source-index-v2))))
+                 29)))
+      (let ((buffer (slynet-doc-symbol "connection-info")))
+        (should (equal requested '(autodoc "(connection-info")))
+        (with-current-buffer buffer
+          (goto-char (point-min))
+          (should (eq major-mode 'slynet-doc-mode))
+          (should (search-forward "SLYNET Janet Docs" nil t))
+          (should (search-forward "Name: connection-info" nil t))
+          (should (search-forward "Support: workaround" nil t))
+          (should (search-forward "Return connection metadata." nil t))
+          (should (search-forward "source-index=slynet-source-index-v2" nil t)))))))
+
+(ert-deftest slynet-autodoc-sends-form-and-callback-payload ()
+  (let ((slynet-current-connection (slynet-completion-test--connection))
+        (requested nil)
+        (received nil))
+    (cl-letf (((symbol-function 'slynet-client-send-rex-async)
+               (lambda (_connection form callback &rest _ignored)
+                 (setq requested form)
+                 (funcall callback '(:status :ok :operator "map" :arglist "(f xs)"))
+                 30)))
+      (slynet-autodoc "(map" (lambda (payload) (setq received payload)))
+      (should (equal requested '(autodoc "(map")))
+      (should (equal (plist-get received :operator) "map")))))
+
+(ert-deftest slynet-complete-form-sends-form-and-callback-payload ()
+  (let ((slynet-current-connection (slynet-completion-test--connection))
+        (requested nil)
+        (received nil))
+    (cl-letf (((symbol-function 'slynet-client-send-rex-async)
+               (lambda (_connection form callback &rest _ignored)
+                 (setq requested form)
+                 (funcall callback '(:status :ok :prefix "con" :candidates ((:name "connection-info"))))
+                 31)))
+      (slynet-complete-form "(con" (lambda (payload) (setq received payload)))
+      (should (equal requested '(complete-form "(con")))
+      (should (equal (plist-get received :prefix) "con")))))
+
+
 (provide 'slynet-completion-tests)
 ;;; slynet-completion-tests.el ends here

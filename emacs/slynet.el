@@ -60,6 +60,9 @@ The first element is the program; remaining elements are arguments."
 
 (defvar slynet-status-buffer-name "*slynet-status*"
   "Buffer name used by `slynet-health'.")
+(defvar slynet-doc-buffer-name "*slynet-doc*"
+  "Buffer name used by `slynet-doc-symbol' and `slynet-autodoc'.")
+
 
 (defvar slynet-mode-line-string " SLYNET:off"
   "Compact mode-line status for SLYNET.")
@@ -97,6 +100,7 @@ The first element is the program; remaining elements are arguments."
     (define-key map (kbd "i") #'slynet-inspect-value)
     (define-key map (kbd "x") #'slynet-find-definitions)
     (define-key map (kbd "b") #'slynet-debugger-info)
+    (define-key map (kbd "D") #'slynet-doc-symbol)
     map)
   "Prefix keymap for user-facing SLYNET commands.")
 
@@ -131,7 +135,8 @@ server by itself; use `slynet-connect', `slynet-start-server', or
     ["Eval string" slynet-eval-string t]
     ["Inspector" slynet-inspect-value t]
     ["Find definitions" slynet-find-definitions t]
-    ["Debugger" slynet-debugger-info t]))
+    ["Debugger" slynet-debugger-info t]
+    ["Docs" slynet-doc-symbol t]))
 
 
 (defun slynet--handle-wire-message (message)
@@ -445,6 +450,9 @@ Call CALLBACK with an autodoc payload."
 
 (define-derived-mode slynet-debugger-mode special-mode "SLYNET-Debugger"
   "Major mode for displaying SLYNET debugger and execution-unit state.")
+
+(define-derived-mode slynet-doc-mode special-mode "SLYNET-Doc"
+  "Major mode for scrollable Janet doc/autodoc payloads.")
 
 (defun slynet--display-buffer (name mode)
   "Return buffer NAME initialized with MODE."
@@ -1126,6 +1134,72 @@ Return the request id assigned to the wire message."
      (if status (format " janet-status=%s" (slynet--plist-string location :janet-status)) "")
      (if pc (format " pc=%S" pc) "")
      (if slots (format " slots=%S" slots) ""))))
+
+
+(defun slynet--listify (value)
+  "Return VALUE as a list suitable for rendering."
+  (cond
+   ((null value) nil)
+   ((listp value) value)
+   ((vectorp value) (append value nil))
+   (t (list value))))
+
+(defun slynet--render-doc-payload (payload buffer)
+  "Render Janet doc/autodoc PAYLOAD into BUFFER."
+  (with-current-buffer buffer
+    (let ((inhibit-read-only t))
+      (erase-buffer)
+      (slynet-doc-mode)
+      (slynet--insert-line "SLYNET Janet Docs")
+      (slynet--insert-line "Name: %s" (or (plist-get payload :name)
+                                          (plist-get payload :operator)
+                                          ""))
+      (slynet--insert-line "Surface: %s" (slynet--plist-string payload :frontend-surface "doc-browser"))
+      (slynet--insert-line "Support: %s" (slynet--plist-string payload :support-class "unknown"))
+      (slynet--insert-line "CL-equivalent: %s"
+                           (or (plist-get payload :cl-autodoc-equivalent)
+                               (plist-get payload :cl-documentation-equivalent)
+                               "false"))
+      (slynet--insert-line "Arglist: %s" (slynet--plist-string payload :arglist ""))
+      (insert "\n")
+      (slynet--insert-line "%s" (slynet--plist-string payload :documentation ""))
+      (let ((sources (slynet--listify (plist-get payload :source-locations))))
+        (when sources
+          (insert "\nSource locations:\n")
+          (dolist (source sources)
+            (slynet--insert-line "- %s:%s:%s source-index=%s"
+                                 (slynet--plist-string source :file)
+                                 (slynet--plist-string source :line)
+                                 (slynet--plist-string source :column)
+                                 (slynet--plist-string source :source-index))))))
+    buffer))
+
+(defun slynet-autodoc (form &optional callback)
+  "Request SLYNET autodoc for FORM and render or pass it to CALLBACK."
+  (interactive "sAutodoc form: ")
+  (let ((buffer (slynet--display-buffer slynet-doc-buffer-name #'slynet-doc-mode)))
+    (slynet-client-send-rex-async
+     (slynet--require-connection)
+     (list 'autodoc form)
+     (lambda (payload)
+       (if callback
+           (funcall callback payload)
+         (slynet--render-doc-payload payload buffer))))
+    buffer))
+
+(defun slynet-doc-symbol (symbol-name)
+  "Display a scrollable Janet doc buffer for SYMBOL-NAME."
+  (interactive "sJanet symbol: ")
+  (slynet-autodoc (format "(%s" symbol-name)))
+
+(defun slynet-complete-form (form &optional callback)
+  "Request SLYNET complete-form metadata for FORM."
+  (interactive "sComplete form: ")
+  (slynet-client-send-rex-async
+   (slynet--require-connection)
+   (list 'complete-form form)
+   (lambda (payload)
+     (when callback (funcall callback payload)))))
 
 (provide 'slynet)
 ;;; slynet.el ends here

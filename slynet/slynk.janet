@@ -2517,7 +2517,7 @@
                            (string? op) (symbol op)
                            :else nil)]
             (cond
-              (= rpc-name 'slynet-documentation-symbol)
+              (and rpc-name (= (string rpc-name) "slynet-documentation-symbol"))
               (slynet-documentation-symbol (args 0))
               (and rpc-name
                    (or (inf/get-interface rpc-name)

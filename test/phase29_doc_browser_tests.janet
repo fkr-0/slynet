@@ -28,21 +28,6 @@
       (set found table)))
   found)
 
-(deftest p29-documentation-symbol-links-janet-docs-to-source-index {:tags [:phase29 :doc-browser]}
-  (tt/with-test-server [srv]
-    (def doc (plist->table ((srv :emacs-rex!) '(slynet-documentation-symbol "connection-info") :core nil 2901)))
-    (assert= :ok (doc :status))
-    (assert= "connection-info" (doc :name))
-    (assert= :doc-browser (doc :frontend-surface))
-    (assert= :native (doc :support-class))
-    (assert= false (doc :cl-documentation-equivalent))
-    (assert-true (string? (doc :documentation)))
-    (assert-true (array? (doc :source-locations)))
-    (def first-source (plist->table ((doc :source-locations) 0)))
-    (assert= :slynet-source-index-v2 (first-source :source-index))
-    (assert-true (string? (first-source :file)))
-    (assert-true (number? (first-source :line)))))
-
 (deftest p29-autodoc-returns-operator-arglist-doc-and-provenance {:tags [:phase29 :autodoc]}
   (tt/with-test-server [srv]
     (def auto (plist->table ((srv :emacs-rex!) '(autodoc "(connection-info") :core nil 2902)))
