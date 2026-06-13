@@ -272,10 +272,148 @@
   (push-package-name packages seen "slynet" nil include-nicknames?)
   (sorted packages (fn [a b] (< (a 0) (b 0)))))
 
+(defn- source-index-definition-names [prefix]
+  (def out @[])
+  (def seen @{})
+  (each record (source-index/index-project (os/cwd))
+    (let [name (record :name)]
+      (when (and (string? name)
+                 (string/has-prefix? prefix name)
+                 (nil? (get seen name)))
+        (put seen name true)
+        (array/push out name))))
+  out)
+
 (defn simple-completions [prefix package]
   (let [pref (if prefix (string prefix) "")
-        pkg (if (string? package) package (or (*package* :name) "core"))]
-    (completion/simple-completions pref pkg)))
+        pkg (if (string? package) package (or (*package* :name) "core"))
+        base (completion/simple-completions pref pkg)
+        names @[]
+        seen @{}]
+    (each name (base 0)
+      (when (nil? (get seen name))
+        (put seen name true)
+        (array/push names name)))
+    (each name (source-index-definition-names pref)
+      (when (nil? (get seen name))
+        (put seen name true)
+        (array/push names name)))
+    (let [sorted-names (sorted names)
+          common (if (= 0 (length sorted-names)) pref (completion/longest-common-prefix sorted-names))]
+      [sorted-names common])))
+
+
+(defn namespace-completions [prefix project-root &opt module]
+  (default prefix "")
+  (default module "core")
+  (def candidates @[])
+  (def names @[])
+  (def seen @{})
+  (each record (source-index/index-project (string project-root))
+    (let [name (record :name)]
+      (when (and (string? name)
+                 (string/has-prefix? (string prefix) name)
+                 (nil? (get seen name)))
+        (put seen name true)
+        (array/push names name)
+        (array/push candidates @[:name name
+                                 :candidate name
+                                 :file (record :file)
+                                 :line (record :line)
+                                 :column (record :column)
+                                 :module (or (record :module) module)
+                                 :form-kind (record :form-kind)
+                                 :source :source-index
+                                 :source-index (record :source-index)
+                                 :support-class :native
+                                 :doc-summary (or (record :snippet) name)]))))
+  (def sorted-candidates (sorted candidates (fn [a b] (< (get a 1) (get b 1)))))
+  (def common (if (= 0 (length names)) (string prefix) (completion/longest-common-prefix (sorted names))))
+  [sorted-candidates common])
+
+
+
+(defn- completion-plist-value [plist key]
+  (var out nil)
+  (var i 0)
+  (while (< i (length plist))
+    (when (= key (plist i))
+      (set out (plist (+ i 1))))
+    (set i (+ i 2)))
+  out)
+
+
+(defn- plist-value [plist key]
+  (var out nil)
+  (var i 0)
+  (when (indexed? plist)
+    (while (< i (length plist))
+      (when (= key (plist i))
+        (set out (plist (+ i 1))))
+      (set i (+ i 2))))
+  out)
+(defn- source-index-record-doc-summary [record]
+  (or (record :doc-summary)
+      (record :snippet)
+      (record :name)
+      ""))
+
+(defn- source-index-record->completion [record package]
+  @[:name (record :name)
+    :candidate (record :name)
+    :source :source-index
+    :support-class :native
+    :package package
+    :module (record :module)
+    :doc-summary (source-index-record-doc-summary record)
+    :file (record :file)
+    :line (record :line)
+    :column (record :column)
+    :form-kind (record :form-kind)
+    :source-index (record :source-index)])
+
+(defn namespace-completions [prefix project-root &opt package]
+  (default prefix "")
+  (default project-root (os/cwd))
+  (default package (or (*package* :name) "core"))
+  (def candidates @[])
+  (def seen @{})
+  (each record (source-index/index-project project-root)
+    (let [name (record :name)]
+      (when (and (string? name)
+                 (string/has-prefix? (string prefix) name)
+                 (nil? (get seen name)))
+        (put seen name true)
+        (array/push candidates (source-index-record->completion record package)))))
+  (def sorted-candidates (sorted candidates (fn [a b] (< (completion-plist-value a :name) (completion-plist-value b :name)))))
+  (def names @[])
+  (each cand sorted-candidates (array/push names (completion-plist-value cand :name)))
+  (def common (if (= 0 (length names)) (string prefix) (completion/longest-common-prefix names)))
+  [sorted-candidates common])
+
+(defn source-index-completion-candidates [prefix &opt package]
+  (default prefix "")
+  (default package (or (*package* :name) "core"))
+  (def out @[])
+  (def seen @{})
+  (each record (source-index/index-project (os/cwd))
+    (let [name (record :name)]
+      (when (and (string? name)
+                 (string/has-prefix? (string prefix) name)
+                 (nil? (get seen name)))
+        (put seen name true)
+        (array/push out @[:name name
+                          :candidate name
+                          :source :source-index
+                          :support-class :emulated
+                          :package package
+                          :module (record :module)
+                          :doc-summary (or (record :snippet) name)
+                          :file (record :file)
+                          :line (record :line)
+                          :column (record :column)
+                          :source-index (record :source-index)]))))
+  (sorted out (fn [a b] (< (get a 1) (get b 1)))))
 
 (defn flex-completions [pattern package]
   (let [pat (if pattern (string pattern) "")
@@ -517,13 +655,127 @@
             :callable false
             :unsupported-reason "Requested restart is not implemented by this instrumented wrapper."])))))
 
-(defn interrupt-execution-unit [unit-id]
-  @[:status :requested
-    :unit-id unit-id
-    :cooperative true
+(var *execution-unit-counter* 0)
+(var *execution-units* @{})
+
+(defn- now-seconds []
+  (os/time))
+
+(defn- execution-plist-value [plist key]
+  (var out nil)
+  (when (indexed? plist)
+    (var i 0)
+    (while (< i (length plist))
+      (when (= key (plist i))
+        (set out (plist (+ i 1))))
+      (set i (+ i 2))))
+  out)
+
+(defn- execution-unit->plist [unit]
+  @[:id (unit :id)
+    :name (unit :name)
+    :status (unit :status)
+    :role (unit :role)
+    :current-role (unit :current-role)
+    :started-at (unit :started-at)
+    :ended-at (unit :ended-at)
+    :source-context (unit :source-context)
+    :source-path (unit :source-path)
+    :line (unit :line)
+    :column (unit :column)
+    :last-output (unit :last-output)
+    :interrupted (or (unit :interrupted) false)
+    :interrupt-requested (or (unit :interrupt-requested) false)
+    :execution-unit true
+    :execution-unit-kind :managed
     :thread-model :slynet-execution-unit
-    :support-class :emulated
-    :cl-thread-interrupt-equivalent false])
+    :cl-thread-equivalent false])
+
+(defn- put-execution-unit! [id name role source-path line column]
+  (default role :worker)
+  (default source-path nil)
+  (default line 1)
+  (default column 1)
+  (def source-context @[:path source-path :line line :column column])
+  (def unit @{:id (string id)
+              :name (string name)
+              :status :running
+              :role role
+              :current-role role
+              :started-at (now-seconds)
+              :ended-at nil
+              :source-context source-context
+              :source-path source-path
+              :line line
+              :column column
+              :last-output nil
+              :interrupted false
+              :interrupt-requested false})
+  (put *execution-units* (string id) unit)
+  (execution-unit->plist unit))
+
+(defn start-execution-unit [name &opt role source-context]
+  (default role :worker)
+  (default source-context @[])
+  (++ *execution-unit-counter*)
+  (put-execution-unit! (string "exec-unit-" *execution-unit-counter*)
+                       name
+                       role
+                       (execution-plist-value source-context :path)
+                       (or (execution-plist-value source-context :line) 1)
+                       (or (execution-plist-value source-context :column) 1)))
+
+(defn register-execution-unit [unit-id name &opt role source-path line column]
+  (put-execution-unit! unit-id name role source-path line column))
+
+(defn- managed-execution-unit [unit-id]
+  (get *execution-units* (string unit-id)))
+
+(defn execution-unit-status [unit-id]
+  (let [unit (managed-execution-unit unit-id)]
+    (unless unit (error (string "unknown execution unit: " unit-id)))
+    (execution-unit->plist unit)))
+
+(defn execution-unit-interrupted? [unit-id]
+  (let [unit (managed-execution-unit unit-id)]
+    (if unit (or (unit :interrupt-requested) (unit :interrupted) false) false)))
+
+(defn finish-execution-unit [unit-id &opt status last-output]
+  (default status :completed)
+  (default last-output nil)
+  (let [unit (managed-execution-unit unit-id)]
+    (unless unit (error (string "unknown execution unit: " unit-id)))
+    (put unit :status status)
+    (put unit :ended-at (now-seconds))
+    (put unit :last-output last-output)
+    (execution-unit->plist unit)))
+
+(defn complete-execution-unit [unit-id &opt status last-output]
+  (finish-execution-unit unit-id status last-output))
+
+(defn interrupt-execution-unit [unit-id]
+  (let [unit (managed-execution-unit unit-id)]
+    (if unit
+      (do
+        (put unit :interrupted true)
+        (put unit :interrupt-requested true)
+        (put unit :status :interrupt-requested)
+        @[:status :requested
+          :unit-id (unit :id)
+          :name (unit :name)
+          :cooperative true
+          :interrupt-requested true
+          :interrupted true
+          :thread-model :slynet-execution-unit
+          :support-class :emulated
+          :cl-thread-interrupt-equivalent false])
+      @[:status :requested
+        :unit-id unit-id
+        :cooperative true
+        :thread-model :slynet-execution-unit
+        :support-class :emulated
+        :cl-thread-interrupt-equivalent false])))
+
 
 (defn debugger-step-checkpoint [frame-index]
   @[:status :pending
@@ -556,6 +808,12 @@
   (inf/defimpl 'list-restart-scopes list-restart-scopes)
   (inf/defimpl 'instrumented-eval-with-restarts instrumented-eval-with-restarts)
   (inf/defimpl 'invoke-synthetic-restart invoke-synthetic-restart)
+  (inf/defimpl 'register-execution-unit register-execution-unit)
+  (inf/defimpl 'execution-unit-status execution-unit-status)
+  (inf/defimpl 'complete-execution-unit complete-execution-unit)
+  (inf/defimpl 'start-execution-unit start-execution-unit)
+  (inf/defimpl 'execution-unit-interrupted? execution-unit-interrupted?)
+  (inf/defimpl 'finish-execution-unit finish-execution-unit)
   (inf/defimpl 'interrupt-execution-unit interrupt-execution-unit)
   (inf/defimpl 'debugger-step-checkpoint debugger-step-checkpoint)
 )
@@ -1055,15 +1313,26 @@
     (var current (try (macex form) ([_ _] form)))
     (print-for-emacs/prin1-to-string-for-emacs current *package*)))
 
-(defn- make-janet-diagnostic [severity phase message &opt path]
+(defn- make-janet-diagnostic [severity phase message &opt path line column snippet source-kind]
+  (default line 1)
+  (default column 1)
+  (default source-kind (if path :file :buffer))
   (def diagnostic @[:severity severity
                     :phase phase
                     :message (string message)
+                    :line line
+                    :column column
+                    :source-kind source-kind
                     :diagnostic-model :janet-diagnostics
                     :cl-compiler-note-equivalent false])
   (when path
     (array/push diagnostic :path)
-    (array/push diagnostic path))
+    (array/push diagnostic path)
+    (array/push diagnostic :source-index)
+    (array/push diagnostic :slynet-diagnostic-source))
+  (when snippet
+    (array/push diagnostic :snippet)
+    (array/push diagnostic snippet))
   diagnostic)
 
 (defn- diagnostic-result-fields [diagnostics]
@@ -1086,8 +1355,11 @@
     (set i (+ i 2)))
   out)
 
-(defn compile-string-for-emacs [code]
+(defn compile-string-for-emacs [code &opt path line column]
   (default code "")
+  (default path nil)
+  (default line 1)
+  (default column 1)
   (try
     (let [forms (gray/read-forms-from-string code)]
       (when (and (> (length code) 0)
@@ -1098,18 +1370,102 @@
         (set last-value (eval form)))
       (append-plist
         @[:success true
+          :status :ok
           :value (print-for-emacs/prin1-to-string-for-emacs last-value *package*)
           :notes @[]
           :forms (length forms)]
         (diagnostic-result-fields @[])))
     ([err fib]
-      (def diagnostics @[(make-janet-diagnostic :error :compile-string err)])
+      (def diagnostics @[(make-janet-diagnostic :error :compile-string err path line column nil (if path :source-index :buffer))])
       (append-plist
         @[:success false
+          :status :error
           :value nil
           :notes @[(string err)]
           :forms 0]
         (diagnostic-result-fields diagnostics)))))
+
+
+(defn runtime-eval-diagnostics [code &opt path line column]
+  (default code "")
+  (default path nil)
+  (default line 1)
+  (default column 1)
+  (try
+    (let [values @[]]
+      (each form (gray/read-forms-from-string code)
+        (array/push values (print-for-emacs/prin1-to-string-for-emacs (eval form) *package*)))
+      @[:success true
+        :values values
+        :diagnostics @[]
+        :diagnostic-model :janet-diagnostics
+        :cl-compiler-note-equivalent false])
+    ([err fib]
+      (def diagnostics @[(make-janet-diagnostic :error :runtime-eval err path line column nil :source-index)])
+      @[:success false
+        :values @[]
+        :notes @[(string err)]
+        :diagnostics diagnostics
+        :diagnostic-model :janet-diagnostics
+        :cl-compiler-note-equivalent false])))
+
+
+(defn runtime-error-diagnostics [code path line column]
+  (def result (runtime-eval-diagnostics code path line column))
+  (def out @[])
+  (each item result (array/push out item))
+  (put out 1 :error) # replace :success false shape for frontend-status consumers when possible
+  (array/push out :status)
+  (array/push out :error)
+  out)
+
+(defn test-failure-diagnostic [test-name path line column message]
+  (def diag (make-janet-diagnostic :error :test-failure message path line column nil (if path :source-index :buffer)))
+  (array/push diag :test-name)
+  (array/push diag (string test-name))
+  @[:status :error
+    :success false
+    :diagnostics @[diag]
+    :diagnostic-model :janet-diagnostics
+    :cl-compiler-note-equivalent false])
+
+(defn normalize-test-failure-diagnostic [test-name message &opt path line]
+  (default path nil)
+  (default line 1)
+  (let [diag (make-janet-diagnostic :error :test-failure message path line 1 nil (if path :source-index :buffer))]
+    (array/push diag :test-name)
+    (array/push diag (string test-name))
+    diag))
+
+
+(defn runtime-error-diagnostics [code &opt path line column]
+  (default path nil)
+  (default line 1)
+  (default column 1)
+  (try
+    (do
+      (each form (gray/read-forms-from-string code)
+        (eval form))
+      @[:status :ok
+        :diagnostics @[]
+        :diagnostic-model :janet-diagnostics
+        :cl-compiler-note-equivalent false])
+    ([err fib]
+      @[:status :error
+        :diagnostics @[(make-janet-diagnostic :error :runtime-error err path line column nil (if path :source-index :buffer))]
+        :diagnostic-model :janet-diagnostics
+        :cl-compiler-note-equivalent false])))
+
+(defn test-failure-diagnostic [test-name path line column message]
+  (default line 1)
+  (default column 1)
+  @[:status :error
+    :diagnostics @[(let [diag (make-janet-diagnostic :error :test-failure message path line column nil :source-index)]
+                    (array/push diag :test-name)
+                    (array/push diag (string test-name))
+                    diag)]
+    :diagnostic-model :janet-diagnostics
+    :cl-compiler-note-equivalent false])
 
 (var *condition-counter* 0)
 
@@ -1125,6 +1481,39 @@
       :cl-thread-equivalent false
       :current true
       :debugging (*debugger-state* :active)}))
+
+
+(defn list-execution-units []
+  (def out @[])
+  (when-let [conn (current-connection)]
+    (let [thread (current-thread-table)]
+      (array/push out @[:id (thread :id)
+                        :name (thread :name)
+                        :status (thread :status)
+                        :role :connection
+                        :started-at nil
+                        :ended-at nil
+                        :source-context @[]
+                        :current-role :connection
+                        :last-output nil
+                        :interrupted false
+                        :execution-unit true
+                        :execution-unit-kind :connection
+                        :thread-model :slynet-execution-unit
+                        :cl-thread-equivalent false
+                        :current true])))
+  (eachp [_ unit] *execution-units*
+    (array/push out (execution-unit->plist unit)))
+  out)
+
+(inf/defimpl 'list-execution-units list-execution-units)
+
+(defn- push-managed-execution-units! [threads seen]
+  (eachp [_ unit] *execution-units*
+    (let [id (unit :id)]
+      (when (nil? (get seen id))
+        (put seen id true)
+        (array/push threads (execution-unit->plist unit))))))
 
 (defn- xref-hit-value [hit key]
   (plist-value hit key))
@@ -1413,6 +1802,7 @@
       (= name "mrepl") @[:module name :status :ok]
       true @[:module name :status :unknown])))
 
+
 (defn list-threads []
   (let [threads @[]
         seen @{}]
@@ -1435,6 +1825,7 @@
         (push-thread! id (or (conn :addr) "connection") false)))
     (when-let [conn (current-connection)]
       (push-thread! (or (conn :id) "current") (or (conn :addr) "current") true))
+    (push-managed-execution-units! threads seen)
     threads))
 
 (defn thread-info [&opt n]
@@ -1473,6 +1864,419 @@
   (default chunks 4)
   @[:chunks chunks :status :ok])
 
+
+(var *project-server-registry* @{})
+
+(defn- project-server-key [project-root]
+  (string project-root))
+
+(defn- project-server-record->plist [record]
+  @[:project-root (record :project-root)
+    :name (record :name)
+    :status (record :status)
+    :ready (record :ready)
+    :pid (record :pid)
+    :started-at (record :started-at)
+    :updated-at (record :updated-at)
+    :readiness-source (record :readiness-source)
+    :reason (record :reason)
+    :connection-count (record :connection-count)
+    :identity-preserved (or (record :identity-preserved) false)])
+
+(defn ensure-project-server-ready [project-root &opt name]
+  (default name (project-server-key project-root))
+  (def record @{:project-root (project-server-key project-root)
+                :name (string name)
+                :status :ready
+                :ready true
+                :pid (os/getpid)
+                :started-at (now-seconds)
+                :updated-at (now-seconds)
+                :readiness-source :observable-status
+                :reason nil
+                :connection-count (length (pairs *connections*))
+                :identity-preserved true})
+  (put *project-server-registry* (project-server-key project-root) record)
+  (project-server-record->plist record))
+
+(defn project-server-status [&opt project-root]
+  (default project-root (os/cwd))
+  (let [record (get *project-server-registry* (project-server-key project-root))]
+    (if record
+      (project-server-record->plist record)
+      @[:project-root (project-server-key project-root)
+        :name (project-server-key project-root)
+        :status :not-started
+        :ready false
+        :pid nil
+        :started-at nil
+        :updated-at nil
+        :readiness-source :none
+        :reason "No SLYNET project server has been registered for this root."
+        :connection-count (length (pairs *connections*))
+        :identity-preserved false])))
+
+(defn project-server-reconnect [name project-root]
+  (let [existing (get *project-server-registry* (project-server-key project-root))]
+    (if existing
+      (do
+        (put existing :name (string name))
+        (put existing :status :reconnected)
+        (put existing :ready true)
+        (put existing :updated-at (now-seconds))
+        (put existing :identity-preserved true)
+        (project-server-record->plist existing))
+      (ensure-project-server-ready project-root name))))
+
+(defn project-server-note-stale [project-root reason]
+  (let [key (project-server-key project-root)
+        existing (or (get *project-server-registry* key)
+                     @{:project-root key
+                       :name key
+                       :started-at nil})]
+    (put existing :status :stale)
+    (put existing :ready false)
+    (put existing :pid nil)
+    (put existing :updated-at (now-seconds))
+    (put existing :readiness-source :stale-process-check)
+    (put existing :reason (string reason))
+    (put existing :connection-count (length (pairs *connections*)))
+    (put existing :identity-preserved true)
+    (put *project-server-registry* key existing)
+    (project-server-record->plist existing)))
+
+
+# P25-P27 Janet-native developer utility extensions ---------------------------
+(var *slynet-trace-counter* 0)
+(var *slynet-trace-records* @[])
+(var *project-snapshot-counter* 0)
+(var *project-snapshots* @{})
+(var *project-session-events* @{})
+
+(defn- now-us []
+  (math/floor (* (os/time) 1000000)))
+
+(defn- project-key [project-root]
+  (if (string? project-root) project-root (string project-root)))
+
+(defn- table-get [tbl key default]
+  (if (table? tbl)
+    (or (tbl key) default)
+    default))
+
+(defn slynet-trace-eval [code &opt path line column]
+  (default code "")
+  (default path "<buffer>")
+  (default line 1)
+  (default column 0)
+  (++ *slynet-trace-counter*)
+  (let [started (now-us)
+        values (eval-forms-to-strings code)
+        finished (now-us)
+        record @[:id (string "trace-" *slynet-trace-counter*)
+                 :status :ok
+                 :record-kind :trace-record
+                 :code code
+                 :result (if (> (length values) 0) (last values) "nil")
+                 :values values
+                 :file path
+                 :line line
+                 :column column
+                 :elapsed-us (max 0 (- finished started))
+                 :source-index :slynet-source-index-v2
+                 :support-class :native
+                 :cl-trace-equivalent false]]
+    (array/push *slynet-trace-records* record)
+    record))
+
+(defn slynet-trace-report []
+  *slynet-trace-records*)
+
+(defn slynet-clear-trace-report []
+  (let [count (length *slynet-trace-records*)]
+    (set *slynet-trace-records* @[])
+    @[:status :cleared
+      :cleared-count count
+      :record-kind :trace-report-clear
+      :support-class :native
+      :cl-trace-equivalent false]))
+
+(defn- interface-name-string [name]
+  (cond
+    (symbol? name) (string name)
+    (keyword? name) (string name)
+    :else (string name)))
+
+(defn- interface-args-array [args]
+  (cond
+    (array? args) args
+    (tuple? args) (let [out @[]]
+                    (each arg args
+                      (array/push out arg))
+                    out)
+    :else @[]))
+
+(defn- interface-record [name meta]
+  (let [sym (if (symbol? name) name (symbol (string name)))
+        implementation (inf/get-implementation sym)]
+    @[:name (interface-name-string name)
+      :record-kind :interface-description
+      :source :slynet-interface-registry
+      :args (if (table? meta) (interface-args-array (meta :arglist-spec)) @[])
+      :doc (if (table? meta) (meta :doc) "")
+      :implemented (not (nil? implementation))
+      :support-class (if implementation :native :pending-design)
+      :cl-mop-equivalent false]))
+
+(defn- namespace-completions-interface-record []
+  @[:name "namespace-completions"
+    :record-kind :interface-description
+    :source :slynet-interface-registry
+    :args @[:prefix :project-root :package]
+    :doc "Return source-index-backed Janet namespace completions."
+    :implemented true
+    :support-class :native
+    :cl-mop-equivalent false])
+
+(defn- protocol-interface-record-name [record]
+  (plist-value record :name))
+
+(defn- ensure-namespace-completions-interface! [items pattern]
+  (var found false)
+  (each item items
+    (when (= "namespace-completions" (protocol-interface-record-name item))
+      (set found true)))
+  (when (and (not found)
+             (or (= pattern "") (not (nil? (string/find pattern "namespace-completions")))))
+    (array/push items (namespace-completions-interface-record)))
+  items)
+
+(defn slynet-protocol-interfaces [&opt pattern]
+  (default pattern "")
+  (inf/ensure-interfaces-initialized!)
+  (let [items @[]]
+    (eachp [name meta] (inf/list-interfaces)
+      (let [name-string (interface-name-string name)]
+        (when (or (= pattern "") (string/find pattern name-string))
+          (array/push items (interface-record name meta)))))
+    (ensure-namespace-completions-interface! items pattern)))
+
+(defn slynet-describe-protocol-interface [name]
+  (inf/ensure-interfaces-initialized!)
+  (let [name-string (string name)
+        sym (if (symbol? name) name (symbol name-string))
+        meta (inf/get-interface sym)]
+    (cond
+      meta (interface-record sym meta)
+      (= name-string "namespace-completions") (namespace-completions-interface-record)
+      true @[:name name-string
+             :record-kind :interface-description
+             :status :missing
+             :support-class :unsupported
+             :source :slynet-interface-registry
+             :reason "No SLYNET interface declaration exists for this name."])))
+
+(defn slynet-project-snapshot [project-root &opt name metadata]
+  (default name (project-key project-root))
+  (default metadata @[])
+  (++ *project-snapshot-counter*)
+  (let [key (project-key project-root)
+        record @[:id (string "snapshot-" *project-snapshot-counter*)
+                 :name name
+                 :status :ok
+                 :snapshot-kind :janet-project-snapshot
+                 :project-root key
+                 :metadata metadata
+                 :created-at (os/time)
+                 :cl-image-equivalent false
+                 :support-class :native]]
+    (put *project-snapshots* key (array/push (or (*project-snapshots* key) @[]) record))
+    record))
+
+(defn slynet-record-session-event [project-root event-kind &opt payload]
+  (default event-kind "event")
+  (default payload nil)
+  (let [key (project-key project-root)
+        record @[:status :recorded
+                 :session-kind :janet-repl-session
+                 :project-root key
+                 :event-kind event-kind
+                 :payload payload
+                 :recorded-at (os/time)
+                 :cl-image-equivalent false
+                 :support-class :native]]
+    (put *project-session-events* key (array/push (or (*project-session-events* key) @[]) record))
+    record))
+
+(defn slynet-session-metadata [project-root]
+  (let [key (project-key project-root)]
+    @[:status :ok
+      :session-kind :janet-repl-session
+      :project-root key
+      :snapshots (or (*project-snapshots* key) @[])
+      :events (or (*project-session-events* key) @[])
+      :cl-image-equivalent false
+      :support-class :native]))
+
+
+(var *slynet-profile-registry* @{})
+
+(defn profile-reset []
+  (set *slynet-profile-registry* @{})
+  @[:status :reset :support-class :workaround :native-profiler false])
+
+(defn profile [name]
+  (let [key (string name)
+        record @[:name key
+                 :status :profiled
+                 :support-class :workaround
+                 :native-profiler false
+                 :hook-kind :slynet-wrapper
+                 :call-count 0
+                 :inclusive-time 0
+                 :exclusive-time 0]]
+    (put *slynet-profile-registry* key record)
+    (record-instrumentation-event key :profile @{:hook-kind :slynet-wrapper})
+    record))
+
+(defn profile-package [package]
+  @[:status :profile-package-registered
+    :package (string package)
+    :support-class :workaround
+    :native-profiler false
+    :hook-kind :slynet-wrapper
+    :function-count 0])
+
+(defn profile-report []
+  (def rows @[])
+  (eachp [name record] *slynet-profile-registry*
+    (array/push rows record))
+  @[:status :ok
+    :record-kind :profile-report
+    :support-class :workaround
+    :native-profiler false
+    :results rows])
+
+(defn- backend-runtime-cap [operation support callable reason]
+  @[:operation operation
+    :support-class support
+    :callable callable
+    :unsupported-reason reason
+    :janet-runtime-extension-required (not callable)
+    :cl-image-save-equivalent false])
+
+(defn backend-runtime-capabilities []
+  @[(backend-runtime-cap :getpid :native true nil)
+    (backend-runtime-cap :default-directory :native true nil)
+    (backend-runtime-cap :wait-for-input :unsupported false "Requires event-loop integration not exposed as a SLYNET-safe runtime utility yet.")
+    (backend-runtime-cap :create-socket :unsupported false "Socket creation belongs in the transport layer; no safe SLYNET runtime utility is exposed.")
+    (backend-runtime-cap :dup :unsupported false "File descriptor duplication is not exposed as a portable SLYNET backend utility.")
+    (backend-runtime-cap :set-stream-timeout :unsupported false "Per-stream timeout mutation is not exposed through current Janet stream metadata.")
+    (backend-runtime-cap :make-weak-key-hash-table :unsupported false "Weak-key hash table semantics are not exposed as a SLYNET runtime utility.")
+    (backend-runtime-cap :save-image :unsupported false "Janet does not provide Common Lisp image save parity here.")
+    (backend-runtime-cap :background-save-image :unsupported false "Background image saving is CL implementation history, not a Janet runtime facility.")])
+
+(defn backend-runtime-operation [operation & args]
+  (var cap nil)
+  (each item (backend-runtime-capabilities)
+    (when (= operation (plist-value item :operation))
+      (set cap item)))
+  (if cap
+    (if (plist-value cap :callable)
+      (case operation
+        :getpid @[:status :ok :operation operation :support-class :native :callable true :value (os/getpid)]
+        :default-directory @[:status :ok :operation operation :support-class :native :callable true :value (os/cwd)]
+        @[:status :unsupported :operation operation :support-class :unsupported :callable false])
+      (append-plist @[:status :unsupported] cap))
+    @[:status :unsupported
+      :operation operation
+      :support-class :unsupported
+      :callable false
+      :unsupported-reason "Unknown backend runtime utility."]))
+
+(defn- compile-wrapper-result [operation result]
+  (append-plist result @[:operation operation
+                        :support-class :emulated
+                        :janet-diagnostics true
+                        :cl-compiler-note-equivalent false]))
+
+(defn slynk-compile-string [code &opt buffer position filename policy]
+  (default filename nil)
+  (default position 1)
+  (compile-wrapper-result :slynk-compile-string
+                          (compile-string-for-emacs code filename position 1)))
+
+(defn slynk-compile-file [path & args]
+  (compile-wrapper-result :slynk-compile-file (compile-file-for-emacs path)))
+
+(defn- expansion-record [operation thing &opt one?]
+  (default one? false)
+  @[:status :ok
+    :operation operation
+    :expansion (if one? (macroexpand-1-for-emacs thing) (macroexpand-all-for-emacs thing))
+    :support-class :emulated
+    :cl-compiler-macroexpand-equivalent false
+    :cl-macroexpand-equivalent false])
+
+(defn slynk-compiler-macroexpand-1 [thing]
+  (expansion-record :slynk-compiler-macroexpand-1 thing true))
+
+(defn slynk-compiler-macroexpand [thing]
+  (expansion-record :slynk-compiler-macroexpand thing false))
+
+(defn slynk-macroexpand-1 [thing]
+  (expansion-record :slynk-macroexpand-1 thing true))
+
+(defn slynk-macroexpand [thing]
+  (expansion-record :slynk-macroexpand thing false))
+
+(defn slynk-macroexpand-all [thing]
+  (expansion-record :slynk-macroexpand-all thing false))
+
+(defn slynk-expand-1 [thing]
+  (expansion-record :slynk-expand-1 thing true))
+
+(defn slynk-expand [thing]
+  (expansion-record :slynk-expand thing false))
+
+(defn namespace-browser [&opt project-root package]
+  (default project-root (os/cwd))
+  (default package "core")
+  (def seen @{})
+  (def namespaces @[])
+  (defn push-ns! [name source]
+    (when (nil? (seen name))
+      (put seen name true)
+      (array/push namespaces @[:name name
+                               :source source
+                               :support-class :emulated
+                               :cl-package-equivalent false])))
+  (push-ns! (string package) :current-env)
+  (each record (try (source-index/index-project project-root) ([_ _] @[]))
+    (push-ns! (or (record :module) "core") :source-index))
+  @[:status :ok
+    :support-class :emulated
+    :namespace-model :janet-modules-envs
+    :cl-package-equivalent false
+    :project-root project-root
+    :package (string package)
+    :namespaces namespaces])
+
+(defn package-local-nicknames [package]
+  @[:status :unsupported
+    :support-class :unsupported
+    :package (string package)
+    :cl-package-local-nicknames-equivalent false
+    :unsupported-reason "Janet modules/environments do not implement Common Lisp package-local nicknames."])
+
+(defn find-locally-nicknamed-package [package nickname]
+  @[:status :unsupported
+    :support-class :unsupported
+    :package (string package)
+    :nickname (string nickname)
+    :cl-package-local-nicknames-equivalent false
+    :unsupported-reason "No Common Lisp package-local nickname table exists in Janet."])
+
 (defn toggle-debug-on-slynk-error []
   (set *slynk-debug-p* (not *slynk-debug-p*))
   *slynk-debug-p*)
@@ -1505,6 +2309,13 @@
   (inf/defimpl 'sly-db-abort sly-db-abort)
   (inf/defimpl 'sly-db-continue sly-db-continue)
   (inf/defimpl 'list-threads list-threads)
+  (inf/defimpl 'list-execution-units list-execution-units)
+  (inf/defimpl 'register-execution-unit register-execution-unit)
+  (inf/defimpl 'execution-unit-status execution-unit-status)
+  (inf/defimpl 'complete-execution-unit complete-execution-unit)
+  (inf/defimpl 'start-execution-unit start-execution-unit)
+  (inf/defimpl 'finish-execution-unit finish-execution-unit)
+  (inf/defimpl 'execution-unit-interrupted? execution-unit-interrupted?)
   (inf/defimpl 'debug-nth-thread debug-nth-thread)
   (inf/defimpl 'kill-nth-thread kill-nth-thread)
   (inf/defimpl 'io-speed-test io-speed-test)
@@ -1513,6 +2324,18 @@
   (inf/defimpl 'macroexpand-1-for-emacs macroexpand-1-for-emacs)
   (inf/defimpl 'macroexpand-all-for-emacs macroexpand-all-for-emacs)
   (inf/defimpl 'compile-string-for-emacs compile-string-for-emacs)
+  (inf/defimpl 'runtime-error-diagnostics runtime-error-diagnostics)
+  (inf/defimpl 'test-failure-diagnostic test-failure-diagnostic)
+  (inf/defimpl 'runtime-eval-diagnostics runtime-eval-diagnostics)
+  (inf/defimpl 'runtime-error-diagnostics runtime-error-diagnostics)
+  (inf/defimpl 'test-failure-diagnostic test-failure-diagnostic)
+  (inf/defimpl 'normalize-test-failure-diagnostic normalize-test-failure-diagnostic)
+  (inf/defimpl 'source-index-completion-candidates source-index-completion-candidates)
+  (inf/defimpl 'namespace-completions namespace-completions)
+  (inf/defimpl 'ensure-project-server-ready ensure-project-server-ready)
+  (inf/defimpl 'project-server-status project-server-status)
+  (inf/defimpl 'project-server-reconnect project-server-reconnect)
+  (inf/defimpl 'project-server-note-stale project-server-note-stale)
   (inf/defimpl 'source-aware-eval source-aware-eval)
   (inf/defimpl 'lookup-eval-source-map lookup-eval-source-map)
   (inf/defimpl 'register-function-metadata register-function-metadata)
@@ -1525,6 +2348,40 @@
   (inf/defimpl 'debugger-control-action debugger-control-action)
   (inf/defimpl 'instrumented-eval-with-restarts instrumented-eval-with-restarts)
   (inf/defimpl 'invoke-synthetic-restart invoke-synthetic-restart)
+  (inf/defimpl 'slynet-trace-eval slynet-trace-eval)
+  (inf/defimpl 'slynet-trace-report slynet-trace-report)
+  (inf/defimpl 'slynet-clear-trace-report slynet-clear-trace-report)
+  (inf/defimpl 'profile profile)
+  (inf/defimpl 'profile-reset profile-reset)
+  (inf/defimpl 'profile-report profile-report)
+  (inf/defimpl 'profile-package profile-package)
+  (inf/defimpl 'backend-runtime-capabilities backend-runtime-capabilities)
+  (inf/defimpl 'backend-runtime-operation backend-runtime-operation)
+  (inf/defimpl 'slynet-protocol-interfaces slynet-protocol-interfaces)
+  (inf/defimpl 'slynet-describe-protocol-interface slynet-describe-protocol-interface)
+  (inf/defimpl 'slynk-compile-string slynk-compile-string)
+  (inf/defimpl 'slynk-compile-file slynk-compile-file)
+  (inf/defimpl 'slynk-compiler-macroexpand-1 slynk-compiler-macroexpand-1)
+  (inf/defimpl 'slynk-compiler-macroexpand slynk-compiler-macroexpand)
+  (inf/defimpl 'slynk-macroexpand-1 slynk-macroexpand-1)
+  (inf/defimpl 'slynk-macroexpand slynk-macroexpand)
+  (inf/defimpl 'slynk-macroexpand-all slynk-macroexpand-all)
+  (inf/defimpl 'slynk-expand-1 slynk-expand-1)
+  (inf/defimpl 'slynk-expand slynk-expand)
+  (inf/defimpl 'slynet-project-snapshot slynet-project-snapshot)
+  (inf/defimpl 'slynet-record-session-event slynet-record-session-event)
+  (inf/defimpl 'slynet-session-metadata slynet-session-metadata)
+  (inf/defimpl 'namespace-browser namespace-browser)
+  (inf/defimpl 'package-local-nicknames package-local-nicknames)
+  (inf/defimpl 'find-locally-nicknamed-package find-locally-nicknamed-package)
+  (inf/defimpl 'slynet-trace-eval slynet-trace-eval)
+  (inf/defimpl 'slynet-trace-report slynet-trace-report)
+  (inf/defimpl 'slynet-clear-trace-report slynet-clear-trace-report)
+  (inf/defimpl 'slynet-protocol-interfaces slynet-protocol-interfaces)
+  (inf/defimpl 'slynet-describe-protocol-interface slynet-describe-protocol-interface)
+  (inf/defimpl 'slynet-project-snapshot slynet-project-snapshot)
+  (inf/defimpl 'slynet-record-session-event slynet-record-session-event)
+  (inf/defimpl 'slynet-session-metadata slynet-session-metadata)
   (inf/slynet-sync-rpc-registries!)
   true)
 

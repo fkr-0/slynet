@@ -17,6 +17,11 @@
 (import ./restart_scope_tests)
 (import ./runtime_instrumentation_tests)
 (import ./phase21_24_tests)
+(import ./phase25_28_tests)
+(import ./execution_unit_registry_tests)
+(import ./diagnostics_source_tests)
+(import ./completion_namespace_tests)
+(import ./phase25_27_tests)
 (import ./client_test)
 
 (defn main [& args]

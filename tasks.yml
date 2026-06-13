@@ -1,1297 +1,1530 @@
 version: 1
 project: slynet
-generated_at: "2026-05-13"
+generated_at: '2026-05-13'
 status: draft_source_of_truth
-purpose: >-
-  Maintain an executable, test-first plan for a feature-complete-as-possible
+purpose: 'Maintain an executable, test-first plan for a feature-complete-as-possible
   Janet implementation of the SLY/SLYNK experience: the Janet-side SLYNK-equivalent
-  runtime/backend called slynt, plus an operational Emacs Lisp frontend called slynet.
-
+  runtime/backend called slynt, plus an operational Emacs Lisp frontend called slynet.'
 operating_rules:
   tdd_required: true
   no_production_change_without_red_test: true
   verification_before_completion: true
   update_this_file_when:
-    - a protocol operation changes status
-    - a Janet design constraint is discovered
-    - a test proves or disproves an assumption
-    - a task is completed, split, merged, or invalidated
-  completion_gate: >-
-    A task may move to done only after its red test has been observed failing for
-    the intended reason, the minimal implementation passes it, and the relevant
-    focused and aggregate verification commands are recorded here.
-
+  - a protocol operation changes status
+  - a Janet design constraint is discovered
+  - a test proves or disproves an assumption
+  - a task is completed, split, merged, or invalidated
+  completion_gate: A task may move to done only after its red test has been observed
+    failing for the intended reason, the minimal implementation passes it, and the
+    relevant focused and aggregate verification commands are recorded here.
 verified_baseline:
-  date: "2026-05-13"
-  command: "bridge.yml:test => sh -lc 'export JANET_PATH=${JANET_PATH}:$(pwd) && janet test/run_tests.janet'"
+  date: '2026-05-13'
+  command: bridge.yml:test => sh -lc 'export JANET_PATH=${JANET_PATH}:$(pwd) && janet
+    test/run_tests.janet'
   result:
     exit_code: 0
     duration_ms: 718
-    summary: "43 tests, 133/133 assertions passed, 0 failed"
+    summary: 43 tests, 133/133 assertions passed, 0 failed
   observations:
-    - "Existing Janet test suite is green at the baseline used for this plan."
-    - "stdout is very noisy: prin1-to-string-for-emacs and SLYNET RECV traces appear during normal tests."
-    - "stderr contains expected negative-test diagnostics from mini-test.janet:82 even when exit code is 0."
-    - "The repository working tree was already dirty before creating this file; this plan must not claim ownership of pre-existing modified files."
-  immediate_consequence: >-
-    Treat the current implementation as a usable but noisy baseline. Before declaring
-    release readiness, tests must be made quiet or explicitly assert expected stderr.
-
+  - Existing Janet test suite is green at the baseline used for this plan.
+  - 'stdout is very noisy: prin1-to-string-for-emacs and SLYNET RECV traces appear
+    during normal tests.'
+  - stderr contains expected negative-test diagnostics from mini-test.janet:82 even
+    when exit code is 0.
+  - The repository working tree was already dirty before creating this file; this
+    plan must not claim ownership of pre-existing modified files.
+  immediate_consequence: Treat the current implementation as a usable but noisy baseline.
+    Before declaring release readiness, tests must be made quiet or explicitly assert
+    expected stderr.
 source_inventory:
   common_lisp_and_sly_reference:
     root: sly_source
     key_files:
-      - sly_source/sly.el
-      - sly_source/slynk/slynk.lisp
-      - sly_source/slynk/slynk-backend.lisp
-      - sly_source/slynk/slynk-rpc.lisp
-      - sly_source/slynk/slynk-completion.lisp
-      - sly_source/slynk/xref.lisp
-      - sly_source/slynk/backend/*.lisp
-      - sly_source/contrib/*.el
-      - sly_source/contrib/slynk-*.lisp
+    - sly_source/sly.el
+    - sly_source/slynk/slynk.lisp
+    - sly_source/slynk/slynk-backend.lisp
+    - sly_source/slynk/slynk-rpc.lisp
+    - sly_source/slynk/slynk-completion.lisp
+    - sly_source/slynk/xref.lisp
+    - sly_source/slynk/backend/*.lisp
+    - sly_source/contrib/*.el
+    - sly_source/contrib/slynk-*.lisp
   janet_backend_current:
     root: slynet
     key_files:
-      - slynet/slynk.janet
-      - slynet/backend.janet
-      - slynet/rpc.janet
-      - slynet/interfaces.janet
-      - slynet/infrastructure.janet
-      - slynet/completion.janet
-      - slynet/xref.janet
-      - slynet/gray.janet
-      - slynet/print-for-emacs.janet
-      - slynet/contrib/*.janet
+    - slynet/slynk.janet
+    - slynet/backend.janet
+    - slynet/rpc.janet
+    - slynet/interfaces.janet
+    - slynet/infrastructure.janet
+    - slynet/completion.janet
+    - slynet/xref.janet
+    - slynet/gray.janet
+    - slynet/print-for-emacs.janet
+    - slynet/contrib/*.janet
   tests_current:
     root: test
     key_files:
-      - test/run_tests.janet
-      - test/project_core_tests.janet
-      - test/channel_dispatch_tests.janet
-      - test/contrib_tests.janet
-      - test/message-tests.janet
-      - test/server_integration_tests.janet
-      - test/suite-slynet.janet
-      - test/client_test.janet
+    - test/run_tests.janet
+    - test/project_core_tests.janet
+    - test/channel_dispatch_tests.janet
+    - test/contrib_tests.janet
+    - test/message-tests.janet
+    - test/server_integration_tests.janet
+    - test/suite-slynet.janet
+    - test/client_test.janet
   spec_docs_current:
     authoritative_seed:
-      - impl_spec.yml
-      - TASKS.md
-      - docs/tasks/current-task-plan.md
+    - impl_spec.yml
+    - TASKS.md
+    - docs/tasks/current-task-plan.md
     stale_or_partial:
-      - docs/missing_protocol.md
-      - docs/missing_protocol_definterface.md
-
+    - docs/missing_protocol.md
+    - docs/missing_protocol_definterface.md
 translation_state_comparison:
-  summary: >-
-    The project already contains a sizable Janet backend and green tests, but its
-    protocol inventory documents are inconsistent. TASKS.md marks handshake,
-    channel, contrib, filesystem, REPL, and test harness work as complete or mostly
-    complete, while docs/missing_protocol.md still lists some of those same RPCs as
-    missing. tasks.yml therefore treats inventory reconciliation as the first product task.
+  summary: The project already contains a sizable Janet backend and green tests, but
+    its protocol inventory documents are inconsistent. TASKS.md marks handshake, channel,
+    contrib, filesystem, REPL, and test harness work as complete or mostly complete,
+    while docs/missing_protocol.md still lists some of those same RPCs as missing.
+    tasks.yml therefore treats inventory reconciliation as the first product task.
   areas:
-    - id: protocol_handshake
-      reference_files:
-        - sly_source/slynk/slynk.lisp
-      janet_files:
-        - slynet/slynk.janet
-        - slynet/completion.janet
-      current_state: tested_partial
-      evidence:
-        - "Baseline suite includes passing tests for simple completions and connection-info."
-        - "TASKS.md marks ping, connection-info, list-all-package-names, simple-completions, and flex-completions complete."
-      gaps:
-        - "docs/missing_protocol.md still lists these operations as missing; stale inventory."
-      next_test_focus:
-        - "Machine-generated protocol inventory must classify implemented/tested/stub/missing."
-    - id: interface_registry
-      reference_files:
-        - sly_source/slynk/slynk-backend.lisp
-        - impl_spec.yml
-      janet_files:
-        - slynet/interfaces.janet
-        - slynet/infrastructure.janet
-        - slynet/rpc.janet
-      current_state: tested_partial
-      evidence:
-        - "Baseline suite passes definterface and defimplementation registry tests."
-      gaps:
-        - "Spec source is too small: impl_spec.yml contains only six operations."
-        - "missing_protocol_definterface.md contains CL lambda-list syntax and at least one typo: d(definterface operator-arglist...)."
-      next_test_focus:
-        - "Spec parser must reject invalid sketches and generate normalized operation records."
-    - id: eval_repl_editing
-      reference_files:
-        - sly_source/slynk/slynk.lisp
-        - sly_source/contrib/slynk-mrepl.lisp
-      janet_files:
-        - slynet/slynk.janet
-        - slynet/contrib/slynet-mrepl.janet
-      current_state: partial
-      evidence:
-        - "TASKS.md marks interactive-eval, eval-for-emacs, set-package, guess-and-set-package complete."
-      gaps:
-        - "value editing, pretty-printing, package semantics, and MREPL lifecycle need contract tests against the SLY wire protocol shape."
-      janet_constraints:
-        - "Janet has environments/modules, not CL packages. set-package can preserve Emacs-facing session metadata but cannot make Janet reader/evaluator obey CL package lookup semantics."
-    - id: compiler_macroexpand_loader
-      reference_files:
-        - sly_source/slynk/slynk.lisp
-      janet_files:
-        - slynet/slynk.janet
-      current_state: partial_or_stub
-      gaps:
-        - "compile-file-for-emacs, compile-string-for-emacs variants, load-file, slynk-require, macroexpand families need exact result-shape tests."
-      janet_constraints:
-        - "Janet compile/load diagnostics differ from CL compiler notes; translation must expose best-effort diagnostics with explicit non-equivalence tags."
-    - id: debugger_restarts_conditions
-      reference_files:
-        - sly_source/slynk/slynk.lisp
-        - sly_source/slynk/backend/*.lisp
-      janet_files:
-        - slynet/slynk.janet
-      current_state: mostly_missing_or_emulated
-      gaps:
-        - "backtrace, debugger-info-for-emacs, invoke-nth-restart, sly-db-* stepping and restarts require a Janet-specific debugger model."
-      janet_constraints:
-        - "Janet exceptions do not provide CL condition/restart semantics. abort/continue/restart APIs must be marked emulated, limited, or unsupported depending on the runtime evidence."
-    - id: inspector_gray_printer
-      reference_files:
-        - sly_source/slynk/slynk.lisp
-        - sly_source/contrib/slynk-fancy-inspector.lisp
-        - sly_source/slynk/slynk-gray.lisp
-      janet_files:
-        - slynet/gray.janet
-        - slynet/print-for-emacs.janet
-        - slynet/contrib/slynet-fancy-inspector.janet
-      current_state: partial_tested
-      evidence:
-        - "Baseline suite includes inspector nth part tests."
-      gaps:
-        - "History, range, actions, verbose toggles, frame/condition inspection, and object identity edge cases need tests."
-    - id: xref_source_location
-      reference_files:
-        - sly_source/slynk/xref.lisp
-        - sly_source/slynk/slynk-source-file-cache.lisp
-        - sly_source/slynk/slynk-source-path-parser.lisp
-      janet_files:
-        - slynet/xref.janet
-      current_state: partial
-      gaps:
-        - "find-definitions-for-emacs, xref/xrefs, source location cache, and Janet module source maps need fixture-driven tests."
-      janet_constraints:
-        - "Janet does not expose CL-style compiler source notes for every form. Source locations must rely on parser/indexing instrumentation where runtime metadata is unavailable."
-    - id: completion_arglists_autodoc
-      reference_files:
-        - sly_source/slynk/slynk-completion.lisp
-        - sly_source/contrib/slynk-arglists.lisp
-        - sly_source/contrib/sly-autodoc.el
-      janet_files:
-        - slynet/completion.janet
-        - slynet/contrib/slynet-arglists.janet
-      current_state: partial
-      evidence:
-        - "simple-completions and flex-completions are marked implemented."
-      gaps:
-        - "operator-arglist, describe-function, autodoc, and Janet macro/function signature extraction need golden tests."
-      janet_constraints:
-        - "Janet supports fixed, variadic, and macro forms but not CL lambda-list keywords such as &optional and &key with identical semantics. Translation must normalize signatures into an Emacs display model."
-    - id: contrib_parity
-      reference_files:
-        - sly_source/contrib/*.el
-        - sly_source/contrib/slynk-*.lisp
-      janet_files:
-        - slynet/contrib/*.janet
-      current_state: tested_partial
-      evidence:
-        - "TASKS.md marks contrib audit, missing RPC implementation, and focused tests complete."
-      gaps:
-        - "Need generated contrib inventory to prove every contrib RPC has a corresponding test and explicit unsupported marker where Janet cannot emulate CL behavior."
-    - id: emacs_frontend
-      reference_files:
-        - sly_source/sly.el
-        - sly_source/contrib/sly-mrepl.el
-        - sly_source/lib/*.el
-      janet_files: []
-      proposed_files:
-        - emacs/slynet.el
-        - emacs/slynet-client.el
-        - emacs/slynet-mrepl.el
-        - emacs/slynet-tests.el
-      current_state: missing
-      gaps:
-        - "No operational Emacs Lisp frontend is present in the project tree."
-      target: >-
-        Provide a thin SLY-like Emacs frontend for Janet that reuses compatible SLY UI concepts but speaks the SLYNET/Janet protocol and exposes interaction, eval, completion, MREPL, inspector, debugger-status, and connection management.
-
+  - id: protocol_handshake
+    reference_files:
+    - sly_source/slynk/slynk.lisp
+    janet_files:
+    - slynet/slynk.janet
+    - slynet/completion.janet
+    current_state: tested_partial
+    evidence:
+    - Baseline suite includes passing tests for simple completions and connection-info.
+    - TASKS.md marks ping, connection-info, list-all-package-names, simple-completions,
+      and flex-completions complete.
+    gaps:
+    - docs/missing_protocol.md still lists these operations as missing; stale inventory.
+    next_test_focus:
+    - Machine-generated protocol inventory must classify implemented/tested/stub/missing.
+  - id: interface_registry
+    reference_files:
+    - sly_source/slynk/slynk-backend.lisp
+    - impl_spec.yml
+    janet_files:
+    - slynet/interfaces.janet
+    - slynet/infrastructure.janet
+    - slynet/rpc.janet
+    current_state: tested_partial
+    evidence:
+    - Baseline suite passes definterface and defimplementation registry tests.
+    gaps:
+    - 'Spec source is too small: impl_spec.yml contains only six operations.'
+    - 'missing_protocol_definterface.md contains CL lambda-list syntax and at least
+      one typo: d(definterface operator-arglist...).'
+    next_test_focus:
+    - Spec parser must reject invalid sketches and generate normalized operation records.
+  - id: eval_repl_editing
+    reference_files:
+    - sly_source/slynk/slynk.lisp
+    - sly_source/contrib/slynk-mrepl.lisp
+    janet_files:
+    - slynet/slynk.janet
+    - slynet/contrib/slynet-mrepl.janet
+    current_state: partial
+    evidence:
+    - TASKS.md marks interactive-eval, eval-for-emacs, set-package, guess-and-set-package
+      complete.
+    gaps:
+    - value editing, pretty-printing, package semantics, and MREPL lifecycle need
+      contract tests against the SLY wire protocol shape.
+    janet_constraints:
+    - Janet has environments/modules, not CL packages. set-package can preserve Emacs-facing
+      session metadata but cannot make Janet reader/evaluator obey CL package lookup
+      semantics.
+  - id: compiler_macroexpand_loader
+    reference_files:
+    - sly_source/slynk/slynk.lisp
+    janet_files:
+    - slynet/slynk.janet
+    current_state: partial_or_stub
+    gaps:
+    - compile-file-for-emacs, compile-string-for-emacs variants, load-file, slynk-require,
+      macroexpand families need exact result-shape tests.
+    janet_constraints:
+    - Janet compile/load diagnostics differ from CL compiler notes; translation must
+      expose best-effort diagnostics with explicit non-equivalence tags.
+  - id: debugger_restarts_conditions
+    reference_files:
+    - sly_source/slynk/slynk.lisp
+    - sly_source/slynk/backend/*.lisp
+    janet_files:
+    - slynet/slynk.janet
+    current_state: mostly_missing_or_emulated
+    gaps:
+    - backtrace, debugger-info-for-emacs, invoke-nth-restart, sly-db-* stepping and
+      restarts require a Janet-specific debugger model.
+    janet_constraints:
+    - Janet exceptions do not provide CL condition/restart semantics. abort/continue/restart
+      APIs must be marked emulated, limited, or unsupported depending on the runtime
+      evidence.
+  - id: inspector_gray_printer
+    reference_files:
+    - sly_source/slynk/slynk.lisp
+    - sly_source/contrib/slynk-fancy-inspector.lisp
+    - sly_source/slynk/slynk-gray.lisp
+    janet_files:
+    - slynet/gray.janet
+    - slynet/print-for-emacs.janet
+    - slynet/contrib/slynet-fancy-inspector.janet
+    current_state: partial_tested
+    evidence:
+    - Baseline suite includes inspector nth part tests.
+    gaps:
+    - History, range, actions, verbose toggles, frame/condition inspection, and object
+      identity edge cases need tests.
+  - id: xref_source_location
+    reference_files:
+    - sly_source/slynk/xref.lisp
+    - sly_source/slynk/slynk-source-file-cache.lisp
+    - sly_source/slynk/slynk-source-path-parser.lisp
+    janet_files:
+    - slynet/xref.janet
+    current_state: partial
+    gaps:
+    - find-definitions-for-emacs, xref/xrefs, source location cache, and Janet module
+      source maps need fixture-driven tests.
+    janet_constraints:
+    - Janet does not expose CL-style compiler source notes for every form. Source
+      locations must rely on parser/indexing instrumentation where runtime metadata
+      is unavailable.
+  - id: completion_arglists_autodoc
+    reference_files:
+    - sly_source/slynk/slynk-completion.lisp
+    - sly_source/contrib/slynk-arglists.lisp
+    - sly_source/contrib/sly-autodoc.el
+    janet_files:
+    - slynet/completion.janet
+    - slynet/contrib/slynet-arglists.janet
+    current_state: partial
+    evidence:
+    - simple-completions and flex-completions are marked implemented.
+    gaps:
+    - operator-arglist, describe-function, autodoc, and Janet macro/function signature
+      extraction need golden tests.
+    janet_constraints:
+    - Janet supports fixed, variadic, and macro forms but not CL lambda-list keywords
+      such as &optional and &key with identical semantics. Translation must normalize
+      signatures into an Emacs display model.
+  - id: contrib_parity
+    reference_files:
+    - sly_source/contrib/*.el
+    - sly_source/contrib/slynk-*.lisp
+    janet_files:
+    - slynet/contrib/*.janet
+    current_state: tested_partial
+    evidence:
+    - TASKS.md marks contrib audit, missing RPC implementation, and focused tests
+      complete.
+    gaps:
+    - Need generated contrib inventory to prove every contrib RPC has a corresponding
+      test and explicit unsupported marker where Janet cannot emulate CL behavior.
+  - id: emacs_frontend
+    reference_files:
+    - sly_source/sly.el
+    - sly_source/contrib/sly-mrepl.el
+    - sly_source/lib/*.el
+    janet_files: []
+    proposed_files:
+    - emacs/slynet.el
+    - emacs/slynet-client.el
+    - emacs/slynet-mrepl.el
+    - emacs/slynet-tests.el
+    current_state: missing
+    gaps:
+    - No operational Emacs Lisp frontend is present in the project tree.
+    target: Provide a thin SLY-like Emacs frontend for Janet that reuses compatible
+      SLY UI concepts but speaks the SLYNET/Janet protocol and exposes interaction,
+      eval, completion, MREPL, inspector, debugger-status, and connection management.
 janet_design_constraints:
-  - id: cl_packages
-    cl_feature: "Packages, symbols, nicknames, *package*, reader package prefixes."
-    janet_reality: "Janet has modules/environments and symbols/keywords but no CL package system with equivalent reader semantics."
-    required_plan_behavior: "Implement Emacs-facing package metadata and completion namespaces; mark semantic equivalence as emulated-not-equivalent."
-  - id: conditions_restarts
-    cl_feature: "Condition system, restarts, debugger frames, invoke-nth-restart."
-    janet_reality: "Janet has errors/exceptions, fibers, and stack traces but not CL restarts."
-    required_plan_behavior: "Expose best-effort debugger commands and explicitly report unsupported restart classes."
-  - id: clos_mop
-    cl_feature: "CLOS classes, generic methods, MOP, remove-method-by-name, generic-method-specs."
-    janet_reality: "Janet tables/structs/prototypes do not provide CL MOP."
-    required_plan_behavior: "Provide Janet object inspection; mark CLOS-specific operations unsupported unless backed by a compatibility layer."
-  - id: compiler_notes
-    cl_feature: "compile-file, compiler warnings/notes with source locations."
-    janet_reality: "Janet compile/load pipeline has different diagnostics and source metadata."
-    required_plan_behavior: "Return SLY-shaped diagnostic envelopes with Janet-native fields and non-equivalence annotations."
-  - id: cl_lambda_lists
-    cl_feature: "&optional, &key, &rest, &body, &allow-other-keys."
-    janet_reality: "Janet function signatures and macros differ; CL syntax in specs is not executable Janet."
-    required_plan_behavior: "Normalize signatures in generated specs; tests must reject raw CL lambda-lists in Janet source."
-  - id: threads
-    cl_feature: "Implementation-dependent CL threads and debugger thread browser."
-    janet_reality: "Janet scheduling/fibers and host threads do not map one-to-one to CL implementation thread APIs."
-    required_plan_behavior: "Expose current Janet execution units and mark kill/debug behavior as limited where runtime does not support it."
-
+- id: cl_packages
+  cl_feature: Packages, symbols, nicknames, *package*, reader package prefixes.
+  janet_reality: Janet has modules/environments and symbols/keywords but no CL package
+    system with equivalent reader semantics.
+  required_plan_behavior: Implement Emacs-facing package metadata and completion namespaces;
+    mark semantic equivalence as emulated-not-equivalent.
+- id: conditions_restarts
+  cl_feature: Condition system, restarts, debugger frames, invoke-nth-restart.
+  janet_reality: Janet has errors/exceptions, fibers, and stack traces but not CL
+    restarts.
+  required_plan_behavior: Expose best-effort debugger commands and explicitly report
+    unsupported restart classes.
+- id: clos_mop
+  cl_feature: CLOS classes, generic methods, MOP, remove-method-by-name, generic-method-specs.
+  janet_reality: Janet tables/structs/prototypes do not provide CL MOP.
+  required_plan_behavior: Provide Janet object inspection; mark CLOS-specific operations
+    unsupported unless backed by a compatibility layer.
+- id: compiler_notes
+  cl_feature: compile-file, compiler warnings/notes with source locations.
+  janet_reality: Janet compile/load pipeline has different diagnostics and source
+    metadata.
+  required_plan_behavior: Return SLY-shaped diagnostic envelopes with Janet-native
+    fields and non-equivalence annotations.
+- id: cl_lambda_lists
+  cl_feature: '&optional, &key, &rest, &body, &allow-other-keys.'
+  janet_reality: Janet function signatures and macros differ; CL syntax in specs is
+    not executable Janet.
+  required_plan_behavior: Normalize signatures in generated specs; tests must reject
+    raw CL lambda-lists in Janet source.
+- id: threads
+  cl_feature: Implementation-dependent CL threads and debugger thread browser.
+  janet_reality: Janet scheduling/fibers and host threads do not map one-to-one to
+    CL implementation thread APIs.
+  required_plan_behavior: Expose current Janet execution units and mark kill/debug
+    behavior as limited where runtime does not support it.
 testing_strategy:
   layers:
-    - id: spec_inventory_tests
-      purpose: "Prove the project knows what SLY/SLYNK operations exist and how each maps to Janet."
-      files:
-        create:
-          - tools/protocol_inventory.janet
-          - test/protocol_inventory_tests.janet
-        update:
-          - docs/missing_protocol.md
-          - docs/missing_protocol_definterface.md
-      verification:
-        focused: "JANET_PATH=$PWD janet test/protocol_inventory_tests.janet"
-        aggregate: "JANET_PATH=$PWD janet test/run_tests.janet"
-    - id: unit_contract_tests
-      purpose: "Verify individual registry, reader/writer, printer, completion, xref, inspector, and eval functions with real code, not mocks."
-      files:
-        update:
-          - test/project_core_tests.janet
-          - test/message-tests.janet
-          - test/contrib_tests.janet
-      verification:
-        focused: "make core-tests && make contrib-tests"
-        aggregate: "make test"
-    - id: in_memory_server_tests
-      purpose: "Verify Emacs wire messages against an in-memory SLYNET server without flaky sleeps."
-      files:
-        update:
-          - test/server_integration_tests.janet
-          - test/channel_dispatch_tests.janet
-          - test/client_test.janet
-      rule: "Use condition-based waiting for asynchronous server/channel effects; no arbitrary sleeps except documented timing behavior."
-      verification:
-        focused: "JANET_PATH=$PWD janet test/server_integration_tests.janet"
-        aggregate: "JANET_PATH=$PWD janet test/run_tests.janet"
-    - id: golden_protocol_tests
-      purpose: "Compare SLY-shaped request/response envelopes to fixtures derived from SLY source behavior."
-      files:
-        create:
-          - test/fixtures/protocol/*.edn
-          - test/golden_protocol_tests.janet
-      verification:
-        focused: "JANET_PATH=$PWD janet test/golden_protocol_tests.janet"
-        aggregate: "make test"
-    - id: emacs_ert_frontend_tests
-      purpose: "Verify frontend commands, process filters, major/minor mode behavior, and MREPL buffers under batch Emacs."
-      files:
-        create:
-          - emacs/slynet.el
-          - emacs/slynet-client.el
-          - emacs/slynet-mrepl.el
-          - test/emacs/slynet-frontend-tests.el
-      verification:
-        focused: "emacs -Q --batch -L emacs -l test/emacs/slynet-frontend-tests.el -f ert-run-tests-batch-and-exit"
-        aggregate: "make test-emacs"
-      environment_gate: "If Emacs is unavailable, CI must report frontend tests skipped with reason, not passed."
-    - id: smoke_end_to_end_tests
-      purpose: "Start a real Janet SLYNET server, connect the CLI or Emacs frontend, evaluate code, complete symbols, inspect a value, and close cleanly."
-      files:
-        create:
-          - test/e2e/slynet_smoke.janet
-          - scripts/run-e2e.sh
-      verification:
-        focused: "scripts/run-e2e.sh"
-        aggregate: "make all-tests"
-
-task_groups:
-  - id: T00_tasks_yml_governance
-    title: "Make tasks.yml the maintained implementation contract"
-    status: in_progress
-    description: >-
-      Keep this file synchronized with implementation, tests, and constraints. It is the source
-      of truth until generated inventory files can supersede manual claims.
+  - id: spec_inventory_tests
+    purpose: Prove the project knows what SLY/SLYNK operations exist and how each
+      maps to Janet.
     files:
       create:
-        - tasks.yml
+      - tools/protocol_inventory.janet
+      - test/protocol_inventory_tests.janet
       update:
-        - TASKS.md
-        - docs/tasks/current-task-plan.md
-    operations:
-      - description: "Record baseline state, dirty working tree caveat, and green test result."
-        consequence: "Future implementation work can distinguish pre-existing code changes from plan changes."
-      - description: "Add a rule that every task carries focused and aggregate verification commands."
-        consequence: "Done status is evidence-based, not assertion-based."
-    tests:
-      red:
-        - name: "tasks.yml does not exist or lacks verification gates"
-          command: "test ! -f tasks.yml || ! grep -q 'completion_gate' tasks.yml"
-          expected_failure: "After creation this check must fail, proving the file now carries gates."
-      green:
-        - name: "tasks.yml includes baseline, constraints, and task groups"
-          command: "python3 - <<'PY'\nfrom pathlib import Path\np=Path('tasks.yml').read_text()\nfor s in ['verified_baseline:', 'janet_design_constraints:', 'task_groups:', 'testing_strategy:']:\n    assert s in p, s\nPY"
-      aggregate:
-        - "JANET_PATH=$PWD janet test/run_tests.janet"
-    done_when:
-      - "tasks.yml exists and is reviewed whenever implementation status changes."
-      - "Current Janet tests still pass after creating/updating the plan."
-
-  - id: T01_protocol_inventory_generator
-    title: "Generate a machine-readable SLY/SLYNK-to-SLYNET inventory"
-    status: in_progress
-    description: >-
-      Build slynt's translation map from source, not from stale hand-written lists. Classify each
-      reference operation as implemented, tested, stubbed, missing, emulated, or Janet-forbidden.
+      - docs/missing_protocol.md
+      - docs/missing_protocol_definterface.md
+    verification:
+      focused: JANET_PATH=$PWD janet test/protocol_inventory_tests.janet
+      aggregate: JANET_PATH=$PWD janet test/run_tests.janet
+  - id: unit_contract_tests
+    purpose: Verify individual registry, reader/writer, printer, completion, xref,
+      inspector, and eval functions with real code, not mocks.
+    files:
+      update:
+      - test/project_core_tests.janet
+      - test/message-tests.janet
+      - test/contrib_tests.janet
+    verification:
+      focused: make core-tests && make contrib-tests
+      aggregate: make test
+  - id: in_memory_server_tests
+    purpose: Verify Emacs wire messages against an in-memory SLYNET server without
+      flaky sleeps.
+    files:
+      update:
+      - test/server_integration_tests.janet
+      - test/channel_dispatch_tests.janet
+      - test/client_test.janet
+    rule: Use condition-based waiting for asynchronous server/channel effects; no
+      arbitrary sleeps except documented timing behavior.
+    verification:
+      focused: JANET_PATH=$PWD janet test/server_integration_tests.janet
+      aggregate: JANET_PATH=$PWD janet test/run_tests.janet
+  - id: golden_protocol_tests
+    purpose: Compare SLY-shaped request/response envelopes to fixtures derived from
+      SLY source behavior.
     files:
       create:
+      - test/fixtures/protocol/*.edn
+      - test/golden_protocol_tests.janet
+    verification:
+      focused: JANET_PATH=$PWD janet test/golden_protocol_tests.janet
+      aggregate: make test
+  - id: emacs_ert_frontend_tests
+    purpose: Verify frontend commands, process filters, major/minor mode behavior,
+      and MREPL buffers under batch Emacs.
+    files:
+      create:
+      - emacs/slynet.el
+      - emacs/slynet-client.el
+      - emacs/slynet-mrepl.el
+      - test/emacs/slynet-frontend-tests.el
+    verification:
+      focused: emacs -Q --batch -L emacs -l test/emacs/slynet-frontend-tests.el -f
+        ert-run-tests-batch-and-exit
+      aggregate: make test-emacs
+    environment_gate: If Emacs is unavailable, CI must report frontend tests skipped
+      with reason, not passed.
+  - id: smoke_end_to_end_tests
+    purpose: Start a real Janet SLYNET server, connect the CLI or Emacs frontend,
+      evaluate code, complete symbols, inspect a value, and close cleanly.
+    files:
+      create:
+      - test/e2e/slynet_smoke.janet
+      - scripts/run-e2e.sh
+    verification:
+      focused: scripts/run-e2e.sh
+      aggregate: make all-tests
+task_groups:
+- id: T00_tasks_yml_governance
+  title: Make tasks.yml the maintained implementation contract
+  status: in_progress
+  description: Keep this file synchronized with implementation, tests, and constraints.
+    It is the source of truth until generated inventory files can supersede manual
+    claims.
+  files:
+    create:
+    - tasks.yml
+    update:
+    - TASKS.md
+    - docs/tasks/current-task-plan.md
+  operations:
+  - description: Record baseline state, dirty working tree caveat, and green test
+      result.
+    consequence: Future implementation work can distinguish pre-existing code changes
+      from plan changes.
+  - description: Add a rule that every task carries focused and aggregate verification
+      commands.
+    consequence: Done status is evidence-based, not assertion-based.
+  tests:
+    red:
+    - name: tasks.yml does not exist or lacks verification gates
+      command: test ! -f tasks.yml || ! grep -q 'completion_gate' tasks.yml
+      expected_failure: After creation this check must fail, proving the file now
+        carries gates.
+    green:
+    - name: tasks.yml includes baseline, constraints, and task groups
+      command: "python3 - <<'PY'\nfrom pathlib import Path\np=Path('tasks.yml').read_text()\n\
+        for s in ['verified_baseline:', 'janet_design_constraints:', 'task_groups:',\
+        \ 'testing_strategy:']:\n    assert s in p, s\nPY"
+    aggregate:
+    - JANET_PATH=$PWD janet test/run_tests.janet
+  done_when:
+  - tasks.yml exists and is reviewed whenever implementation status changes.
+  - Current Janet tests still pass after creating/updating the plan.
+- id: T01_protocol_inventory_generator
+  title: Generate a machine-readable SLY/SLYNK-to-SLYNET inventory
+  status: in_progress
+  description: Build slynt's translation map from source, not from stale hand-written
+    lists. Classify each reference operation as implemented, tested, stubbed, missing,
+    emulated, or Janet-forbidden.
+  files:
+    create:
+    - tools/protocol_inventory.janet
+    - docs/generated/protocol-inventory.yml
+    - test/protocol_inventory_tests.janet
+    read:
+    - sly_source/slynk/slynk.lisp
+    - sly_source/slynk/slynk-backend.lisp
+    - sly_source/slynk/slynk-rpc.lisp
+    - sly_source/contrib/slynk-*.lisp
+    - slynet/*.janet
+    - slynet/contrib/*.janet
+    - test/*.janet
+    update:
+    - docs/missing_protocol.md
+    - docs/missing_protocol_definterface.md
+    - tasks.yml
+  operations:
+  - description: Extract reference RPC/function names from SLY source and contrib
+      source.
+    consequence: Manual missing-protocol lists stop drifting from upstream SLY source.
+  - description: Extract Janet definterface/defimplementation registrations and test
+      mentions.
+    consequence: Each operation receives implementation and test evidence.
+  - description: Emit status records with source file, Janet file, test file, and
+      constraint reason.
+    consequence: A missing or unsupported operation is explicit and auditable.
+  tests:
+    red:
+    - name: inventory detects stale missing_protocol entries
+      command: JANET_PATH=$PWD janet test/protocol_inventory_tests.janet --case stale-missing-protocol
+      expected_failure: Before implementation, ping/simple-completions are both implemented
+        and listed as missing.
+    green:
+    - name: inventory classifies implemented handshake ops
+      command: JANET_PATH=$PWD janet test/protocol_inventory_tests.janet --case handshake-status
+    aggregate:
+    - JANET_PATH=$PWD janet test/run_tests.janet
+  implementation_slices:
+  - id: T01-1_handshake_completion_inventory
+    status: done
+    description: Generate initial inventory records for ping, connection-info, simple-completions,
+      and flex-completions.
+    files:
+      created:
+      - tools/protocol_inventory.janet
+      - docs/generated/protocol-inventory.yml
+      - test/protocol_inventory_tests.janet
+      updated:
+      - test/run_tests.janet
+      - tasks.yml
+    verification_log:
+    - date: '2026-05-14'
+      phase: red
+      command: bridge.yml:test
+      result: 'failed as intended: tools/protocol_inventory.janet and docs/generated/protocol-inventory.yml
+        missing'
+    - date: '2026-05-14'
+      phase: green
+      command: JANET_PATH=$PWD janet test/run_tests.janet :report compact
+      result: 'passed: 46 tests, 147/147 asserts, compact stdout_lines=4, stderr empty'
+    - date: '2026-05-14'
+      phase: regression
+      command: bridge.yml:test
+      result: 'passed: 46 tests, 147/147 asserts, stderr empty'
+    limitations:
+    - Current generator uses a curated first-slice operation list, not yet full source
+      extraction.
+    - Evidence matching is mention-based and can over-classify files that contain
+      operation names in broad contexts.
+  - id: T01-2_full_source_extraction
+    status: done
+    description: Expand generator to parse defslyfun, definterface, and contrib definitions
+      across the full SLY source corpus.
+    verification_log:
+    - date: '2026-05-14'
+      phase: red
+      command: JANET_PATH=$PWD janet test/run_tests.janet :report compact
+      result: 'failed as intended after fixing protocol_inventory_tests contains helper:
+        generator only emitted curated operations and lacked backtrace/debugger/operator/definterface
+        records'
+    - date: '2026-05-14'
+      phase: green
+      command: JANET_PATH=$PWD janet test/run_tests.janet :report compact
+      result: 'passed: 47 tests, 151/151 asserts, compact stdout_lines=4, stderr empty;
+        generated operation_count=249'
+    - date: '2026-05-14'
+      phase: regression
+      command: bridge.yml:test
+      result: 'passed: 47 tests, 151/151 asserts, stderr empty'
+    implementation_details:
+    - Generator now extracts defslyfun and definterface records from configured SLY
+      source files instead of using a four-operation curated list.
+    - Generated schema_version advanced to 2 and includes operation_count.
+    - 'Fixed test helper bug: string/find arguments are pattern-first in Janet; previous
+      contains helper was invalid and falsely green.'
+    emerging_tasks:
+    - id: T01-2A_inventory_parser_self_tests
+      status: todo
+      description: Add focused tests for token-after/source extraction helpers through
+        exported or fixture-driven generator API, so parser regressions are caught
+        before full-suite shell generation.
+    - id: T01-2B_deterministic_inventory_order
+      status: todo
+      description: Implement deterministic sorting without unavailable array/sort,
+        or define a local sort, so generated inventory diffs are stable across Janet/table
+        iteration behavior.
+  - id: T01-3_precise_evidence_matching
+    status: done
+    description: Replace broad string matching with definition-aware and test-assertion-aware
+      evidence matching.
+    verification_log:
+    - date: '2026-05-14'
+      phase: red
+      command: JANET_PATH=$PWD janet test/run_tests.janet :report compact
+      result: 'failed as intended: ping record included unrelated slynet/backend.janet
+        and slynet/contrib/slynet-fancy-inspector.janet evidence'
+    - date: '2026-05-14'
+      phase: green
+      command: JANET_PATH=$PWD janet test/run_tests.janet :report compact
+      result: 'passed: 48 tests, 155/155 asserts, compact stdout_lines=4, stderr empty'
+    - date: '2026-05-14'
+      phase: regression
+      command: bridge.yml:test
+      result: 'passed: 48 tests, 155/155 asserts, stderr empty'
+    implementation_details:
+    - Replaced broad operation substring matching with pattern families for source
+      definitions, Janet definitions/defimpls/interfaces, tests, and stale docs.
+    - Added record-level tests proving ping keeps slynet/slynk.janet evidence while
+      excluding unrelated backend/fancy-inspector mentions.
+    emerging_tasks:
+    - id: T01-3A_test_evidence_precision
+      status: todo
+      description: Tighten test evidence beyond string/name mentions so protocol_inventory_tests.janet
+        does not count as product coverage for all inventory rows.
+    - id: T01-3B_constraint_classification
+      status: done
+      description: Classify known Janet design gaps such as CL packages, restarts,
+        CLOS/MOP, compiler notes, and threads into constraint fields instead of null.
+      verification_log:
+      - date: '2026-05-14'
+        phase: red
+        command: JANET_PATH=$PWD janet test/run_tests.janet :report compact
+        result: 'failed as intended: representative operation records still had constraint:
+          null or no extracted thread-info record; adjusted thread example to extracted
+          list-threads'
+      - date: '2026-05-14'
+        phase: green
+        command: JANET_PATH=$PWD janet test/run_tests.janet :report compact
+        result: 'passed: 49 tests, 165/165 asserts, compact stdout_lines=4, stderr
+          empty'
+      - date: '2026-05-14'
+        phase: regression
+        command: bridge.yml:test
+        result: 'passed: 49 tests, 165/165 asserts, stderr empty'
+      implemented_constraints:
+        cl_packages:
+          examples:
+          - set-package
+          - frame-package-name
+          - package-local-nicknames
+          reason: Janet has modules/environments, not CL packages and reader package
+            semantics.
+        conditions_restarts:
+          examples:
+          - invoke-nth-restart
+          - debugger-info-for-emacs
+          - backtrace
+          reason: Janet exceptions/stack traces do not expose CL condition/restart
+            semantics.
+        clos_mop:
+          examples:
+          - generic-method-specs
+          - remove-method-by-name
+          reason: Janet does not provide CLOS/MOP method metadata.
+        compiler_notes:
+          examples:
+          - compile-file-for-emacs
+          - compile-string-for-emacs
+          reason: Janet diagnostics differ from CL compiler note objects and source-note
+            semantics.
+        threads:
+          examples:
+          - list-threads
+          - kill-thread
+          - debug-nth-thread
+          reason: Janet execution units/fibers do not map one-to-one to CL implementation
+            thread APIs.
+      emerging_tasks:
+      - id: T01-3B-1_constraint_reason_field
+        status: done
+        description: Emit both constraint id and human-readable reason in generated
+          inventory records, not just the id.
+        verification_log:
+        - date: '2026-05-14'
+          phase: red
+          command: JANET_PATH=$PWD janet test/run_tests.janet :report compact
+          result: 'failed as intended: five representative constrained records lacked
+            constraint_reason fields'
+        - date: '2026-05-14'
+          phase: green
+          command: JANET_PATH=$PWD janet test/run_tests.janet :report compact
+          result: 'passed: 50 tests, 170/170 asserts, compact stdout_lines=4, stderr
+            empty'
+        - date: '2026-05-14'
+          phase: regression
+          command: bridge.yml:test
+          result: 'passed: 50 tests, 170/170 asserts, stderr empty'
+        implemented_details:
+        - Added constraint-reason-for in tools/protocol_inventory.janet.
+        - Generated inventory now emits constraint_reason for non-none constraints.
+        - Added protocol_inventory_tests coverage for all five representative constraint
+          classes.
+        emerging_tasks:
+        - id: T01-3B-1A_yaml_escape_constraint_reasons
+          status: todo
+          description: Add YAML escaping/quoting for generated scalar fields before
+            allowing arbitrary reason text from external config.
+      - id: T01-3B-2_constraint_coverage_audit
+        status: done
+        description: Add a generator test that every non-none constraint id is documented
+          in tasks.yml janet_design_constraints.
+        verification_log:
+        - date: '2026-05-14'
+          phase: red
+          command: JANET_PATH=$PWD janet test/run_tests.janet :report compact
+          result: 'failed as intended: generated inventory lacked constraint_coverage_audit
+            section and documented/used/undocumented constraint lists'
+        - date: '2026-05-14'
+          phase: green
+          command: JANET_PATH=$PWD janet test/run_tests.janet :report compact && python3
+            -c 'import yaml, pathlib; yaml.safe_load(pathlib.Path("docs/generated/protocol-inventory.yml").read_text())'
+          result: 'passed: 51 tests, 177/177 asserts, compact stdout_lines=4, stderr
+            empty; generated inventory parses as YAML'
+        - date: '2026-05-14'
+          phase: regression
+          command: bridge.yml:test
+          result: 'passed: 51 tests, 177/177 asserts, stderr empty'
+        implemented_details:
+        - Generated inventory now includes constraint_coverage_audit with documented_constraints,
+          used_constraints, and undocumented_constraints.
+        - Audit derives documented constraints from tasks.yml janet_design_constraints
+          ids and used constraints from generated operation classifications.
+        - Fixed a generated YAML formatting bug in the audit header before committing.
+        emerging_tasks:
+        - id: T01-3B-2A_fixture_unknown_constraint_failure
+          status: todo
+          description: Add fixture-level generator tests proving an unknown emitted
+            constraint fails the audit instead of merely listing it.
+        - id: T01-3B-2B_yaml_parse_regression_test
+          status: todo
+          description: Move generated-inventory YAML parsing into Janet or a stable
+            test command so malformed YAML cannot pass string-only assertions.
+  reviewed_and_enhanced:
+    date: '2026-05-14'
+    findings:
+    - The inventory generator now proves source extraction, evidence precision, and
+      constraint reasons, but it still needs deterministic ordering and parser-level
+      self-tests.
+    - T01 should become the release gate that drives T02 stale-doc repair, T04 golden
+      protocol fixtures, and T14 Emacs frontend coverage.
+    - Generated inventory currently reports operation-level state, but not yet risk
+      level, frontend exposure, or release milestone assignment.
+    added_subtasks:
+    - id: T01-4_inventory_release_gate
+      status: todo
+      description: 'Turn docs/generated/protocol-inventory.yml into a CI/release gate:
+        no undocumented constraints, no unknown states, and no implemented operations
+        without either product tests or explicit rationale.'
+      files:
+        update:
+        - tools/protocol_inventory.janet
+        - test/protocol_inventory_tests.janet
+        - .github/workflows/test.yml
+      tests:
+        red:
+        - Inventory generated from a fixture with an unknown constraint must fail
+          the audit.
+        green:
+        - Current repo inventory passes the release gate and emits an audit summary.
+    - id: T01-5_frontend_surface_mapping
+      status: done
+      description: 'Add frontend_surface fields so each operation is mapped to Emacs
+        UI areas: repl, eval, completion, inspector, debugger, contrib, transport,
+        or backend-only.'
+      verification_log:
+      - date: '2026-06-12'
+        phase: red
+        command: JANET_PATH=$PWD janet tmp-protocol-red-runner.janet
+        result: 'failed as intended: representative operation records lacked frontend_surface/support_class/state_detail
+          fields. Temporary runner removed after verification.'
+      - date: '2026-06-12'
+        phase: green
+        command: JANET_PATH=$PWD janet tmp-protocol-red-runner.janet
+        result: 'passed: 8 tests, 48/48 asserts; representative transport/repl/completion/debugger/inspector/xref
+          surfaces emitted.'
+      files:
+        update:
         - tools/protocol_inventory.janet
         - docs/generated/protocol-inventory.yml
         - test/protocol_inventory_tests.janet
-      read:
-        - sly_source/slynk/slynk.lisp
-        - sly_source/slynk/slynk-backend.lisp
-        - sly_source/slynk/slynk-rpc.lisp
-        - sly_source/contrib/slynk-*.lisp
-        - slynet/*.janet
-        - slynet/contrib/*.janet
-        - test/*.janet
-      update:
-        - docs/missing_protocol.md
-        - docs/missing_protocol_definterface.md
-        - tasks.yml
-    operations:
-      - description: "Extract reference RPC/function names from SLY source and contrib source."
-        consequence: "Manual missing-protocol lists stop drifting from upstream SLY source."
-      - description: "Extract Janet definterface/defimplementation registrations and test mentions."
-        consequence: "Each operation receives implementation and test evidence."
-      - description: "Emit status records with source file, Janet file, test file, and constraint reason."
-        consequence: "A missing or unsupported operation is explicit and auditable."
-    tests:
-      red:
-        - name: "inventory detects stale missing_protocol entries"
-          command: "JANET_PATH=$PWD janet test/protocol_inventory_tests.janet --case stale-missing-protocol"
-          expected_failure: "Before implementation, ping/simple-completions are both implemented and listed as missing."
-      green:
-        - name: "inventory classifies implemented handshake ops"
-          command: "JANET_PATH=$PWD janet test/protocol_inventory_tests.janet --case handshake-status"
-      aggregate:
-        - "JANET_PATH=$PWD janet test/run_tests.janet"
-    implementation_slices:
-      - id: T01-1_handshake_completion_inventory
-        status: done
-        description: "Generate initial inventory records for ping, connection-info, simple-completions, and flex-completions."
-        files:
-          created:
-            - tools/protocol_inventory.janet
-            - docs/generated/protocol-inventory.yml
-            - test/protocol_inventory_tests.janet
-          updated:
-            - test/run_tests.janet
-            - tasks.yml
-        verification_log:
-          - date: "2026-05-14"
-            phase: red
-            command: "bridge.yml:test"
-            result: "failed as intended: tools/protocol_inventory.janet and docs/generated/protocol-inventory.yml missing"
-          - date: "2026-05-14"
-            phase: green
-            command: "JANET_PATH=$PWD janet test/run_tests.janet :report compact"
-            result: "passed: 46 tests, 147/147 asserts, compact stdout_lines=4, stderr empty"
-          - date: "2026-05-14"
-            phase: regression
-            command: "bridge.yml:test"
-            result: "passed: 46 tests, 147/147 asserts, stderr empty"
-        limitations:
-          - "Current generator uses a curated first-slice operation list, not yet full source extraction."
-          - "Evidence matching is mention-based and can over-classify files that contain operation names in broad contexts."
-      - id: T01-2_full_source_extraction
-        status: done
-        description: "Expand generator to parse defslyfun, definterface, and contrib definitions across the full SLY source corpus."
-        verification_log:
-          - date: "2026-05-14"
-            phase: red
-            command: "JANET_PATH=$PWD janet test/run_tests.janet :report compact"
-            result: "failed as intended after fixing protocol_inventory_tests contains helper: generator only emitted curated operations and lacked backtrace/debugger/operator/definterface records"
-          - date: "2026-05-14"
-            phase: green
-            command: "JANET_PATH=$PWD janet test/run_tests.janet :report compact"
-            result: "passed: 47 tests, 151/151 asserts, compact stdout_lines=4, stderr empty; generated operation_count=249"
-          - date: "2026-05-14"
-            phase: regression
-            command: "bridge.yml:test"
-            result: "passed: 47 tests, 151/151 asserts, stderr empty"
-        implementation_details:
-          - "Generator now extracts defslyfun and definterface records from configured SLY source files instead of using a four-operation curated list."
-          - "Generated schema_version advanced to 2 and includes operation_count."
-          - "Fixed test helper bug: string/find arguments are pattern-first in Janet; previous contains helper was invalid and falsely green."
-        emerging_tasks:
-          - id: T01-2A_inventory_parser_self_tests
-            status: todo
-            description: "Add focused tests for token-after/source extraction helpers through exported or fixture-driven generator API, so parser regressions are caught before full-suite shell generation."
-          - id: T01-2B_deterministic_inventory_order
-            status: todo
-            description: "Implement deterministic sorting without unavailable array/sort, or define a local sort, so generated inventory diffs are stable across Janet/table iteration behavior."
-      - id: T01-3_precise_evidence_matching
-        status: done
-        description: "Replace broad string matching with definition-aware and test-assertion-aware evidence matching."
-        verification_log:
-          - date: "2026-05-14"
-            phase: red
-            command: "JANET_PATH=$PWD janet test/run_tests.janet :report compact"
-            result: "failed as intended: ping record included unrelated slynet/backend.janet and slynet/contrib/slynet-fancy-inspector.janet evidence"
-          - date: "2026-05-14"
-            phase: green
-            command: "JANET_PATH=$PWD janet test/run_tests.janet :report compact"
-            result: "passed: 48 tests, 155/155 asserts, compact stdout_lines=4, stderr empty"
-          - date: "2026-05-14"
-            phase: regression
-            command: "bridge.yml:test"
-            result: "passed: 48 tests, 155/155 asserts, stderr empty"
-        implementation_details:
-          - "Replaced broad operation substring matching with pattern families for source definitions, Janet definitions/defimpls/interfaces, tests, and stale docs."
-          - "Added record-level tests proving ping keeps slynet/slynk.janet evidence while excluding unrelated backend/fancy-inspector mentions."
-        emerging_tasks:
-          - id: T01-3A_test_evidence_precision
-            status: todo
-            description: "Tighten test evidence beyond string/name mentions so protocol_inventory_tests.janet does not count as product coverage for all inventory rows."
-          - id: T01-3B_constraint_classification
-            status: done
-            description: "Classify known Janet design gaps such as CL packages, restarts, CLOS/MOP, compiler notes, and threads into constraint fields instead of null."
-            verification_log:
-              - date: "2026-05-14"
-                phase: red
-                command: "JANET_PATH=$PWD janet test/run_tests.janet :report compact"
-                result: "failed as intended: representative operation records still had constraint: null or no extracted thread-info record; adjusted thread example to extracted list-threads"
-              - date: "2026-05-14"
-                phase: green
-                command: "JANET_PATH=$PWD janet test/run_tests.janet :report compact"
-                result: "passed: 49 tests, 165/165 asserts, compact stdout_lines=4, stderr empty"
-              - date: "2026-05-14"
-                phase: regression
-                command: "bridge.yml:test"
-                result: "passed: 49 tests, 165/165 asserts, stderr empty"
-            implemented_constraints:
-              cl_packages:
-                examples:
-                  - set-package
-                  - frame-package-name
-                  - package-local-nicknames
-                reason: "Janet has modules/environments, not CL packages and reader package semantics."
-              conditions_restarts:
-                examples:
-                  - invoke-nth-restart
-                  - debugger-info-for-emacs
-                  - backtrace
-                reason: "Janet exceptions/stack traces do not expose CL condition/restart semantics."
-              clos_mop:
-                examples:
-                  - generic-method-specs
-                  - remove-method-by-name
-                reason: "Janet does not provide CLOS/MOP method metadata."
-              compiler_notes:
-                examples:
-                  - compile-file-for-emacs
-                  - compile-string-for-emacs
-                reason: "Janet diagnostics differ from CL compiler note objects and source-note semantics."
-              threads:
-                examples:
-                  - list-threads
-                  - kill-thread
-                  - debug-nth-thread
-                reason: "Janet execution units/fibers do not map one-to-one to CL implementation thread APIs."
-            emerging_tasks:
-              - id: T01-3B-1_constraint_reason_field
-                status: done
-                description: "Emit both constraint id and human-readable reason in generated inventory records, not just the id."
-                verification_log:
-                  - date: "2026-05-14"
-                    phase: red
-                    command: "JANET_PATH=$PWD janet test/run_tests.janet :report compact"
-                    result: "failed as intended: five representative constrained records lacked constraint_reason fields"
-                  - date: "2026-05-14"
-                    phase: green
-                    command: "JANET_PATH=$PWD janet test/run_tests.janet :report compact"
-                    result: "passed: 50 tests, 170/170 asserts, compact stdout_lines=4, stderr empty"
-                  - date: "2026-05-14"
-                    phase: regression
-                    command: "bridge.yml:test"
-                    result: "passed: 50 tests, 170/170 asserts, stderr empty"
-                implemented_details:
-                  - "Added constraint-reason-for in tools/protocol_inventory.janet."
-                  - "Generated inventory now emits constraint_reason for non-none constraints."
-                  - "Added protocol_inventory_tests coverage for all five representative constraint classes."
-                emerging_tasks:
-                  - id: T01-3B-1A_yaml_escape_constraint_reasons
-                    status: todo
-                    description: "Add YAML escaping/quoting for generated scalar fields before allowing arbitrary reason text from external config."
-              - id: T01-3B-2_constraint_coverage_audit
-                status: done
-                description: "Add a generator test that every non-none constraint id is documented in tasks.yml janet_design_constraints."
-                verification_log:
-                  - date: "2026-05-14"
-                    phase: red
-                    command: "JANET_PATH=$PWD janet test/run_tests.janet :report compact"
-                    result: "failed as intended: generated inventory lacked constraint_coverage_audit section and documented/used/undocumented constraint lists"
-                  - date: "2026-05-14"
-                    phase: green
-                    command: >-
-                      JANET_PATH=$PWD janet test/run_tests.janet :report compact && python3 -c 'import yaml, pathlib; yaml.safe_load(pathlib.Path("docs/generated/protocol-inventory.yml").read_text())'
-                    result: "passed: 51 tests, 177/177 asserts, compact stdout_lines=4, stderr empty; generated inventory parses as YAML"
-                  - date: "2026-05-14"
-                    phase: regression
-                    command: "bridge.yml:test"
-                    result: "passed: 51 tests, 177/177 asserts, stderr empty"
-                implemented_details:
-                  - "Generated inventory now includes constraint_coverage_audit with documented_constraints, used_constraints, and undocumented_constraints."
-                  - "Audit derives documented constraints from tasks.yml janet_design_constraints ids and used constraints from generated operation classifications."
-                  - "Fixed a generated YAML formatting bug in the audit header before committing."
-                emerging_tasks:
-                  - id: T01-3B-2A_fixture_unknown_constraint_failure
-                    status: todo
-                    description: "Add fixture-level generator tests proving an unknown emitted constraint fails the audit instead of merely listing it."
-                  - id: T01-3B-2B_yaml_parse_regression_test
-                    status: todo
-                    description: "Move generated-inventory YAML parsing into Janet or a stable test command so malformed YAML cannot pass string-only assertions."
-    reviewed_and_enhanced:
-      date: "2026-05-14"
-      findings:
-        - "The inventory generator now proves source extraction, evidence precision, and constraint reasons, but it still needs deterministic ordering and parser-level self-tests."
-        - "T01 should become the release gate that drives T02 stale-doc repair, T04 golden protocol fixtures, and T14 Emacs frontend coverage."
-        - "Generated inventory currently reports operation-level state, but not yet risk level, frontend exposure, or release milestone assignment."
-      added_subtasks:
-        - id: T01-4_inventory_release_gate
-          status: todo
-          description: "Turn docs/generated/protocol-inventory.yml into a CI/release gate: no undocumented constraints, no unknown states, and no implemented operations without either product tests or explicit rationale."
-          files:
-            update:
-              - tools/protocol_inventory.janet
-              - test/protocol_inventory_tests.janet
-              - .github/workflows/test.yml
-          tests:
-            red:
-              - "Inventory generated from a fixture with an unknown constraint must fail the audit."
-            green:
-              - "Current repo inventory passes the release gate and emits an audit summary."
-        - id: T01-5_frontend_surface_mapping
-          status: done
-          description: "Add frontend_surface fields so each operation is mapped to Emacs UI areas: repl, eval, completion, inspector, debugger, contrib, transport, or backend-only."
-          verification_log:
-            - date: "2026-06-12"
-              phase: red
-              command: "JANET_PATH=$PWD janet tmp-protocol-red-runner.janet"
-              result: "failed as intended: representative operation records lacked frontend_surface/support_class/state_detail fields. Temporary runner removed after verification."
-            - date: "2026-06-12"
-              phase: green
-              command: "JANET_PATH=$PWD janet tmp-protocol-red-runner.janet"
-              result: "passed: 8 tests, 48/48 asserts; representative transport/repl/completion/debugger/inspector/xref surfaces emitted."
-          files:
-            update:
-              - tools/protocol_inventory.janet
-              - docs/generated/protocol-inventory.yml
-              - test/protocol_inventory_tests.janet
-          tests:
-            red:
-              - "Representative operations ping, simple-completions, backtrace, inspect-nth-part, and create-mrepl lack frontend_surface."
-            green:
-              - "All generated records include frontend_surface and unknown surfaces are audited."
-        - id: T01-6_operation_state_model
-          status: done
-          description: "Refine state from implemented/missing into implemented_tested, implemented_untested, emulated_not_equivalent, unsupported_by_janet_design, missing, and stale_doc_conflict."
-          verification_log:
-            - date: "2026-06-12"
-              phase: red
-              command: "JANET_PATH=$PWD janet tmp-protocol-red-runner.janet"
-              result: "failed as intended before generator update: schema_version remained 2 and support_class/state_detail were absent."
-            - date: "2026-06-12"
-              phase: green
-              command: "JANET_PATH=$PWD janet tmp-protocol-red-runner.janet"
-              result: "passed: schema_version 3; ping is implemented_native_tested; invoke-nth-restart is implemented_emulated_untested after inventory tests stopped counting themselves as product tests."
-          files:
-            update:
-              - tools/protocol_inventory.janet
-              - docs/generated/protocol-inventory.yml
-              - tasks.yml
-          tests:
-            red:
-              - "Constrained CLOS/restart operations are not allowed to report plain implemented without emulation/unsupported nuance."
-            green:
-              - "Constraint-bearing operations include state_detail and evidence explaining the state."
-    done_when:
-      - "docs/generated/protocol-inventory.yml exists."
-      - "Every operation has state, source_files, janet_files, tests, constraint, and constraint_reason when applicable."
-      - "Every non-none constraint id is documented in janet_design_constraints and audited by tests."
-      - "No operation may be silently omitted."
-      - "Generated inventory is deterministic enough for clean diffs or explicitly sorted by a tested comparator."
-
-  - id: T02_spec_normalization_and_stale_doc_repair
-    title: "Normalize protocol specs and repair stale protocol documentation"
-    status: todo
-    files:
-      update:
-        - impl_spec.yml
-        - docs/missing_protocol.md
-        - docs/missing_protocol_definterface.md
-        - docs/generated/protocol-inventory.yml
-        - tasks.yml
-    operations:
-      - description: "Replace raw CL lambda-list syntax in Janet sketches with a normalized YAML operation schema."
-        consequence: "Specs become machine-checkable and Janet-valid code generation is possible."
-      - description: "Fix malformed definterface sketches, including d(definterface operator-arglist...)."
-        consequence: "Spec parsing can fail only on real incompatibilities, not typos."
-      - description: "Move already-implemented operations from missing_protocol.md to an implemented/tested section."
-        consequence: "Roadmap reflects verified state instead of stale omissions."
-    tests:
-      red:
-        - name: "spec parser rejects malformed raw definterface sketches"
-          command: "JANET_PATH=$PWD janet test/protocol_inventory_tests.janet --case malformed-definterface-spec"
-          expected_failure: "Current docs contain invalid sketches and CL-only lambda list markers."
-      green:
-        - name: "normalized spec parses and preserves CL-origin metadata"
-          command: "JANET_PATH=$PWD janet test/protocol_inventory_tests.janet --case normalized-spec"
-      aggregate:
-        - "make test"
-    implementation_slices:
-      - id: T02-1_normalized_operation_schema
-        status: todo
-        description: "Define a YAML schema for operation name, origin kind, CL lambda-list metadata, Janet arg model, state, constraint, and tests."
-        files:
-          create:
-            - docs/specs/operation-schema.yml
-            - test/spec_normalization_tests.janet
-          update:
-            - impl_spec.yml
-            - tools/protocol_inventory.janet
-        tests:
-          red:
-            - "Spec normalization rejects raw executable CL lambda-list syntax such as &optional in Janet code fields."
-          green:
-            - "Spec normalization preserves CL-origin metadata while emitting Janet-safe operation records."
-      - id: T02-2_reconcile_missing_protocol_docs
-        status: todo
-        description: "Generate or rewrite docs/missing_protocol.md from docs/generated/protocol-inventory.yml so implemented/tested operations are not listed as missing."
-        files:
-          update:
-            - docs/missing_protocol.md
-            - docs/generated/protocol-inventory.yml
-        tests:
-          red:
-            - "ping/simple-completions listed as implemented in inventory but missing in docs fail reconciliation."
-          green:
-            - "No implemented_tested inventory operation appears in missing docs without stale_doc_conflict metadata."
-      - id: T02-3_janet_forbidden_annotations
-        status: todo
-        description: "Promote constraint ids into explicit unsupported_by_janet_design or emulated_not_equivalent annotations where implementation cannot be faithful."
-        files:
-          update:
-            - docs/generated/protocol-inventory.yml
-            - tasks.yml
-        tests:
-          red:
-            - "CLOS/MOP and restart operations with constraints but no explicit behavior status fail."
-          green:
-            - "Every constrained operation has behavior_status and user-facing consequence text."
-    done_when:
-      - "Spec docs distinguish implemented, missing, emulated, and Janet-forbidden operations."
-      - "Raw &optional/&rest appear only as CL-origin metadata, never as executable Janet syntax."
-      - "Stale protocol docs are generated or reconciled from the inventory instead of maintained by hand."
-
-  - id: T03_test_runner_noise_gate
-    title: "Make verification output trustworthy and quiet"
-    status: done
-    files:
-      update:
-        - mini-test.janet
-        - test-runner.janet
-        - test/run_tests.janet
-        - test-tools.janet
-    operations:
-      - description: "Capture expected negative-test errors instead of printing stack noise to stderr."
-        consequence: "CI logs represent true failures; green runs are easy to audit."
-      - description: "Gate debug prints behind an explicit SLYNET_TEST_VERBOSE or logger setting."
-        consequence: "Protocol traces remain available but no longer pollute normal test output."
-    tests:
-      red:
-        - name: "green test run emits stderr noise today"
-          command: "sh -lc 'JANET_PATH=$PWD janet test/run_tests.janet >/tmp/slynet.out 2>/tmp/slynet.err; test -s /tmp/slynet.err'"
-          expected_failure: "After fix, this command must fail because stderr should be empty for green tests."
-      green:
-        - name: "green test run has empty stderr and summary in stdout"
-          command: >-
-            sh -lc 'JANET_PATH=$PWD janet test/run_tests.janet >/tmp/slynet.out 2>/tmp/slynet.err; test ! -s /tmp/slynet.err; grep -q "133/133 asserts passed" /tmp/slynet.out'
-      aggregate:
-        - "make test"
-    done_when:
-      - "Normal test run exits 0 with empty stderr."
-      - "Verbose test run still exposes protocol traces when requested."
-    verification_log:
-      - date: "2026-05-14"
+      tests:
+        red:
+        - Representative operations ping, simple-completions, backtrace, inspect-nth-part,
+          and create-mrepl lack frontend_surface.
+        green:
+        - All generated records include frontend_surface and unknown surfaces are
+          audited.
+    - id: T01-6_operation_state_model
+      status: done
+      description: Refine state from implemented/missing into implemented_tested,
+        implemented_untested, emulated_not_equivalent, unsupported_by_janet_design,
+        missing, and stale_doc_conflict.
+      verification_log:
+      - date: '2026-06-12'
         phase: red
-        command: "JANET_PATH=$PWD janet test/run_tests.janet >/tmp/slynet-t03.out 2>/tmp/slynet-t03.err; test ! -s /tmp/slynet-t03.err"
-        result: "failed as intended: suite_status=0, stderr_bytes=6777"
-      - date: "2026-05-14"
+        command: JANET_PATH=$PWD janet tmp-protocol-red-runner.janet
+        result: 'failed as intended before generator update: schema_version remained
+          2 and support_class/state_detail were absent.'
+      - date: '2026-06-12'
         phase: green
-        command: "JANET_PATH=$PWD janet test/run_tests.janet >/tmp/slynet-t03-green3.out 2>/tmp/slynet-t03-green3.err; test ! -s /tmp/slynet-t03-green3.err"
-        result: "passed: suite_status=0, stderr_bytes=0"
-    implemented_details:
-      - "Disabled synthetic stacktrace generation in mini-test current-loc-line because Janet emits those synthetic frames to stderr."
-      - "Gated SLYNET normal diagnostics and debug prints behind SLYNET_TEST_VERBOSE=1."
-      - "Preserved actual uncaught test failure stacktrace printing in mini-test.janet."
-    emerging_followups:
-      - id: T03A_quiet_stdout_mode
-        status: done
-        description: "Add an explicit compact test reporter mode that suppresses passing assertion echo while preserving failure details."
-        files:
-          update:
-            - mini-test.janet
-            - test/run_tests.janet
-        tests:
-          red:
-            - "JANET_PATH=$PWD janet test/run_tests.janet :report compact should emit summary and failures only."
-          green:
-            - "Default output remains current verbose test transcript; compact mode is concise and stderr-clean."
-        verification_log:
-          - date: "2026-05-14"
-            phase: red
-            command: "JANET_PATH=$PWD janet test/run_tests.janet :report compact >/tmp/slynet-t03a-red.out 2>/tmp/slynet-t03a-red.err; grep -q '======running test' /tmp/slynet-t03a-red.out"
-            result: "failed requirement as intended: status=0, stdout_lines=388, stderr_bytes=0, banners still present"
-          - date: "2026-05-14"
-            phase: green_partial
-            command: "JANET_PATH=$PWD janet test/run_tests.janet :report compact >/tmp/slynet-t03a-final.out 2>/tmp/slynet-t03a-final.err"
-            result: "passed compact gate subset: status=0, stdout_lines=4 after T03A-1, stderr_bytes=0, summary present, no per-test banners"
-        implemented_details:
-          - "Added :report compact CLI option parsing."
-          - "Normalized compact report to disable per-test headers, passing assertion streaming, and captured stdout display for passing tests."
-          - "Reduced assertion message construction side effects by replacing several pp-based message builders with string-based builders."
-
-        latest_verification:
-          - date: "2026-05-14"
-            task: T03A-1_remove_test_body_prints
-            command: "JANET_PATH=$PWD janet test/run_tests.janet :report compact >/tmp/slynet-t03a1-green.out 2>/tmp/slynet-t03a1-green.err"
-            result: "passed: status=0, stdout_lines=4, stderr_bytes=0, summary only"
-          - date: "2026-05-14"
-            task: T03A-1_regression
-            command: "bridge.yml:test"
-            result: "passed: 43 tests, 133/133 asserts, stderr empty"
-          - date: "2026-05-14"
-            task: T03A-2_add_runner_self_tests
-            command: "bridge.yml:test"
-            result: "passed: 45 tests, 140/140 asserts, stderr empty"
-          - date: "2026-05-14"
-            task: T03A-2_compact_regression
-            command: "JANET_PATH=$PWD janet test/run_tests.janet :report compact >/tmp/slynet-t03a2-compact.out 2>/tmp/slynet-t03a2-compact.err"
-            result: "passed: status=0, stdout_lines=4, stderr_bytes=0, no per-test banners"
-
-        remaining_subtasks:
-          - id: T03A-1_remove_test_body_prints
-            status: done
-            description: "Eliminate or gate direct prints from test bodies and module initialization so compact output becomes summary-only on success."
-            evidence: "RED: compact mode emitted 90 stdout lines; GREEN: compact mode emits only summary framing, stdout_lines=4, stderr_bytes=0."
-          - id: T03A-2_add_runner_self_tests
-            status: done
-            description: "Add focused self-tests for parse-cli-args and normalize-report-options instead of relying only on shell probes. Implemented in test/runner_self_tests.janet."
-
-  - id: T04_core_wire_protocol_and_message_codec
-    title: "Harden SLY wire message read/write compatibility"
-    status: in_progress
-    files:
-      update:
-        - slynet/rpc.janet
-        - slynet/print-for-emacs.janet
-        - test/message-tests.janet
-      create:
-        - test/fixtures/protocol/messages.edn
-    operations:
-      - description: "Test and implement round-trip read-message/write-message for all SLY message envelopes used by Emacs."
-        consequence: "Frontend and backend can exchange deterministic S-expressions without data loss."
-      - description: "Add malformed frame tests for length prefix, EOF, invalid form, and unsupported package metadata."
-        consequence: "Transport errors become explicit protocol errors, not hangs."
-    tests:
-      red:
-        - name: "unsupported or malformed message fixture fails with expected error shape"
-          command: "JANET_PATH=$PWD janet test/message-tests.janet --case malformed-frames"
-      green:
-        - name: "all message fixtures round-trip"
-          command: "JANET_PATH=$PWD janet test/message-tests.janet"
-      aggregate:
-        - "JANET_PATH=$PWD janet test/run_tests.janet"
-
-    implementation_slices:
-      - id: T04-1_transport_frame_helpers
-        status: done
-        description: "Add deterministic pure transport helpers for six-byte length-prefixed payload frames and explicit fragmented/malformed buffer decoding."
-        files:
-          updated:
-            - slynet/rpc.janet
-            - test/message-tests.janet
-            - tasks.yml
-          created:
-            - docs/specs/cl-janet-equivalence-contracts.md
-            - phases.yml
-        verification_log:
-          - date: "2026-06-12"
-            phase: red
-            command: "JANET_PATH=$PWD janet test/run_tests.janet :match 'transport frame' :report compact"
-            result: "failed as intended: rpc/encode-packet and rpc/read-packet-from-buffer did not exist."
-          - date: "2026-06-12"
-            phase: green
-            command: "JANET_PATH=$PWD janet test/run_tests.janet :match 'transport frame' :report compact"
-            result: "passed as part of current 65-test suite: 216/216 assertions passed."
-        remaining:
-          - "Round-trip complete SLY message envelopes, not just raw payload frames."
-          - "Add live socket EOF/error tests once real Emacs/Janet E2E harness is in place."
-
-  - id: T05_core_eval_repl_package_model
-    title: "Complete Janet eval/edit/MREPL behavior with explicit package limitations"
-    status: todo
-    files:
-      update:
-        - slynet/slynk.janet
-        - slynet/contrib/slynet-mrepl.janet
-        - slynet/completion.janet
-        - test/project_core_tests.janet
-        - test/client_test.janet
-    operations:
-      - description: "Define the Janet session model for current module/package, default directory, history, and last values."
-        consequence: "M-x slynet-eval and MREPL commands behave predictably across requests."
-      - description: "Mark CL package-equivalence gaps in return metadata where Janet cannot emulate package semantics."
-        consequence: "Frontend can display accurate compatibility warnings."
-    tests:
-      red:
-        - name: "set-package affects completion namespace but not impossible CL reader semantics"
-          command: "JANET_PATH=$PWD janet test/project_core_tests.janet --case package-model-limit"
-      green:
-        - name: "interactive eval, pprint eval, value editing, MREPL create/eval return SLY-shaped results"
-          command: "JANET_PATH=$PWD janet test/project_core_tests.janet --case eval-edit-mrepl"
-      aggregate:
-        - "make test"
-
-  - id: T06_compile_macroexpand_load_services
-    title: "Implement compile, macroexpand, load, and require services as Janet-native approximations"
-    status: todo
-    files:
-      update:
-        - slynet/slynk.janet
-        - slynet/backend.janet
-        - test/project_core_tests.janet
-      create:
-        - test/fixtures/compile/good.janet
-        - test/fixtures/compile/bad.janet
-    operations:
-      - description: "Implement compile-string-for-emacs and compile-file-for-emacs envelopes with Janet diagnostics."
-        consequence: "Emacs can jump to Janet compile errors using SLY-style notes when locations exist."
-      - description: "Implement macroexpand family for Janet forms where Janet exposes macro expansion."
-        consequence: "Users can inspect macro output from Emacs, with CL compiler-macro functions marked unsupported."
-      - description: "Implement load-file and slynk-require over Janet module loading."
-        consequence: "Frontend can load project files and dependencies."
-    tests:
-      red:
-        - name: "compile bad fixture returns SLY-shaped diagnostic, not raw exception"
-          command: "JANET_PATH=$PWD janet test/project_core_tests.janet --case compile-diagnostics"
-      green:
-        - name: "compile, macroexpand, load fixtures pass"
-          command: "JANET_PATH=$PWD janet test/project_core_tests.janet --case compile-macroexpand-load"
-      aggregate:
-        - "make test"
-
-  - id: T07_debugger_and_restart_emulation
-    title: "Build a Janet-specific debugger protocol layer"
-    status: todo
-    files:
-      update:
-        - slynet/slynk.janet
-        - slynet/backend.janet
-        - test/project_core_tests.janet
-        - test/server_integration_tests.janet
-      create:
-        - docs/modules/debugger/overview.md
-    operations:
-      - description: "Return backtrace/debugger-info-for-emacs from Janet error stack data."
-        consequence: "Emacs debugger buffer can display frames for Janet errors."
-      - description: "Implement abort/continue as safe top-level control commands where possible."
-        consequence: "Frontend can recover from failed evals without killing the server."
-      - description: "Mark CL restarts, frame stepping, return-from-frame, and condition-specific restarts as emulated or unsupported when Janet cannot provide them."
-        consequence: "Feature gaps are honest and testable."
-    tests:
-      red:
-        - name: "raised Janet error produces no debugger protocol today or wrong shape"
-          command: "JANET_PATH=$PWD janet test/server_integration_tests.janet --case debugger-error-envelope"
-      green:
-        - name: "debugger info, abort, continue, unsupported restart metadata are returned"
-          command: "JANET_PATH=$PWD janet test/server_integration_tests.janet --case debugger-basic"
-      aggregate:
-        - "make test"
-
-  - id: T08_inspector_object_browser
-    title: "Complete Janet inspector and fancy inspector behavior"
-    status: todo
-    files:
-      update:
-        - slynet/gray.janet
-        - slynet/print-for-emacs.janet
-        - slynet/contrib/slynet-fancy-inspector.janet
-        - test/project_core_tests.janet
-        - test/contrib_tests.janet
-    operations:
-      - description: "Implement inspector range/history/pop/next/reinspect/action/toggle verbose for Janet values."
-        consequence: "Emacs inspector can navigate tables, structs, arrays, tuples, functions, fibers, and errors."
-      - description: "Add cycle and truncation tests to prevent recursive printer crashes."
-        consequence: "Large or cyclic Janet data remains inspectable."
-    tests:
-      red:
-        - name: "inspector history/range/action fixtures fail before implementation"
-          command: "JANET_PATH=$PWD janet test/project_core_tests.janet --case inspector-navigation"
-      green:
-        - name: "inspector fixtures navigate and print correctly"
-          command: "JANET_PATH=$PWD janet test/project_core_tests.janet --case inspector-navigation"
-      aggregate:
-        - "make test"
-
-  - id: T09_xref_and_source_locations
-    title: "Implement source-location and xref services for Janet modules"
-    status: todo
-    files:
-      update:
-        - slynet/xref.janet
-        - slynet/slynk.janet
-        - test/project_core_tests.janet
-      create:
-        - test/fixtures/xref/sample_a.janet
-        - test/fixtures/xref/sample_b.janet
-    operations:
-      - description: "Index Janet definitions, vars, macros, and module imports for fixtures and loaded modules."
-        consequence: "find-definitions-for-emacs and xrefs can jump to Janet source."
-      - description: "Return explicit unavailable metadata where Janet runtime lacks exact source position."
-        consequence: "Frontend can distinguish not-found from not-supported."
-    tests:
-      red:
-        - name: "xref fixture lookups fail or return missing metadata"
-          command: "JANET_PATH=$PWD janet test/project_core_tests.janet --case xref-fixtures"
-      green:
-        - name: "xref and source-location fixture lookups pass"
-          command: "JANET_PATH=$PWD janet test/project_core_tests.janet --case xref-fixtures"
-      aggregate:
-        - "make test"
-
-  - id: T10_completion_arglists_autodoc
-    title: "Complete completion, arglist, describe, and autodoc behavior"
-    status: todo
-    files:
-      update:
-        - slynet/completion.janet
-        - slynet/contrib/slynet-arglists.janet
-        - slynet/contrib/slynet-apropos.janet
-        - test/project_core_tests.janet
-        - test/contrib_tests.janet
-    operations:
-      - description: "Extract Janet callable signatures and normalize them into SLY display arglists."
-        consequence: "Frontend can show minibuffer arglists/autodoc for functions and macros."
-      - description: "Document CL lambda-list non-equivalence and use display-only markers for optional/rest/key-like Janet idioms."
-        consequence: "Users see useful signatures without false CL compatibility claims."
-    tests:
-      red:
-        - name: "operator arglist fixtures expose missing or CL-invalid signature data"
-          command: "JANET_PATH=$PWD janet test/contrib_tests.janet --case arglists-autodoc"
-      green:
-        - name: "arglist, describe-function, apropos, autodoc fixtures pass"
-          command: "JANET_PATH=$PWD janet test/contrib_tests.janet --case arglists-autodoc"
-      aggregate:
-        - "make test"
-
-  - id: T11_contrib_protocol_parity
-    title: "Prove contrib module parity or explicit non-equivalence"
-    status: todo
-    files:
-      update:
-        - slynet/contrib/*.janet
-        - test/contrib_tests.janet
+        command: JANET_PATH=$PWD janet tmp-protocol-red-runner.janet
+        result: 'passed: schema_version 3; ping is implemented_native_tested; invoke-nth-restart
+          is implemented_emulated_untested after inventory tests stopped counting
+          themselves as product tests.'
+      files:
+        update:
+        - tools/protocol_inventory.janet
         - docs/generated/protocol-inventory.yml
-    operations:
-      - description: "For each contrib source module, create a parity row with implemented/tested/unsupported status."
-        consequence: "Contrib completion, package-fu, MREPL, trace dialog, profiler, stickers, inspector, and indentation are auditable."
-      - description: "Replace generic stubs with tested best-effort Janet behavior or explicit unsupported errors."
-        consequence: "Frontend never silently succeeds with fake data."
+        - tasks.yml
+      tests:
+        red:
+        - Constrained CLOS/restart operations are not allowed to report plain implemented
+          without emulation/unsupported nuance.
+        green:
+        - Constraint-bearing operations include state_detail and evidence explaining
+          the state.
+  done_when:
+  - docs/generated/protocol-inventory.yml exists.
+  - Every operation has state, source_files, janet_files, tests, constraint, and constraint_reason
+    when applicable.
+  - Every non-none constraint id is documented in janet_design_constraints and audited
+    by tests.
+  - No operation may be silently omitted.
+  - Generated inventory is deterministic enough for clean diffs or explicitly sorted
+    by a tested comparator.
+- id: T02_spec_normalization_and_stale_doc_repair
+  title: Normalize protocol specs and repair stale protocol documentation
+  status: todo
+  files:
+    update:
+    - impl_spec.yml
+    - docs/missing_protocol.md
+    - docs/missing_protocol_definterface.md
+    - docs/generated/protocol-inventory.yml
+    - tasks.yml
+  operations:
+  - description: Replace raw CL lambda-list syntax in Janet sketches with a normalized
+      YAML operation schema.
+    consequence: Specs become machine-checkable and Janet-valid code generation is
+      possible.
+  - description: Fix malformed definterface sketches, including d(definterface operator-arglist...).
+    consequence: Spec parsing can fail only on real incompatibilities, not typos.
+  - description: Move already-implemented operations from missing_protocol.md to an
+      implemented/tested section.
+    consequence: Roadmap reflects verified state instead of stale omissions.
+  tests:
+    red:
+    - name: spec parser rejects malformed raw definterface sketches
+      command: JANET_PATH=$PWD janet test/protocol_inventory_tests.janet --case malformed-definterface-spec
+      expected_failure: Current docs contain invalid sketches and CL-only lambda list
+        markers.
+    green:
+    - name: normalized spec parses and preserves CL-origin metadata
+      command: JANET_PATH=$PWD janet test/protocol_inventory_tests.janet --case normalized-spec
+    aggregate:
+    - make test
+  implementation_slices:
+  - id: T02-1_normalized_operation_schema
+    status: todo
+    description: Define a YAML schema for operation name, origin kind, CL lambda-list
+      metadata, Janet arg model, state, constraint, and tests.
+    files:
+      create:
+      - docs/specs/operation-schema.yml
+      - test/spec_normalization_tests.janet
+      update:
+      - impl_spec.yml
+      - tools/protocol_inventory.janet
     tests:
       red:
-        - name: "inventory detects contrib operation without test or unsupported marker"
-          command: "JANET_PATH=$PWD janet test/protocol_inventory_tests.janet --case contrib-coverage"
+      - Spec normalization rejects raw executable CL lambda-list syntax such as &optional
+        in Janet code fields.
       green:
-        - name: "all contrib operations have test or unsupported marker"
-          command: "JANET_PATH=$PWD janet test/contrib_tests.janet && JANET_PATH=$PWD janet test/protocol_inventory_tests.janet --case contrib-coverage"
-      aggregate:
-        - "make test"
-
-  - id: T12_server_transport_channels_and_logging
-    title: "Harden TCP transport, channels, and structured logging"
+      - Spec normalization preserves CL-origin metadata while emitting Janet-safe
+        operation records.
+  - id: T02-2_reconcile_missing_protocol_docs
     status: todo
+    description: Generate or rewrite docs/missing_protocol.md from docs/generated/protocol-inventory.yml
+      so implemented/tested operations are not listed as missing.
     files:
       update:
-        - slynet/start.janet
-        - slynet/slynk.janet
-        - slynet/rpc.janet
-        - test/server_integration_tests.janet
-        - test/channel_dispatch_tests.janet
-      create:
-        - docs/dev-guides/remote-connections.md
-    operations:
-      - description: "Add structured log levels and timestamps with toggle-debug-on-slynk-error integration."
-        consequence: "Operational debugging is possible without polluting normal tests."
-      - description: "Replace arbitrary waits in channel/server tests with condition-based waits."
-        consequence: "CI failures reflect bugs, not timing guesses."
-      - description: "Document SSH tunnel/TLS guidance instead of pretending transport is secure by default."
-        consequence: "Remote use has explicit security posture."
+      - docs/missing_protocol.md
+      - docs/generated/protocol-inventory.yml
     tests:
       red:
-        - name: "channel lifecycle test fails when using event conditions unavailable today"
-          command: "JANET_PATH=$PWD janet test/channel_dispatch_tests.janet --case condition-wait-lifecycle"
+      - ping/simple-completions listed as implemented in inventory but missing in
+        docs fail reconciliation.
       green:
-        - name: "server/channel/logging focused tests pass"
-          command: "JANET_PATH=$PWD janet test/server_integration_tests.janet && JANET_PATH=$PWD janet test/channel_dispatch_tests.janet"
-      aggregate:
-        - "make test"
-
-  - id: T13_public_api_cli_packaging
-    title: "Expose stable Janet API and CLI packaging"
+      - No implemented_tested inventory operation appears in missing docs without
+        stale_doc_conflict metadata.
+  - id: T02-3_janet_forbidden_annotations
     status: todo
+    description: Promote constraint ids into explicit unsupported_by_janet_design
+      or emulated_not_equivalent annotations where implementation cannot be faithful.
     files:
       update:
-        - slynet/slynet-api.janet
-        - slynet/cli.janet
-        - slynet-client.janet
-        - project.janet
-        - bundle/init.janet
-        - bundle/info.jdn
-        - Makefile
-        - test/client_test.janet
-      create:
-        - slynet/api.janet
-        - examples/eval-inspect-breakpoint.janet
-    operations:
-      - description: "Provide start, stop, with-server, connect, eval, complete, inspect helpers."
-        consequence: "Users can embed SLYNET without registry plumbing."
-      - description: "Make janet -m slynet/start and package installation paths work under Janet module conventions."
-        consequence: "Release artifacts are runnable outside the repository checkout."
+      - docs/generated/protocol-inventory.yml
+      - tasks.yml
     tests:
       red:
-        - name: "API helper import and package execution fail before public API is complete"
-          command: "JANET_PATH=$PWD janet test/client_test.janet --case public-api"
+      - CLOS/MOP and restart operations with constraints but no explicit behavior
+        status fail.
       green:
-        - name: "public API and CLI smoke tests pass"
-          command: "JANET_PATH=$PWD janet test/client_test.janet && JANET_PATH=$PWD janet slynet-client.janet --help"
-      aggregate:
-        - "make all-tests"
-
-  - id: T14_emacs_lisp_frontend_slynet
-    title: "Implement operational Emacs Lisp frontend resembling SLY interaction mode"
+      - Every constrained operation has behavior_status and user-facing consequence
+        text.
+  done_when:
+  - Spec docs distinguish implemented, missing, emulated, and Janet-forbidden operations.
+  - Raw &optional/&rest appear only as CL-origin metadata, never as executable Janet
+    syntax.
+  - Stale protocol docs are generated or reconciled from the inventory instead of
+    maintained by hand.
+- id: T03_test_runner_noise_gate
+  title: Make verification output trustworthy and quiet
+  status: done
+  files:
+    update:
+    - mini-test.janet
+    - test-runner.janet
+    - test/run_tests.janet
+    - test-tools.janet
+  operations:
+  - description: Capture expected negative-test errors instead of printing stack noise
+      to stderr.
+    consequence: CI logs represent true failures; green runs are easy to audit.
+  - description: Gate debug prints behind an explicit SLYNET_TEST_VERBOSE or logger
+      setting.
+    consequence: Protocol traces remain available but no longer pollute normal test
+      output.
+  tests:
+    red:
+    - name: green test run emits stderr noise today
+      command: sh -lc 'JANET_PATH=$PWD janet test/run_tests.janet >/tmp/slynet.out
+        2>/tmp/slynet.err; test -s /tmp/slynet.err'
+      expected_failure: After fix, this command must fail because stderr should be
+        empty for green tests.
+    green:
+    - name: green test run has empty stderr and summary in stdout
+      command: sh -lc 'JANET_PATH=$PWD janet test/run_tests.janet >/tmp/slynet.out
+        2>/tmp/slynet.err; test ! -s /tmp/slynet.err; grep -q "133/133 asserts passed"
+        /tmp/slynet.out'
+    aggregate:
+    - make test
+  done_when:
+  - Normal test run exits 0 with empty stderr.
+  - Verbose test run still exposes protocol traces when requested.
+  verification_log:
+  - date: '2026-05-14'
+    phase: red
+    command: JANET_PATH=$PWD janet test/run_tests.janet >/tmp/slynet-t03.out 2>/tmp/slynet-t03.err;
+      test ! -s /tmp/slynet-t03.err
+    result: 'failed as intended: suite_status=0, stderr_bytes=6777'
+  - date: '2026-05-14'
+    phase: green
+    command: JANET_PATH=$PWD janet test/run_tests.janet >/tmp/slynet-t03-green3.out
+      2>/tmp/slynet-t03-green3.err; test ! -s /tmp/slynet-t03-green3.err
+    result: 'passed: suite_status=0, stderr_bytes=0'
+  implemented_details:
+  - Disabled synthetic stacktrace generation in mini-test current-loc-line because
+    Janet emits those synthetic frames to stderr.
+  - Gated SLYNET normal diagnostics and debug prints behind SLYNET_TEST_VERBOSE=1.
+  - Preserved actual uncaught test failure stacktrace printing in mini-test.janet.
+  emerging_followups:
+  - id: T03A_quiet_stdout_mode
+    status: done
+    description: Add an explicit compact test reporter mode that suppresses passing
+      assertion echo while preserving failure details.
+    files:
+      update:
+      - mini-test.janet
+      - test/run_tests.janet
+    tests:
+      red:
+      - JANET_PATH=$PWD janet test/run_tests.janet :report compact should emit summary
+        and failures only.
+      green:
+      - Default output remains current verbose test transcript; compact mode is concise
+        and stderr-clean.
+    verification_log:
+    - date: '2026-05-14'
+      phase: red
+      command: JANET_PATH=$PWD janet test/run_tests.janet :report compact >/tmp/slynet-t03a-red.out
+        2>/tmp/slynet-t03a-red.err; grep -q '======running test' /tmp/slynet-t03a-red.out
+      result: 'failed requirement as intended: status=0, stdout_lines=388, stderr_bytes=0,
+        banners still present'
+    - date: '2026-05-14'
+      phase: green_partial
+      command: JANET_PATH=$PWD janet test/run_tests.janet :report compact >/tmp/slynet-t03a-final.out
+        2>/tmp/slynet-t03a-final.err
+      result: 'passed compact gate subset: status=0, stdout_lines=4 after T03A-1,
+        stderr_bytes=0, summary present, no per-test banners'
+    implemented_details:
+    - Added :report compact CLI option parsing.
+    - Normalized compact report to disable per-test headers, passing assertion streaming,
+      and captured stdout display for passing tests.
+    - Reduced assertion message construction side effects by replacing several pp-based
+      message builders with string-based builders.
+    latest_verification:
+    - date: '2026-05-14'
+      task: T03A-1_remove_test_body_prints
+      command: JANET_PATH=$PWD janet test/run_tests.janet :report compact >/tmp/slynet-t03a1-green.out
+        2>/tmp/slynet-t03a1-green.err
+      result: 'passed: status=0, stdout_lines=4, stderr_bytes=0, summary only'
+    - date: '2026-05-14'
+      task: T03A-1_regression
+      command: bridge.yml:test
+      result: 'passed: 43 tests, 133/133 asserts, stderr empty'
+    - date: '2026-05-14'
+      task: T03A-2_add_runner_self_tests
+      command: bridge.yml:test
+      result: 'passed: 45 tests, 140/140 asserts, stderr empty'
+    - date: '2026-05-14'
+      task: T03A-2_compact_regression
+      command: JANET_PATH=$PWD janet test/run_tests.janet :report compact >/tmp/slynet-t03a2-compact.out
+        2>/tmp/slynet-t03a2-compact.err
+      result: 'passed: status=0, stdout_lines=4, stderr_bytes=0, no per-test banners'
+    remaining_subtasks:
+    - id: T03A-1_remove_test_body_prints
+      status: done
+      description: Eliminate or gate direct prints from test bodies and module initialization
+        so compact output becomes summary-only on success.
+      evidence: 'RED: compact mode emitted 90 stdout lines; GREEN: compact mode emits
+        only summary framing, stdout_lines=4, stderr_bytes=0.'
+    - id: T03A-2_add_runner_self_tests
+      status: done
+      description: Add focused self-tests for parse-cli-args and normalize-report-options
+        instead of relying only on shell probes. Implemented in test/runner_self_tests.janet.
+- id: T04_core_wire_protocol_and_message_codec
+  title: Harden SLY wire message read/write compatibility
+  status: in_progress
+  files:
+    update:
+    - slynet/rpc.janet
+    - slynet/print-for-emacs.janet
+    - test/message-tests.janet
+    create:
+    - test/fixtures/protocol/messages.edn
+  operations:
+  - description: Test and implement round-trip read-message/write-message for all
+      SLY message envelopes used by Emacs.
+    consequence: Frontend and backend can exchange deterministic S-expressions without
+      data loss.
+  - description: Add malformed frame tests for length prefix, EOF, invalid form, and
+      unsupported package metadata.
+    consequence: Transport errors become explicit protocol errors, not hangs.
+  tests:
+    red:
+    - name: unsupported or malformed message fixture fails with expected error shape
+      command: JANET_PATH=$PWD janet test/message-tests.janet --case malformed-frames
+    green:
+    - name: all message fixtures round-trip
+      command: JANET_PATH=$PWD janet test/message-tests.janet
+    aggregate:
+    - JANET_PATH=$PWD janet test/run_tests.janet
+  implementation_slices:
+  - id: T04-1_transport_frame_helpers
+    status: done
+    description: Add deterministic pure transport helpers for six-byte length-prefixed
+      payload frames and explicit fragmented/malformed buffer decoding.
+    files:
+      updated:
+      - slynet/rpc.janet
+      - test/message-tests.janet
+      - tasks.yml
+      created:
+      - docs/specs/cl-janet-equivalence-contracts.md
+      - phases.yml
+    verification_log:
+    - date: '2026-06-12'
+      phase: red
+      command: JANET_PATH=$PWD janet test/run_tests.janet :match 'transport frame'
+        :report compact
+      result: 'failed as intended: rpc/encode-packet and rpc/read-packet-from-buffer
+        did not exist.'
+    - date: '2026-06-12'
+      phase: green
+      command: JANET_PATH=$PWD janet test/run_tests.janet :match 'transport frame'
+        :report compact
+      result: 'passed as part of current 65-test suite: 216/216 assertions passed.'
+    remaining:
+    - Round-trip complete SLY message envelopes, not just raw payload frames.
+    - Add live socket EOF/error tests once real Emacs/Janet E2E harness is in place.
+- id: T05_core_eval_repl_package_model
+  title: Complete Janet eval/edit/MREPL behavior with explicit package limitations
+  status: todo
+  files:
+    update:
+    - slynet/slynk.janet
+    - slynet/contrib/slynet-mrepl.janet
+    - slynet/completion.janet
+    - test/project_core_tests.janet
+    - test/client_test.janet
+  operations:
+  - description: Define the Janet session model for current module/package, default
+      directory, history, and last values.
+    consequence: M-x slynet-eval and MREPL commands behave predictably across requests.
+  - description: Mark CL package-equivalence gaps in return metadata where Janet cannot
+      emulate package semantics.
+    consequence: Frontend can display accurate compatibility warnings.
+  tests:
+    red:
+    - name: set-package affects completion namespace but not impossible CL reader
+        semantics
+      command: JANET_PATH=$PWD janet test/project_core_tests.janet --case package-model-limit
+    green:
+    - name: interactive eval, pprint eval, value editing, MREPL create/eval return
+        SLY-shaped results
+      command: JANET_PATH=$PWD janet test/project_core_tests.janet --case eval-edit-mrepl
+    aggregate:
+    - make test
+- id: T06_compile_macroexpand_load_services
+  title: Implement compile, macroexpand, load, and require services as Janet-native
+    approximations
+  status: todo
+  files:
+    update:
+    - slynet/slynk.janet
+    - slynet/backend.janet
+    - test/project_core_tests.janet
+    create:
+    - test/fixtures/compile/good.janet
+    - test/fixtures/compile/bad.janet
+  operations:
+  - description: Implement compile-string-for-emacs and compile-file-for-emacs envelopes
+      with Janet diagnostics.
+    consequence: Emacs can jump to Janet compile errors using SLY-style notes when
+      locations exist.
+  - description: Implement macroexpand family for Janet forms where Janet exposes
+      macro expansion.
+    consequence: Users can inspect macro output from Emacs, with CL compiler-macro
+      functions marked unsupported.
+  - description: Implement load-file and slynk-require over Janet module loading.
+    consequence: Frontend can load project files and dependencies.
+  tests:
+    red:
+    - name: compile bad fixture returns SLY-shaped diagnostic, not raw exception
+      command: JANET_PATH=$PWD janet test/project_core_tests.janet --case compile-diagnostics
+    green:
+    - name: compile, macroexpand, load fixtures pass
+      command: JANET_PATH=$PWD janet test/project_core_tests.janet --case compile-macroexpand-load
+    aggregate:
+    - make test
+- id: T07_debugger_and_restart_emulation
+  title: Build a Janet-specific debugger protocol layer
+  status: todo
+  files:
+    update:
+    - slynet/slynk.janet
+    - slynet/backend.janet
+    - test/project_core_tests.janet
+    - test/server_integration_tests.janet
+    create:
+    - docs/modules/debugger/overview.md
+  operations:
+  - description: Return backtrace/debugger-info-for-emacs from Janet error stack data.
+    consequence: Emacs debugger buffer can display frames for Janet errors.
+  - description: Implement abort/continue as safe top-level control commands where
+      possible.
+    consequence: Frontend can recover from failed evals without killing the server.
+  - description: Mark CL restarts, frame stepping, return-from-frame, and condition-specific
+      restarts as emulated or unsupported when Janet cannot provide them.
+    consequence: Feature gaps are honest and testable.
+  tests:
+    red:
+    - name: raised Janet error produces no debugger protocol today or wrong shape
+      command: JANET_PATH=$PWD janet test/server_integration_tests.janet --case debugger-error-envelope
+    green:
+    - name: debugger info, abort, continue, unsupported restart metadata are returned
+      command: JANET_PATH=$PWD janet test/server_integration_tests.janet --case debugger-basic
+    aggregate:
+    - make test
+- id: T08_inspector_object_browser
+  title: Complete Janet inspector and fancy inspector behavior
+  status: todo
+  files:
+    update:
+    - slynet/gray.janet
+    - slynet/print-for-emacs.janet
+    - slynet/contrib/slynet-fancy-inspector.janet
+    - test/project_core_tests.janet
+    - test/contrib_tests.janet
+  operations:
+  - description: Implement inspector range/history/pop/next/reinspect/action/toggle
+      verbose for Janet values.
+    consequence: Emacs inspector can navigate tables, structs, arrays, tuples, functions,
+      fibers, and errors.
+  - description: Add cycle and truncation tests to prevent recursive printer crashes.
+    consequence: Large or cyclic Janet data remains inspectable.
+  tests:
+    red:
+    - name: inspector history/range/action fixtures fail before implementation
+      command: JANET_PATH=$PWD janet test/project_core_tests.janet --case inspector-navigation
+    green:
+    - name: inspector fixtures navigate and print correctly
+      command: JANET_PATH=$PWD janet test/project_core_tests.janet --case inspector-navigation
+    aggregate:
+    - make test
+- id: T09_xref_and_source_locations
+  title: Implement source-location and xref services for Janet modules
+  status: todo
+  files:
+    update:
+    - slynet/xref.janet
+    - slynet/slynk.janet
+    - test/project_core_tests.janet
+    create:
+    - test/fixtures/xref/sample_a.janet
+    - test/fixtures/xref/sample_b.janet
+  operations:
+  - description: Index Janet definitions, vars, macros, and module imports for fixtures
+      and loaded modules.
+    consequence: find-definitions-for-emacs and xrefs can jump to Janet source.
+  - description: Return explicit unavailable metadata where Janet runtime lacks exact
+      source position.
+    consequence: Frontend can distinguish not-found from not-supported.
+  tests:
+    red:
+    - name: xref fixture lookups fail or return missing metadata
+      command: JANET_PATH=$PWD janet test/project_core_tests.janet --case xref-fixtures
+    green:
+    - name: xref and source-location fixture lookups pass
+      command: JANET_PATH=$PWD janet test/project_core_tests.janet --case xref-fixtures
+    aggregate:
+    - make test
+- id: T10_completion_arglists_autodoc
+  title: Complete completion, arglist, describe, and autodoc behavior
+  status: todo
+  files:
+    update:
+    - slynet/completion.janet
+    - slynet/contrib/slynet-arglists.janet
+    - slynet/contrib/slynet-apropos.janet
+    - test/project_core_tests.janet
+    - test/contrib_tests.janet
+  operations:
+  - description: Extract Janet callable signatures and normalize them into SLY display
+      arglists.
+    consequence: Frontend can show minibuffer arglists/autodoc for functions and macros.
+  - description: Document CL lambda-list non-equivalence and use display-only markers
+      for optional/rest/key-like Janet idioms.
+    consequence: Users see useful signatures without false CL compatibility claims.
+  tests:
+    red:
+    - name: operator arglist fixtures expose missing or CL-invalid signature data
+      command: JANET_PATH=$PWD janet test/contrib_tests.janet --case arglists-autodoc
+    green:
+    - name: arglist, describe-function, apropos, autodoc fixtures pass
+      command: JANET_PATH=$PWD janet test/contrib_tests.janet --case arglists-autodoc
+    aggregate:
+    - make test
+- id: T11_contrib_protocol_parity
+  title: Prove contrib module parity or explicit non-equivalence
+  status: todo
+  files:
+    update:
+    - slynet/contrib/*.janet
+    - test/contrib_tests.janet
+    - docs/generated/protocol-inventory.yml
+  operations:
+  - description: For each contrib source module, create a parity row with implemented/tested/unsupported
+      status.
+    consequence: Contrib completion, package-fu, MREPL, trace dialog, profiler, stickers,
+      inspector, and indentation are auditable.
+  - description: Replace generic stubs with tested best-effort Janet behavior or explicit
+      unsupported errors.
+    consequence: Frontend never silently succeeds with fake data.
+  tests:
+    red:
+    - name: inventory detects contrib operation without test or unsupported marker
+      command: JANET_PATH=$PWD janet test/protocol_inventory_tests.janet --case contrib-coverage
+    green:
+    - name: all contrib operations have test or unsupported marker
+      command: JANET_PATH=$PWD janet test/contrib_tests.janet && JANET_PATH=$PWD janet
+        test/protocol_inventory_tests.janet --case contrib-coverage
+    aggregate:
+    - make test
+- id: T12_server_transport_channels_and_logging
+  title: Harden TCP transport, channels, and structured logging
+  status: todo
+  files:
+    update:
+    - slynet/start.janet
+    - slynet/slynk.janet
+    - slynet/rpc.janet
+    - test/server_integration_tests.janet
+    - test/channel_dispatch_tests.janet
+    create:
+    - docs/dev-guides/remote-connections.md
+  operations:
+  - description: Add structured log levels and timestamps with toggle-debug-on-slynk-error
+      integration.
+    consequence: Operational debugging is possible without polluting normal tests.
+  - description: Replace arbitrary waits in channel/server tests with condition-based
+      waits.
+    consequence: CI failures reflect bugs, not timing guesses.
+  - description: Document SSH tunnel/TLS guidance instead of pretending transport
+      is secure by default.
+    consequence: Remote use has explicit security posture.
+  tests:
+    red:
+    - name: channel lifecycle test fails when using event conditions unavailable today
+      command: JANET_PATH=$PWD janet test/channel_dispatch_tests.janet --case condition-wait-lifecycle
+    green:
+    - name: server/channel/logging focused tests pass
+      command: JANET_PATH=$PWD janet test/server_integration_tests.janet && JANET_PATH=$PWD
+        janet test/channel_dispatch_tests.janet
+    aggregate:
+    - make test
+- id: T13_public_api_cli_packaging
+  title: Expose stable Janet API and CLI packaging
+  status: todo
+  files:
+    update:
+    - slynet/slynet-api.janet
+    - slynet/cli.janet
+    - slynet-client.janet
+    - project.janet
+    - bundle/init.janet
+    - bundle/info.jdn
+    - Makefile
+    - test/client_test.janet
+    create:
+    - slynet/api.janet
+    - examples/eval-inspect-breakpoint.janet
+  operations:
+  - description: Provide start, stop, with-server, connect, eval, complete, inspect
+      helpers.
+    consequence: Users can embed SLYNET without registry plumbing.
+  - description: Make janet -m slynet/start and package installation paths work under
+      Janet module conventions.
+    consequence: Release artifacts are runnable outside the repository checkout.
+  tests:
+    red:
+    - name: API helper import and package execution fail before public API is complete
+      command: JANET_PATH=$PWD janet test/client_test.janet --case public-api
+    green:
+    - name: public API and CLI smoke tests pass
+      command: JANET_PATH=$PWD janet test/client_test.janet && JANET_PATH=$PWD janet
+        slynet-client.janet --help
+    aggregate:
+    - make all-tests
+- id: T14_emacs_lisp_frontend_slynet
+  title: Implement operational Emacs Lisp frontend resembling SLY interaction mode
+  status: in_progress
+  files:
+    create:
+    - emacs/slynet.el
+    - emacs/slynet-client.el
+    - emacs/slynet-repl.el
+    - emacs/slynet-inspector.el
+    - emacs/slynet-debugger.el
+    - emacs/slynet-autoloads.el
+    - test/emacs/slynet-frontend-tests.el
+    read:
+    - sly_source/sly.el
+    - sly_source/contrib/sly-mrepl.el
+    - sly_source/lib/sly-completion.el
+    - sly_source/lib/sly-messages.el
+  operations:
+  - description: 'Implement connection lifecycle: slynet-start, slynet-connect, slynet-disconnect,
+      process sentinel/filter.'
+    consequence: Emacs can start/connect to Janet SLYNET and maintain a session.
+  - description: 'Implement interaction commands: eval-last-expression, eval-region,
+      eval-buffer, compile/load file approximations, completion-at-point.'
+    consequence: Janet buffers get a SLY-like edit/eval loop.
+  - description: Implement REPL buffer with prompts, input history, package/module
+      display, async results, and channel output.
+    consequence: Users can use SLYNET like a practical Janet interaction mode.
+  - description: Implement inspector/debugger buffers that consume the Janet backend's
+      supported/emulated/unsupported metadata.
+    consequence: Frontend degrades honestly when CL-only features are unavailable.
+  - description: Keep frontend thin; do not fork all of sly.el unless a test proves
+      an adapter is insufficient.
+    consequence: YAGNI reduces maintenance and keeps Janet-specific behavior explicit.
+  tests:
+    red:
+    - name: ERT command tests fail because emacs/slynet.el does not exist
+      command: emacs -Q --batch -L emacs -l test/emacs/slynet-frontend-tests.el -f
+        ert-run-tests-batch-and-exit
+    green:
+    - name: ERT frontend tests pass against in-memory fake process and optional real
+        Janet smoke server
+      command: emacs -Q --batch -L emacs -l test/emacs/slynet-frontend-tests.el -f
+        ert-run-tests-batch-and-exit
+    aggregate:
+    - make test-emacs
+    - make all-tests
+    environment_gate: If Emacs is absent, make test-emacs must fail locally or skip
+      only in CI with an explicit SKIP reason.
+  implementation_slices:
+  - id: T14-1_emacs_client_codec
     status: in_progress
+    progress:
+    - date: '2026-06-12'
+      red: emacs -Q --batch -L emacs -l test/emacs/slynet-client-tests.el -f ert-run-tests-batch-and-exit
+        failed because slynet-client could not be loaded.
+      green: eldev test --expect 6 passed 6 Emacs ERT tests; make test-emacs delegates
+        to Eldev; bridge.yml:test loaded client_test and passed 59 tests / 192 assertions.
+      scope: Covers Eldev package setup, length-prefixed S-expression encoding, fragmented
+        and multi-message process-filter decoding, connection lifecycle, request construction
+        for interactive-eval-region, and disconnect; full completion/inspector/debugger/server
+        E2E remains in later T14/T15 slices.
+    description: Implement and ERT-test the Emacs-side length-prefixed S-expression
+      client codec against protocol fixtures.
     files:
       create:
-        - emacs/slynet.el
-        - emacs/slynet-client.el
-        - emacs/slynet-repl.el
-        - emacs/slynet-inspector.el
-        - emacs/slynet-debugger.el
-        - emacs/slynet-autoloads.el
-        - test/emacs/slynet-frontend-tests.el
-      read:
-        - sly_source/sly.el
-        - sly_source/contrib/sly-mrepl.el
-        - sly_source/lib/sly-completion.el
-        - sly_source/lib/sly-messages.el
-    operations:
-      - description: "Implement connection lifecycle: slynet-start, slynet-connect, slynet-disconnect, process sentinel/filter."
-        consequence: "Emacs can start/connect to Janet SLYNET and maintain a session."
-      - description: "Implement interaction commands: eval-last-expression, eval-region, eval-buffer, compile/load file approximations, completion-at-point."
-        consequence: "Janet buffers get a SLY-like edit/eval loop."
-      - description: "Implement REPL buffer with prompts, input history, package/module display, async results, and channel output."
-        consequence: "Users can use SLYNET like a practical Janet interaction mode."
-      - description: "Implement inspector/debugger buffers that consume the Janet backend's supported/emulated/unsupported metadata."
-        consequence: "Frontend degrades honestly when CL-only features are unavailable."
-      - description: "Keep frontend thin; do not fork all of sly.el unless a test proves an adapter is insufficient."
-        consequence: "YAGNI reduces maintenance and keeps Janet-specific behavior explicit."
+      - emacs/slynet-client.el
+      - test/emacs/slynet-client-tests.el
     tests:
       red:
-        - name: "ERT command tests fail because emacs/slynet.el does not exist"
-          command: "emacs -Q --batch -L emacs -l test/emacs/slynet-frontend-tests.el -f ert-run-tests-batch-and-exit"
+      - ERT fails because slynet-client-read-message/write-message do not exist.
       green:
-        - name: "ERT frontend tests pass against in-memory fake process and optional real Janet smoke server"
-          command: "emacs -Q --batch -L emacs -l test/emacs/slynet-frontend-tests.el -f ert-run-tests-batch-and-exit"
-      aggregate:
-        - "make test-emacs"
-        - "make all-tests"
-      environment_gate: "If Emacs is absent, make test-emacs must fail locally or skip only in CI with an explicit SKIP reason."
-    implementation_slices:
-      - id: T14-1_emacs_client_codec
-        status: in_progress
-        progress:
-          - date: "2026-06-12"
-            red: "emacs -Q --batch -L emacs -l test/emacs/slynet-client-tests.el -f ert-run-tests-batch-and-exit failed because slynet-client could not be loaded."
-            green: "eldev test --expect 6 passed 6 Emacs ERT tests; make test-emacs delegates to Eldev; bridge.yml:test loaded client_test and passed 59 tests / 192 assertions."
-            scope: "Covers Eldev package setup, length-prefixed S-expression encoding, fragmented and multi-message process-filter decoding, connection lifecycle, request construction for interactive-eval-region, and disconnect; full completion/inspector/debugger/server E2E remains in later T14/T15 slices."
-        description: "Implement and ERT-test the Emacs-side length-prefixed S-expression client codec against protocol fixtures."
-        files:
-          create:
-            - emacs/slynet-client.el
-            - test/emacs/slynet-client-tests.el
-        tests:
-          red:
-            - "ERT fails because slynet-client-read-message/write-message do not exist."
-          green:
-            - "eldev test --expect 6 verifies codec/filter, connect/disconnect, and interactive-eval-region request construction."
-      - id: T14-2_emacs_eval_completion_loop
-        status: todo
-        description: "Implement slynet-mode eval-region/eval-last-expression and completion-at-point backed by a fake process and optional real Janet server smoke test."
-        files:
-          create:
-            - emacs/slynet.el
-            - test/emacs/slynet-mode-tests.el
-        tests:
-          red:
-            - "ERT command tests fail before slynet-mode and process abstraction exist."
-          green:
-            - "Batch Emacs tests verify eval request construction, completion request construction, and response display."
-      - id: T14-3_emacs_repl_inspector_debugger_buffers
-        status: todo
-        description: "Implement REPL, inspector, and debugger buffers that render constraint/emulation metadata from the Janet backend."
-        files:
-          create:
-            - emacs/slynet-repl.el
-            - emacs/slynet-inspector.el
-            - emacs/slynet-debugger.el
-            - test/emacs/slynet-ui-tests.el
-        tests:
-          red:
-            - "ERT fixtures for constrained debugger/restart replies fail before UI handling exists."
-          green:
-            - "Buffers show values, inspector parts, and unsupported/emulated restart explanations without silent no-ops."
-    done_when:
-      - "M-x slynet-start launches or connects to a Janet server."
-      - "Eval, completion, REPL, inspector, and basic debugger-status flows work from Emacs."
-      - "Unsupported CL-only commands show clear messages, not silent no-ops."
-      - "Batch ERT tests cover client codec, eval/completion commands, and constrained debugger/inspector rendering."
-
-  - id: T15_ci_and_release_readiness
-    title: "Add CI, release checks, and migration documentation"
+      - eldev test --expect 6 verifies codec/filter, connect/disconnect, and interactive-eval-region
+        request construction.
+  - id: T14-2_emacs_eval_completion_loop
     status: todo
+    description: Implement slynet-mode eval-region/eval-last-expression and completion-at-point
+      backed by a fake process and optional real Janet server smoke test.
     files:
       create:
-        - .github/workflows/test.yml
-        - docs/dev-guides/migration-from-sly.md
-        - docs/dev-guides/release-checklist.md
-      update:
-        - README.md
-        - CHANGELOG.md
-        - Makefile
-    operations:
-      - description: "Run Janet tests, lint, inventory checks, and Emacs tests in CI."
-        consequence: "Regression gates run outside the developer machine."
-      - description: "Document Janet incompatibilities and migration workflow for Common Lisp SLY users."
-        consequence: "Users understand which SLY workflows are equivalent, emulated, or unsupported."
+      - emacs/slynet.el
+      - test/emacs/slynet-mode-tests.el
     tests:
       red:
-        - name: "CI workflow missing required commands"
-          command: "python3 - <<'PY'\nfrom pathlib import Path\np=Path('.github/workflows/test.yml')\nassert p.exists()\ntext=p.read_text()\nfor s in ['make test', 'make lint']:\n    assert s in text\nPY"
+      - ERT command tests fail before slynet-mode and process abstraction exist.
       green:
-        - name: "local release gate passes"
-          command: "make lint && make all-tests"
-      aggregate:
-        - "make all-tests"
-
+      - Batch Emacs tests verify eval request construction, completion request construction,
+        and response display.
+  - id: T14-3_emacs_repl_inspector_debugger_buffers
+    status: todo
+    description: Implement REPL, inspector, and debugger buffers that render constraint/emulation
+      metadata from the Janet backend.
+    files:
+      create:
+      - emacs/slynet-repl.el
+      - emacs/slynet-inspector.el
+      - emacs/slynet-debugger.el
+      - test/emacs/slynet-ui-tests.el
+    tests:
+      red:
+      - ERT fixtures for constrained debugger/restart replies fail before UI handling
+        exists.
+      green:
+      - Buffers show values, inspector parts, and unsupported/emulated restart explanations
+        without silent no-ops.
+  done_when:
+  - M-x slynet-start launches or connects to a Janet server.
+  - Eval, completion, REPL, inspector, and basic debugger-status flows work from Emacs.
+  - Unsupported CL-only commands show clear messages, not silent no-ops.
+  - Batch ERT tests cover client codec, eval/completion commands, and constrained
+    debugger/inspector rendering.
+- id: T15_ci_and_release_readiness
+  title: Add CI, release checks, and migration documentation
+  status: todo
+  files:
+    create:
+    - .github/workflows/test.yml
+    - docs/dev-guides/migration-from-sly.md
+    - docs/dev-guides/release-checklist.md
+    update:
+    - README.md
+    - CHANGELOG.md
+    - Makefile
+  operations:
+  - description: Run Janet tests, lint, inventory checks, and Emacs tests in CI.
+    consequence: Regression gates run outside the developer machine.
+  - description: Document Janet incompatibilities and migration workflow for Common
+      Lisp SLY users.
+    consequence: Users understand which SLY workflows are equivalent, emulated, or
+      unsupported.
+  tests:
+    red:
+    - name: CI workflow missing required commands
+      command: "python3 - <<'PY'\nfrom pathlib import Path\np=Path('.github/workflows/test.yml')\n\
+        assert p.exists()\ntext=p.read_text()\nfor s in ['make test', 'make lint']:\n\
+        \    assert s in text\nPY"
+    green:
+    - name: local release gate passes
+      command: make lint && make all-tests
+    aggregate:
+    - make all-tests
 iteration_policy:
   cadence:
-    - "Before each implementation task: write or update the focused failing test."
-    - "After each passing implementation: update docs/generated/protocol-inventory.yml and this tasks.yml."
-    - "After each task group: run aggregate tests and record the command/result in this file."
+  - 'Before each implementation task: write or update the focused failing test.'
+  - 'After each passing implementation: update docs/generated/protocol-inventory.yml
+    and this tasks.yml.'
+  - 'After each task group: run aggregate tests and record the command/result in this
+    file.'
   status_values:
-    - todo
-    - in_progress
-    - blocked
-    - done
-    - emulated_not_equivalent
-    - unsupported_by_janet_design
-  blocked_rule: >-
-    A blocked task must include the evidence command that revealed the block and either a Janet design constraint
-    or an external dependency such as Emacs/CI environment availability.
-
+  - todo
+  - in_progress
+  - blocked
+  - done
+  - emulated_not_equivalent
+  - unsupported_by_janet_design
+  blocked_rule: A blocked task must include the evidence command that revealed the
+    block and either a Janet design constraint or an external dependency such as Emacs/CI
+    environment availability.
 p10_spec_consolidation_support_matrix:
   status: done
-  date: "2026-06-13"
+  date: '2026-06-13'
   scope:
-    - split the equivalence overview into owning spec files
-    - add docs/specs/support-matrix.yml as the machine-readable phase/surface/constraint matrix
-    - add owning_spec and validation_stage to generated protocol inventory records
-    - require support_rationale for emulated, unsupported, and pending-design records
-    - keep phases.yml focused on status and verification while docs/specs owns conceptual contracts
+  - split the equivalence overview into owning spec files
+  - add docs/specs/support-matrix.yml as the machine-readable phase/surface/constraint
+    matrix
+  - add owning_spec and validation_stage to generated protocol inventory records
+  - require support_rationale for emulated, unsupported, and pending-design records
+  - keep phases.yml focused on status and verification while docs/specs owns conceptual
+    contracts
   files:
     created:
-      - docs/specs/README.md
-      - docs/specs/support-matrix.yml
-      - docs/specs/threading-execution-units.md
-      - docs/specs/debugger-condition-restarts.md
-      - docs/specs/inspector-xref-source-index.md
-      - docs/specs/emacs-client-contract.md
+    - docs/specs/README.md
+    - docs/specs/support-matrix.yml
+    - docs/specs/threading-execution-units.md
+    - docs/specs/debugger-condition-restarts.md
+    - docs/specs/inspector-xref-source-index.md
+    - docs/specs/emacs-client-contract.md
     updated:
-      - docs/specs/cl-janet-equivalence-contracts.md
-      - phases.yml
-      - tasks.yml
-      - tools/protocol_inventory.janet
-      - test/protocol_inventory_tests.janet
-      - docs/generated/protocol-inventory.yml
+    - docs/specs/cl-janet-equivalence-contracts.md
+    - phases.yml
+    - tasks.yml
+    - tools/protocol_inventory.janet
+    - test/protocol_inventory_tests.janet
+    - docs/generated/protocol-inventory.yml
   red:
-    - "JANET_PATH=$PWD janet test/run_tests.janet :match 'support matrix' :report compact failed on missing support-matrix.yml and spec index files."
-    - "JANET_PATH=$PWD janet test/run_tests.janet :match 'phase10' :report compact failed on missing owning_spec, validation_stage, and support_rationale inventory fields."
+  - JANET_PATH=$PWD janet test/run_tests.janet :match 'support matrix' :report compact
+    failed on missing support-matrix.yml and spec index files.
+  - JANET_PATH=$PWD janet test/run_tests.janet :match 'phase10' :report compact failed
+    on missing owning_spec, validation_stage, and support_rationale inventory fields.
   green:
-    - "JANET_PATH=$PWD janet test/run_tests.janet :match 'protocol inventory' :report compact passed 89 tests / 499 assertions; full verification pending final gate."
-
+  - JANET_PATH=$PWD janet test/run_tests.janet :match 'protocol inventory' :report
+    compact passed 89 tests / 499 assertions; full verification pending final gate.
 p17_protocol_interface_registry_alignment:
   status: done
-  date: "2026-06-13"
+  date: '2026-06-13'
   scope:
-    - add interface declarations for implemented extension RPCs introduced by the staged phases
-    - preserve declared-but-unimplemented historical SLY/SLYNK gaps as inventory signal
-    - document the registry alignment rule in docs/specs/protocol-interface-registry.md
+  - add interface declarations for implemented extension RPCs introduced by the staged
+    phases
+  - preserve declared-but-unimplemented historical SLY/SLYNK gaps as inventory signal
+  - document the registry alignment rule in docs/specs/protocol-interface-registry.md
   files:
     created:
-      - docs/specs/protocol-interface-registry.md
+    - docs/specs/protocol-interface-registry.md
     updated:
-      - slynet/interfaces.janet
-      - test/project_core_tests.janet
-      - phases.yml
-      - docs/specs/support-matrix.yml
-      - docs/specs/README.md
-      - docs/specs/cl-janet-equivalence-contracts.md
-      - tasks.yml
+    - slynet/interfaces.janet
+    - test/project_core_tests.janet
+    - phases.yml
+    - docs/specs/support-matrix.yml
+    - docs/specs/README.md
+    - docs/specs/cl-janet-equivalence-contracts.md
+    - tasks.yml
   red:
-    - "JANET_PATH=$PWD janet test/run_tests.janet :match 'implemented extension RPCs have interface declarations' :report compact failed 10 assertions on missing interface declarations."
+  - JANET_PATH=$PWD janet test/run_tests.janet :match 'implemented extension RPCs
+    have interface declarations' :report compact failed 10 assertions on missing interface
+    declarations.
   green:
-    - "JANET_PATH=$PWD janet test/run_tests.janet :match 'implemented extension RPCs have interface declarations' :report compact passed 92 tests / 560 assertions."
-
+  - JANET_PATH=$PWD janet test/run_tests.janet :match 'implemented extension RPCs
+    have interface declarations' :report compact passed 92 tests / 560 assertions.
 phase_18_20_progress:
-  date: "2026-06-13"
+  date: '2026-06-13'
   status: done
   phases:
-    - id: P18_source_index_v2
-      summary: "Added slynet/source_index.janet and made find-definitions-for-emacs prefer source-index v2 hits with spans/module/form-kind metadata."
-    - id: P19_inspector_ranges_history_actions
-      summary: "Added inspector-range, inspector-history, inspector-actions and reset inspector harness state per in-memory server."
-    - id: P20_debugger_restart_scopes
-      summary: "Added instrumented-eval-with-restarts and invoke-synthetic-restart with explicit synthetic/emulated and unsupported metadata."
+  - id: P18_source_index_v2
+    summary: Added slynet/source_index.janet and made find-definitions-for-emacs prefer
+      source-index v2 hits with spans/module/form-kind metadata.
+  - id: P19_inspector_ranges_history_actions
+    summary: Added inspector-range, inspector-history, inspector-actions and reset
+      inspector harness state per in-memory server.
+  - id: P20_debugger_restart_scopes
+    summary: Added instrumented-eval-with-restarts and invoke-synthetic-restart with
+      explicit synthetic/emulated and unsupported metadata.
   verification:
     red:
-      - "P18 failed first on missing slynet/source_index.janet."
-      - "P19 failed first on missing inspector range/history/action RPC behavior."
-      - "P20 failed first on missing instrumented restart-scope RPC behavior."
+    - P18 failed first on missing slynet/source_index.janet.
+    - P19 failed first on missing inspector range/history/action RPC behavior.
+    - P20 failed first on missing instrumented restart-scope RPC behavior.
     green:
-      - "bridge.yml:test passed 104 tests / 669 assertions."
+    - bridge.yml:test passed 104 tests / 669 assertions.
+phase_21_24_progress:
+  status: done
+  scope:
+  - P21_execution_unit_registry
+  - P22_diagnostics_source_integration
+  - P23_completion_docs_namespace
+  - P24_project_server_lifecycle
+  red: bridge.yml:test and focused Eldev tests failed first on missing P21-P24 backend/client
+    contracts.
+  green: bridge.yml:test passed 115 tests / 762 assertions; focused P22/P24 Eldev
+    tests passed 4/4.
+  notes:
+  - Execution units are Janet-native SLYNET records with cooperative interruption,
+    not CL hard threads.
+  - Diagnostics remain Janet diagnostic envelopes and explicitly do not claim CL compiler-note
+    equivalence.
+  - Namespace completion is source-index-backed and Janet-native, not CL package parity.
+  - Project lifecycle is a first observable-readiness/status/reconnect seam for daily
+    use.
+
+
+phase_25_28_progress:
+  status: done
+  phases:
+    - P25_trace_timing_runtime_utility
+    - P26_profile_protocol_browser
+    - P27_compile_macroexpand_snapshot_compatibility
+    - P28_namespace_browser_package_boundary
+  summary: >-
+    Implemented Janet-native trace/timing, wrapper-profile reporting, protocol/interface browsing,
+    SLYNK-shaped compile/macroexpand compatibility wrappers, project snapshot/session metadata,
+    namespace browsing, and explicit unsupported CL package-boundary responses.
+  verification:
+    red: "Initial P25-P28 tests failed on missing RPC behavior and tuple-shaped interface arg metadata."
+    green: "bridge.yml:test passed 122 tests / 842 assertions."

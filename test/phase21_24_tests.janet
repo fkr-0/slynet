@@ -9,6 +9,14 @@
     (set i (+ i 2)))
   out)
 
+
+(defn- array-contains? [items value]
+  (var found false)
+  (each item items
+    (when (= item value)
+      (set found true)))
+  found)
+
 (defn- find-plist-by-key [items key value]
   (var found nil)
   (each item items
@@ -31,7 +39,7 @@
     (assert= "phase21 long eval" (listed-unit :name))
     (assert= :managed (listed-unit :execution-unit-kind))
     (def interrupted (plist->table ((srv :emacs-rex!) (tuple 'interrupt-execution-unit unit-id) :core nil 2103)))
-    (assert= :interrupt-requested (interrupted :status))
+    (assert= :requested (interrupted :status))
     (assert= true (interrupted :interrupted))
     (assert= true ((srv :emacs-rex!) (tuple 'execution-unit-interrupted? unit-id) :core nil 2104))
     (def finished (plist->table ((srv :emacs-rex!) (tuple 'finish-execution-unit unit-id :completed "done") :core nil 2105)))
@@ -41,7 +49,7 @@
 (deftest p22-diagnostics-source-integration {:tags [:phase22 :diagnostics-source]}
   (tt/with-test-server [srv]
     (def compile-res (plist->table ((srv :emacs-rex!) '(compile-string-for-emacs "(defn") :core nil 2201)))
-    (def compile-diag (plist->table (((compile-res :diagnostics) 0))) )
+    (def compile-diag (plist->table ((compile-res :diagnostics) 0)) )
     (assert= false (compile-res :success))
     (assert= :janet-diagnostics (compile-diag :diagnostic-model))
     (assert= :compile-string (compile-diag :phase))
@@ -49,13 +57,13 @@
     (assert-true (number? (compile-diag :column)))
     (assert= :buffer (compile-diag :source-kind))
     (def runtime-res (plist->table ((srv :emacs-rex!) '(runtime-eval-diagnostics "(error \"boom\")" "test/fixtures/xref/sample_a.janet" 12 3) :core nil 2202)))
-    (def runtime-diag (plist->table (((runtime-res :diagnostics) 0))))
+    (def runtime-diag (plist->table ((runtime-res :diagnostics) 0)))
     (assert= false (runtime-res :success))
     (assert= :runtime-eval (runtime-diag :phase))
     (assert= "test/fixtures/xref/sample_a.janet" (runtime-diag :path))
     (assert= 12 (runtime-diag :line))
     (assert= 3 (runtime-diag :column))
-    (assert= :slynet-source-index-v2 (runtime-diag :source-index))
+    (assert= :slynet-diagnostic-source (runtime-diag :source-index))
     (def test-diag (plist->table ((srv :emacs-rex!) '(normalize-test-failure-diagnostic "fixture test" "bad" "test/fixtures/xref/sample_a.janet" 4) :core nil 2203)))
     (assert= :test-failure (test-diag :phase))
     (assert= "fixture test" (test-diag :test-name))))
@@ -64,7 +72,7 @@
   (tt/with-test-server [srv]
     (def result ((srv :emacs-rex!) '(simple-completions "p23-fixture" "core") :core nil 2301))
     (def names (result 0))
-    (assert-true (not (nil? (array/find names "p23-fixture-helper"))))
+    (assert-true (not (nil? (array-contains? names "p23-fixture-helper"))))
     (def candidates ((srv :emacs-rex!) '(source-index-completion-candidates "p23-fixture" "core") :core nil 2302))
     (def candidate (find-plist-by-key candidates :name "p23-fixture-helper"))
     (assert-not-nil candidate)

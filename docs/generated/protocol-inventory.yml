@@ -78,13 +78,15 @@ operations:
     kind: definterface
     frontend_surface: backend
     support_class: native
-    state: missing
-    state_detail: missing_unconstrained
+    state: implemented_untested
+    state_detail: implemented_native_untested
     validation_stage: P0_inventory_truth
     owning_spec: docs/specs/emacs-client-contract.md
     source_files:
       - sly_source/slynk/slynk-backend.lisp
-    janet_files: []
+    janet_files:
+      - slynet/slynk.janet
+      - slynet/interfaces.janet
     test_files: []
     constraint: none
     missing_protocol_state: not_listed_missing
@@ -288,13 +290,15 @@ operations:
     kind: definterface
     frontend_surface: compile_load
     support_class: emulated
-    state: missing
-    state_detail: missing_constrained
+    state: implemented_untested
+    state_detail: implemented_emulated_untested
     validation_stage: P13_diagnostics_ui
     owning_spec: docs/specs/emacs-client-contract.md
     source_files:
       - sly_source/slynk/slynk-backend.lisp
-    janet_files: []
+    janet_files:
+      - slynet/slynk.janet
+      - slynet/interfaces.janet
     test_files: []
     constraint: compiler_notes
     constraint_reason: Janet diagnostics differ from CL compiler note objects and source-note semantics.
@@ -356,13 +360,15 @@ operations:
     kind: definterface
     frontend_surface: namespace
     support_class: emulated
-    state: missing
-    state_detail: missing_constrained
+    state: implemented_untested
+    state_detail: implemented_emulated_untested
     validation_stage: P14_project_connection_management
     owning_spec: docs/specs/emacs-client-contract.md
     source_files:
       - sly_source/slynk/slynk-backend.lisp
-    janet_files: []
+    janet_files:
+      - slynet/slynk.janet
+      - slynet/interfaces.janet
     test_files: []
     constraint: cl_packages
     constraint_reason: Janet has modules/environments, not CL packages and reader package semantics.
@@ -373,13 +379,15 @@ operations:
     kind: definterface
     frontend_surface: compile_load
     support_class: emulated
-    state: missing
-    state_detail: missing_constrained
+    state: implemented_untested
+    state_detail: implemented_emulated_untested
     validation_stage: P13_diagnostics_ui
     owning_spec: docs/specs/emacs-client-contract.md
     source_files:
       - sly_source/slynk/slynk-backend.lisp
-    janet_files: []
+    janet_files:
+      - slynet/slynk.janet
+      - slynet/interfaces.janet
     test_files: []
     constraint: compiler_notes
     constraint_reason: Janet diagnostics differ from CL compiler note objects and source-note semantics.
@@ -390,13 +398,14 @@ operations:
     kind: definterface
     frontend_surface: backend
     support_class: native
-    state: missing
-    state_detail: missing_unconstrained
+    state: implemented_untested
+    state_detail: implemented_native_untested
     validation_stage: P0_inventory_truth
     owning_spec: docs/specs/emacs-client-contract.md
     source_files:
       - sly_source/slynk/slynk-backend.lisp
-    janet_files: []
+    janet_files:
+      - slynet/slynk.janet
     test_files: []
     constraint: none
     missing_protocol_state: not_listed_missing
@@ -442,13 +451,15 @@ operations:
     kind: definterface
     frontend_surface: namespace
     support_class: native
-    state: missing
-    state_detail: missing_unconstrained
+    state: implemented_untested
+    state_detail: implemented_native_untested
     validation_stage: P14_project_connection_management
     owning_spec: docs/specs/emacs-client-contract.md
     source_files:
       - sly_source/slynk/slynk-backend.lisp
-    janet_files: []
+    janet_files:
+      - slynet/slynk.janet
+      - slynet/interfaces.janet
     test_files: []
     constraint: none
     missing_protocol_state: not_listed_missing
@@ -532,6 +543,7 @@ operations:
     source_files:
       - sly_source/slynk/slynk.lisp
     janet_files:
+      - slynet/slynk.janet
       - slynet/interfaces.janet
       - slynet/proto/core.janet
     test_files: []
@@ -613,6 +625,7 @@ operations:
     source_files:
       - sly_source/slynk/slynk-backend.lisp
     janet_files:
+      - slynet/slynk.janet
       - slynet/backend.janet
       - slynet/interfaces.janet
     test_files: []
@@ -638,13 +651,14 @@ operations:
     kind: definterface
     frontend_surface: backend
     support_class: native
-    state: missing
-    state_detail: missing_unconstrained
+    state: implemented_untested
+    state_detail: implemented_native_untested
     validation_stage: P0_inventory_truth
     owning_spec: docs/specs/emacs-client-contract.md
     source_files:
       - sly_source/slynk/slynk-backend.lisp
-    janet_files: []
+    janet_files:
+      - slynet/slynk.janet
     test_files: []
     constraint: none
     missing_protocol_state: not_listed_missing
@@ -749,13 +763,14 @@ operations:
     kind: definterface
     frontend_surface: backend
     support_class: native
-    state: missing
-    state_detail: missing_unconstrained
+    state: implemented_untested
+    state_detail: implemented_native_untested
     validation_stage: P0_inventory_truth
     owning_spec: docs/specs/emacs-client-contract.md
     source_files:
       - sly_source/slynk/slynk-backend.lisp
-    janet_files: []
+    janet_files:
+      - slynet/slynk.janet
     test_files: []
     constraint: none
     missing_protocol_state: not_listed_missing
@@ -771,6 +786,7 @@ operations:
     source_files:
       - sly_source/slynk/slynk.lisp
     janet_files:
+      - slynet/slynk.janet
       - slynet/interfaces.janet
       - slynet/proto/core.janet
     test_files: []
@@ -783,13 +799,14 @@ operations:
     kind: definterface
     frontend_surface: backend
     support_class: native
-    state: missing
-    state_detail: missing_unconstrained
+    state: implemented_untested
+    state_detail: implemented_native_untested
     validation_stage: P0_inventory_truth
     owning_spec: docs/specs/emacs-client-contract.md
     source_files:
       - sly_source/slynk/slynk-backend.lisp
-    janet_files: []
+    janet_files:
+      - slynet/slynk.janet
     test_files: []
     constraint: none
     missing_protocol_state: not_listed_missing
@@ -836,13 +853,14 @@ operations:
     kind: definterface
     frontend_surface: backend
     support_class: native
-    state: missing
-    state_detail: missing_unconstrained
+    state: implemented_untested
+    state_detail: implemented_native_untested
     validation_stage: P0_inventory_truth
     owning_spec: docs/specs/emacs-client-contract.md
     source_files:
       - sly_source/slynk/slynk-backend.lisp
-    janet_files: []
+    janet_files:
+      - slynet/slynk.janet
     test_files: []
     constraint: none
     missing_protocol_state: not_listed_missing
@@ -916,13 +934,14 @@ operations:
     kind: definterface
     frontend_surface: backend
     support_class: native
-    state: missing
-    state_detail: missing_unconstrained
+    state: implemented_untested
+    state_detail: implemented_native_untested
     validation_stage: P0_inventory_truth
     owning_spec: docs/specs/emacs-client-contract.md
     source_files:
       - sly_source/slynk/slynk-backend.lisp
-    janet_files: []
+    janet_files:
+      - slynet/slynk.janet
     test_files: []
     constraint: none
     missing_protocol_state: not_listed_missing
@@ -973,13 +992,15 @@ operations:
     kind: definterface
     frontend_surface: backend
     support_class: native
-    state: missing
-    state_detail: missing_unconstrained
+    state: implemented_untested
+    state_detail: implemented_native_untested
     validation_stage: P0_inventory_truth
     owning_spec: docs/specs/emacs-client-contract.md
     source_files:
       - sly_source/slynk/slynk-backend.lisp
-    janet_files: []
+    janet_files:
+      - slynet/slynk.janet
+      - slynet/interfaces.janet
     test_files: []
     constraint: none
     missing_protocol_state: not_listed_missing
@@ -1155,13 +1176,14 @@ operations:
     kind: definterface
     frontend_surface: backend
     support_class: native
-    state: missing
-    state_detail: missing_unconstrained
+    state: implemented_untested
+    state_detail: implemented_native_untested
     validation_stage: P0_inventory_truth
     owning_spec: docs/specs/emacs-client-contract.md
     source_files:
       - sly_source/slynk/slynk-backend.lisp
-    janet_files: []
+    janet_files:
+      - slynet/slynk.janet
     test_files: []
     constraint: none
     missing_protocol_state: not_listed_missing
@@ -1274,6 +1296,7 @@ operations:
     source_files:
       - sly_source/slynk/slynk-backend.lisp
     janet_files:
+      - slynet/slynk.janet
       - slynet/backend.janet
       - slynet/interfaces.janet
     test_files: []
@@ -1338,13 +1361,15 @@ operations:
     kind: definterface
     frontend_surface: namespace
     support_class: emulated
-    state: missing
-    state_detail: missing_constrained
+    state: implemented_untested
+    state_detail: implemented_emulated_untested
     validation_stage: P14_project_connection_management
     owning_spec: docs/specs/emacs-client-contract.md
     source_files:
       - sly_source/slynk/slynk-backend.lisp
-    janet_files: []
+    janet_files:
+      - slynet/slynk.janet
+      - slynet/interfaces.janet
     test_files: []
     constraint: cl_packages
     constraint_reason: Janet has modules/environments, not CL packages and reader package semantics.
@@ -1916,13 +1941,15 @@ operations:
     kind: definterface
     frontend_surface: backend
     support_class: native
-    state: missing
-    state_detail: missing_unconstrained
+    state: implemented_untested
+    state_detail: implemented_native_untested
     validation_stage: P0_inventory_truth
     owning_spec: docs/specs/emacs-client-contract.md
     source_files:
       - sly_source/slynk/slynk-backend.lisp
-    janet_files: []
+    janet_files:
+      - slynet/slynk.janet
+      - slynet/interfaces.janet
     test_files: []
     constraint: none
     missing_protocol_state: not_listed_missing
@@ -2250,6 +2277,7 @@ operations:
     source_files:
       - sly_source/slynk/slynk.lisp
     janet_files:
+      - slynet/slynk.janet
       - slynet/interfaces.janet
       - slynet/proto/core.janet
     test_files: []
@@ -2532,6 +2560,7 @@ operations:
     source_files:
       - sly_source/slynk/slynk.lisp
     janet_files:
+      - slynet/slynk.janet
       - slynet/interfaces.janet
       - slynet/proto/core.janet
     test_files: []
@@ -2982,6 +3011,7 @@ operations:
     source_files:
       - sly_source/slynk/slynk.lisp
     janet_files:
+      - slynet/slynk.janet
       - slynet/interfaces.janet
       - slynet/proto/core.janet
     test_files: []
@@ -3170,6 +3200,7 @@ operations:
     source_files:
       - sly_source/slynk/slynk.lisp
     janet_files:
+      - slynet/slynk.janet
       - slynet/interfaces.janet
       - slynet/proto/core.janet
     test_files: []
@@ -3768,6 +3799,7 @@ operations:
     source_files:
       - sly_source/slynk/slynk.lisp
     janet_files:
+      - slynet/slynk.janet
       - slynet/interfaces.janet
       - slynet/proto/core.janet
     test_files: []

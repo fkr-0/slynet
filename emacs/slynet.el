@@ -663,6 +663,9 @@ When KEY is absent or nil, return DEFAULT or the empty string."
 (defvar slynet-named-connections (make-hash-table :test 'equal)
   "Named SLYNET connections keyed by project or user label.")
 
+(defvar slynet-project-servers (make-hash-table :test 'equal)
+  "Project server lifecycle records keyed by project name.")
+
 (defvar slynet-server-process nil
   "Process object for a SLYNET server started from Emacs, or nil.")
 
@@ -871,8 +874,9 @@ This interactive version buttonizes restart actions and frame source metadata."
       (insert "\n")
       (dolist (diagnostic diagnostics)
         (let ((start (point)))
-          (slynet--insert-line "%s %s:%s:%s %s"
+          (slynet--insert-line "%s %s %s:%s:%s %s"
                                (slynet--plist-string diagnostic :severity "info")
+                               (slynet--plist-string diagnostic :phase "unknown")
                                (slynet--plist-string diagnostic :path "<buffer>")
                                (or (plist-get diagnostic :line) 1)
                                (or (plist-get diagnostic :column) 0)
@@ -889,6 +893,16 @@ This interactive version buttonizes restart actions and frame source metadata."
     (slynet-client-send-rex-async
      (slynet--require-connection)
      (list 'compile-string-for-emacs string buffer-name)
+     (lambda (payload)
+       (slynet--render-diagnostics payload buffer)))
+    buffer))
+
+(defun slynet-runtime-error-diagnostics (string path line column)
+  "Evaluate STRING for diagnostics at PATH, LINE, and COLUMN, then render results."
+  (let ((buffer (slynet--display-buffer slynet-diagnostics-buffer-name #'slynet-diagnostics-mode)))
+    (slynet-client-send-rex-async
+     (slynet--require-connection)
+     (list 'runtime-error-diagnostics string path line column)
      (lambda (payload)
        (slynet--render-diagnostics payload buffer)))
     buffer))
@@ -916,6 +930,86 @@ This interactive version buttonizes restart actions and frame source metadata."
        (locate-dominating-file default-directory "jpm_tree")
        (locate-dominating-file default-directory ".git")
        default-directory)))
+
+(defun slynet--server-ready-p (host port)
+  "Return non-nil when a SLYNET server accepts TCP connections on HOST and PORT."
+  (condition-case nil
+      (let ((process (open-network-stream "slynet-ready-probe" nil host port)))
+        (when process
+          (delete-process process)
+          t))
+    (error nil)))
+
+(defun slynet--wait-for-server-ready (host port timeout-seconds)
+  "Wait until HOST and PORT are ready or TIMEOUT-SECONDS elapses."
+  (let ((deadline (+ (float-time) (or timeout-seconds 5.0)))
+        ready)
+    (while (and (not ready) (< (float-time) deadline))
+      (setq ready (slynet--server-ready-p host port))
+      (unless ready
+        (accept-process-output nil 0.05)))
+    ready))
+
+(cl-defun slynet-start-project-server (project-name &key command host port readiness-timeout)
+  "Start a SLYNET server for PROJECT-NAME using COMMAND, HOST, PORT, and READINESS-TIMEOUT."
+  (let* ((host (or host slynet-host))
+         (port (or port slynet-port))
+         (command (or command slynet-server-command))
+         (argv (if (listp command) command (list command)))
+         (program (car argv))
+         (args (cdr argv))
+         (process (apply #'start-process
+                         (format "slynet-%s" project-name)
+                         (format "*slynet-%s*" project-name)
+                         program args))
+         (ready (slynet--wait-for-server-ready host port (or readiness-timeout 5.0)))
+         (record (list :project project-name
+                       :process process
+                       :host host
+                       :port port
+                       :status (if ready :ready :starting)
+                       :ready ready)))
+    (puthash project-name record slynet-project-servers)
+    (setq slynet-server-process process)
+    process))
+
+(defun slynet-reconnect-project (project-name)
+  "Reconnect named PROJECT-NAME while preserving project identity."
+  (let* ((old (gethash project-name slynet-named-connections))
+         (host (or (and old (slynet-client-connection-host old)) slynet-last-host slynet-host))
+         (port (or (and old (slynet-client-connection-port old)) slynet-last-port slynet-port)))
+    (when old
+      (slynet-client-disconnect old))
+    (let ((connection (slynet-client-connect :host host :port port)))
+      (puthash project-name connection slynet-named-connections)
+      (setq slynet-current-connection connection)
+      connection)))
+
+(defun slynet-project-server-status (project-name)
+  "Render and return a status buffer for PROJECT-NAME."
+  (let* ((record (gethash project-name slynet-project-servers))
+         (process (plist-get record :process))
+         (live (and process (process-live-p process)))
+         (status (cond
+                  ((not record) "not-started")
+                  (live (substring (symbol-name (plist-get record :status)) 1))
+                  (t "stale")))
+         (buffer (get-buffer-create slynet-status-buffer-name)))
+    (with-current-buffer buffer
+      (let ((inhibit-read-only t))
+        (erase-buffer)
+        (special-mode)
+        (insert (format "Project: %s
+" project-name))
+        (insert (format "Status: %s
+" status))
+        (when record
+          (insert (format "Endpoint: %s:%s
+"
+                          (plist-get record :host)
+                          (plist-get record :port))))
+        (goto-char (point-min))))
+    buffer))
 
 (defun slynet-start-server (&optional command)
   "Start a SLYNET server process using COMMAND or `slynet-server-command'.
