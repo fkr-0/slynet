@@ -11,6 +11,7 @@
 (import ./gray)
 (import ./print-for-emacs :as print-for-emacs)
 (import ./xref)
+(import ./source_index :as source-index)
 (import ./completion :as completion)
 
 (var *standard-input* (dyn :in))
@@ -282,23 +283,139 @@
     (completion/flex-completions pat pkg)))
 
 
+(var *eval-source-map-counter* 0)
+(var *eval-source-maps* @{})
+(var *function-metadata-registry* @{})
+(var *instrumentation-event-counter* 0)
+(var *instrumentation-events* @[])
+
+(defn- normalize-runtime-name [name]
+  (cond
+    (symbol? name) (string name)
+    (keyword? name) (string/slice (string name) 1)
+    :else (string name)))
+
+(defn- source-snippet [code]
+  (let [text (string code)
+        lines (string/split "\n" text)]
+    (if (> (length lines) 0)
+      (string/trim (lines 0))
+      "")))
+
+(defn- register-eval-source-map! [code path line column]
+  (++ *eval-source-map-counter*)
+  (def eval-id (string "eval-source-" *eval-source-map-counter*))
+  (def context @[:eval-id eval-id
+                 :path path
+                 :line line
+                 :column column
+                 :snippet (source-snippet code)
+                 :source-aware-eval true
+                 :source-map-kind :source-aware-eval
+                 :runtime-instrumentation :source-aware-eval
+                 :support-class :workaround
+                 :stable-native-source-map false
+                 :source-index-fallback true])
+  (put *eval-source-maps* eval-id context)
+  context)
+
+(defn lookup-eval-source-map [eval-id]
+  (let [id (string eval-id)
+        context (get *eval-source-maps* id)]
+    (if context
+      context
+      @[:eval-id id
+        :status :missing
+        :support-class :workaround
+        :stable-native-source-map false])))
+
+(defn register-function-metadata [name arglist &opt doc source]
+  (default doc "")
+  (default source :user)
+  (def key (normalize-runtime-name name))
+  (def record @[:name key
+                :arglist arglist
+                :documentation (string doc)
+                :source :metadata-registry
+                :origin source
+                :support-class :workaround
+                :native-janet-metadata false
+                :cl-arglist-equivalent false])
+  (put *function-metadata-registry* key record)
+  record)
+
+(defn function-metadata [name]
+  (def key (normalize-runtime-name name))
+  (or (get *function-metadata-registry* key)
+      @[:name key
+        :arglist "(?)"
+        :documentation ""
+        :source :computed-fallback
+        :support-class :workaround
+        :native-janet-metadata false
+        :cl-arglist-equivalent false]))
+
+(defn list-function-metadata []
+  (def records @[])
+  (eachp [_ record] *function-metadata-registry*
+    (array/push records record))
+  records)
+
+(defn record-instrumentation-event [name phase &opt payload]
+  (default payload nil)
+  (++ *instrumentation-event-counter*)
+  (def event @[:id *instrumentation-event-counter*
+               :status :recorded
+               :name (normalize-runtime-name name)
+               :phase phase
+               :payload payload
+               :hook-kind :slynet-wrapper
+               :support-class :workaround
+               :native-instrumentation-hook false])
+  (array/push *instrumentation-events* event)
+  event)
+
+(defn list-instrumentation-events []
+  *instrumentation-events*)
+
+(defn clear-instrumentation-events []
+  (array/clear *instrumentation-events*)
+  (set *instrumentation-event-counter* 0)
+  @[:status :cleared :support-class :workaround])
+
+(defn debugger-control-capabilities []
+  @[:support-class :pending-design
+    :native-resumable-debugger false
+    :operations @[:step :next :out :continue]
+    :workaround :cooperative-checkpoints
+    :uses-janet-debug-primitives true
+    :cl-debugger-control-equivalent false])
+
+(defn debugger-control-action [operation &opt frame-index]
+  (default frame-index nil)
+  @[:status :unsupported
+    :operation operation
+    :frame-index frame-index
+    :support-class :pending-design
+    :native-resumable-debugger false
+    :cl-debugger-control-equivalent false
+    :reason "Janet exposes debug primitives, but SLYNET does not yet own a resumable debug session API."])
+
+
 (defn source-aware-eval [code path line column]
   (default code "")
   (default path "<buffer>")
   (default line 1)
   (default column 0)
   (let [forms (gray/read-forms-from-string code)
-        outputs @[]]
+        outputs @[]
+        source-context (register-eval-source-map! code path line column)]
     (each form forms
       (array/push outputs
                   (print-for-emacs/prin1-to-string-for-emacs (eval form) *package*)))
     @[:status :ok
       :values outputs
-      :source-context @[:path path
-                        :line line
-                        :column column
-                        :source-aware-eval true
-                        :runtime-instrumentation :source-aware-eval]]))
+      :source-context source-context]))
 
 (var *debugger-state* @{:active false :condition nil :condition-record nil :condition-type nil :thread nil :restarts @[] :frames @[] :level 0})
 
@@ -316,6 +433,89 @@
                                 restart))
       (++ index))
     scopes))
+
+
+
+
+(var *restart-scope-counter* 0)
+(var *active-restart-scopes* @[])
+
+(defn- restart-scope-record [restart-name callable safety explanation]
+  (++ *restart-scope-counter*)
+  @[:id (string "restart-scope-" *restart-scope-counter*)
+    :label (case restart-name
+             :continue-as-nil "Continue as nil"
+             :retry "Retry retained thunk"
+             :abort-to-repl "Abort to REPL"
+             (string restart-name))
+    :restart restart-name
+    :class :synthetic
+    :safety-level safety
+    :callable callable
+    :support-class :emulated
+    :cl-restart-equivalent false
+    :explanation explanation])
+
+(defn- eval-forms-to-strings [code]
+  (let [forms (gray/read-forms-from-string code)
+        outputs @[]]
+    (each form forms
+      (array/push outputs
+                  (print-for-emacs/prin1-to-string-for-emacs (eval form) *package*)))
+    outputs))
+
+(defn invoke-synthetic-restart [restart-name]
+  @[:status :unsupported
+    :restart restart-name
+    :support-class :unsupported
+    :callable false
+    :unsupported-reason "No active SLYNET-owned instrumented restart scope is available for this restart."])
+
+(defn instrumented-eval-with-restarts [code requested-restart &opt retry-code]
+  (default code "")
+  (default requested-restart :abort-to-repl)
+  (default retry-code code)
+  (let [scope (restart-scope-record requested-restart true :safe "Synthetic restart owned by a SLYNET instrumented evaluation wrapper.")]
+    (array/push *active-restart-scopes* scope)
+    (try
+      (let [values (eval-forms-to-strings code)]
+        @[:status :ok
+          :values values
+          :scope scope
+          :support-class :emulated
+          :cl-restart-equivalent false])
+      ([err fib]
+        (case requested-restart
+          :continue-as-nil
+          @[:status :continued
+            :restart :continue-as-nil
+            :value "nil"
+            :scope scope
+            :support-class :emulated
+            :cl-restart-equivalent false]
+
+          :retry
+          (let [values (eval-forms-to-strings retry-code)]
+            @[:status :retried
+              :restart :retry
+              :values values
+              :scope scope
+              :support-class :emulated
+              :cl-restart-equivalent false])
+
+          :abort-to-repl
+          @[:status :aborted
+            :restart :abort-to-repl
+            :scope scope
+            :support-class :emulated
+            :cl-restart-equivalent false]
+
+          @[:status :unsupported
+            :restart requested-restart
+            :scope scope
+            :support-class :unsupported
+            :callable false
+            :unsupported-reason "Requested restart is not implemented by this instrumented wrapper."])))))
 
 (defn interrupt-execution-unit [unit-id]
   @[:status :requested
@@ -344,9 +544,21 @@
   (inf/defimpl 'simple-completions simple-completions)
   (inf/defimpl 'flex-completions flex-completions)
   (inf/defimpl 'source-aware-eval source-aware-eval)
+  (inf/defimpl 'lookup-eval-source-map lookup-eval-source-map)
+  (inf/defimpl 'register-function-metadata register-function-metadata)
+  (inf/defimpl 'function-metadata function-metadata)
+  (inf/defimpl 'list-function-metadata list-function-metadata)
+  (inf/defimpl 'record-instrumentation-event record-instrumentation-event)
+  (inf/defimpl 'list-instrumentation-events list-instrumentation-events)
+  (inf/defimpl 'clear-instrumentation-events clear-instrumentation-events)
+  (inf/defimpl 'debugger-control-capabilities debugger-control-capabilities)
+  (inf/defimpl 'debugger-control-action debugger-control-action)
   (inf/defimpl 'list-restart-scopes list-restart-scopes)
+  (inf/defimpl 'instrumented-eval-with-restarts instrumented-eval-with-restarts)
+  (inf/defimpl 'invoke-synthetic-restart invoke-synthetic-restart)
   (inf/defimpl 'interrupt-execution-unit interrupt-execution-unit)
-  (inf/defimpl 'debugger-step-checkpoint debugger-step-checkpoint))
+  (inf/defimpl 'debugger-step-checkpoint debugger-step-checkpoint)
+)
 
 
 (defn- callable-symbol [thing]
@@ -608,32 +820,29 @@
 
 (defn find-definitions-for-emacs [thing]
   (let [sym-name (if (symbol? thing) (string thing) (string thing))
-        exact-hits @[]
-        other-hits @[]
-        seen @{}]
-    (defn push-hit! [hit]
-      (let [key (string (hit 1) ":" (hit 3) ":" (hit 5))
-            snippet (or (get hit 17) "")]
-        (when (nil? (get seen key))
-          (put seen key true)
-          (if (not (nil? (string/find sym-name snippet)))
-            (array/push exact-hits hit)
-            (array/push other-hits hit)))))
-    (each path (xref-candidate-files)
-      (each hit (find-definitions-in-file path sym-name)
-        (push-hit! hit)))
-    (when (and (= 0 (length exact-hits)) (> (length other-hits) 0))
-      (array/push exact-hits
-                  (make-xref-hit sym-name
-                                 (join-path (os/cwd) "slynet/slynk.janet")
-                                 1
-                                 (string "(defn " sym-name " [& args])"))))
-    (when (and (= 0 (length exact-hits)) (= 0 (length other-hits)))
-      (push-hit! (make-xref-hit sym-name
-                                (join-path (os/cwd) "slynet/slynk.janet")
-                                1
-                                (string "(defn " sym-name " [& args])"))))
-    (array/concat exact-hits other-hits)))
+        v2-hits (source-index/find-definition-hits (os/cwd) sym-name)]
+    (if (> (length v2-hits) 0)
+      v2-hits
+      (let [exact-hits @[]
+            other-hits @[]
+            seen @{}]
+        (defn push-hit! [hit]
+          (let [key (string (hit 1) ":" (hit 3) ":" (hit 5))
+                snippet (or (get hit 17) "")]
+            (when (nil? (get seen key))
+              (put seen key true)
+              (if (not (nil? (string/find sym-name snippet)))
+                (array/push exact-hits hit)
+                (array/push other-hits hit)))))
+        (each path (xref-candidate-files)
+          (each hit (find-definitions-in-file path sym-name)
+            (push-hit! hit)))
+        (when (and (= 0 (length exact-hits)) (= 0 (length other-hits)))
+          (push-hit! (make-xref-hit sym-name
+                                    (join-path (os/cwd) "slynet/slynk.janet")
+                                    1
+                                    (string "(defn " sym-name " [& args])"))))
+        (array/concat exact-hits other-hits)))))
 
 (defn- inspector-title [obj]
   (let [printed (print-for-emacs/prin1-to-string-for-emacs obj *package*)]
@@ -741,6 +950,95 @@
                                           (string idx))]
     (array/push *inspector-stack* child-entry)
     (render-inspector child-entry)))
+
+(defn- current-inspector-entry []
+  (when (> (length *inspector-stack*) 0)
+    (get *inspector-stack* (- (length *inspector-stack*) 1))))
+
+(defn- inspector-part-value [obj idx]
+  (cond
+    (array? obj) (get obj idx)
+    (tuple? obj) (get obj idx)
+    (table? obj) (let [entries (pairs obj)]
+                   (when (and (>= idx 0) (< idx (length entries)))
+                     (get entries idx)))
+    :else nil))
+
+(defn- inspector-part-label [obj idx value]
+  (cond
+    (array? obj) (string "[" idx "]")
+    (tuple? obj) (string "(" idx ")")
+    (table? obj) (print-for-emacs/prin1-to-string-for-emacs (value 0) *package*)
+    :else (string idx)))
+
+(defn- inspector-part-summary [obj value]
+  (if (and (table? obj) (indexed? value) (= 2 (length value)))
+    (print-for-emacs/prin1-to-string-for-emacs (value 1) *package*)
+    (print-for-emacs/prin1-to-string-for-emacs value *package*)))
+
+(defn- inspector-part-plist [obj idx]
+  (let [value (inspector-part-value obj idx)]
+    @[:index idx
+      :label (inspector-part-label obj idx value)
+      :summary (inspector-part-summary obj value)
+      :support-class :native]))
+
+(defn inspector-range [start end]
+  (def idx-start (if (number? start) start 0))
+  (def idx-end (if (number? end) end idx-start))
+  (def entry (current-inspector-entry))
+  (unless entry (error "inspector is empty"))
+  (def obj (inspector-entry-object entry))
+  (def total (inspector-parts-count obj))
+  (def bounded-start (max 0 (min idx-start total)))
+  (def bounded-end (max bounded-start (min idx-end total)))
+  (def parts @[])
+  (for i bounded-start bounded-end
+    (array/push parts (inspector-part-plist obj i)))
+  @[:start bounded-start
+    :end bounded-end
+    :total total
+    :parts parts
+    :support-class :native
+    :range-model :slynet-inspector-range])
+
+(defn inspector-history []
+  (def out @[])
+  (def current-index (- (length *inspector-stack*) 1))
+  (var start-index 0)
+  # Return the active top-level inspection session, not stale entries from
+  # earlier tests or prior user inspections in the same backend process.
+  (for i 0 (length *inspector-stack*)
+    (let [entry (*inspector-stack* i)]
+      (when (nil? (entry :parent-object-id))
+        (set start-index i))))
+  (for i start-index (length *inspector-stack*)
+    (let [entry (*inspector-stack* i)
+          obj (inspector-entry-object entry)]
+      (array/push out @[:object-id (entry :object-id)
+                        :parent-object-id (entry :parent-object-id)
+                        :part-key (entry :part-key)
+                        :title (inspector-title obj)
+                        :type (type obj)
+                        :index (- i start-index)
+                        :current (= i current-index)
+                        :support-class :native])))
+  out)
+
+(defn inspector-actions []
+  @[@[:action-id :copy-value
+      :label "Copy printed value"
+      :support-class :native
+      :safety-level :safe
+      :callable true]
+    @[:action-id :edit-value
+      :label "Edit inspected value"
+      :support-class :unsupported
+      :safety-level :unsafe
+      :callable false
+      :unsupported-reason "Editing arbitrary Janet values is not yet a safe SLYNET inspector action."]])
+
+
 
 (defn- parse-form-or-string [thing]
   (cond
@@ -891,9 +1189,26 @@
   (def locals @[])
   (when (table? (stack-frame :locals))
     (eachp [name value] (stack-frame :locals)
-      (array/push locals @{:name (string name) :value (string value)})))
+      (array/push locals @{:name (string name)
+                           :value (string value)
+                           :source :janet-local
+                           :support-class :workaround
+                           :cl-lexical-equivalent false})))
+  (when (indexed? (stack-frame :slots))
+    (var idx 0)
+    (each slot (stack-frame :slots)
+      (array/push locals @{:name (string "$slot-" idx)
+                           :value (string slot)
+                           :source :janet-slot
+                           :support-class :workaround
+                           :cl-lexical-equivalent false})
+      (++ idx)))
   (when (= 0 (length locals))
-    (array/push locals @{:name "*package*" :value (or (*package* :name) "core")}))
+    (array/push locals @{:name "*package*"
+                         :value (or (*package* :name) "core")
+                         :source :slynet-fallback
+                         :support-class :workaround
+                         :cl-lexical-equivalent false}))
   locals)
 
 (defn- make-native-debugger-frame [idx stack-frame status]
@@ -905,6 +1220,10 @@
         :callable callable
         :janet-frame true
         :locals (frame-locals-from-janet stack-frame)
+        :locals-support-class :workaround
+        :cl-lexical-locals-equivalent false
+        :janet-slots-count (length (or (stack-frame :slots) @[]))
+        :locals-source :janet-debug-stack
         :location location})))
 
 (defn- native-debugger-frames [fib]
@@ -1174,6 +1493,9 @@
   (inf/defimpl 'inspector-nth-part inspector-nth-part)
   (inf/defimpl 'inspector-pop inspector-pop)
   (inf/defimpl 'inspector-reinspect inspector-reinspect)
+  (inf/defimpl 'inspector-range inspector-range)
+  (inf/defimpl 'inspector-history inspector-history)
+  (inf/defimpl 'inspector-actions inspector-actions)
   (inf/defimpl 'compile-file-for-emacs compile-file-for-emacs)
   (inf/defimpl 'load-file load-file)
   (inf/defimpl 'slynk-require slynk-require)
@@ -1191,6 +1513,18 @@
   (inf/defimpl 'macroexpand-1-for-emacs macroexpand-1-for-emacs)
   (inf/defimpl 'macroexpand-all-for-emacs macroexpand-all-for-emacs)
   (inf/defimpl 'compile-string-for-emacs compile-string-for-emacs)
+  (inf/defimpl 'source-aware-eval source-aware-eval)
+  (inf/defimpl 'lookup-eval-source-map lookup-eval-source-map)
+  (inf/defimpl 'register-function-metadata register-function-metadata)
+  (inf/defimpl 'function-metadata function-metadata)
+  (inf/defimpl 'list-function-metadata list-function-metadata)
+  (inf/defimpl 'record-instrumentation-event record-instrumentation-event)
+  (inf/defimpl 'list-instrumentation-events list-instrumentation-events)
+  (inf/defimpl 'clear-instrumentation-events clear-instrumentation-events)
+  (inf/defimpl 'debugger-control-capabilities debugger-control-capabilities)
+  (inf/defimpl 'debugger-control-action debugger-control-action)
+  (inf/defimpl 'instrumented-eval-with-restarts instrumented-eval-with-restarts)
+  (inf/defimpl 'invoke-synthetic-restart invoke-synthetic-restart)
   (inf/slynet-sync-rpc-registries!)
   true)
 

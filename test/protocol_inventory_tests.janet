@@ -152,6 +152,12 @@
 (defn- gap-analysis-text []
   (slurp "docs/specs/slynk-backend-gap-analysis.md"))
 
+(defn- janet-extension-candidates-text []
+  (slurp "docs/specs/janet-extension-candidates.md"))
+
+(defn- emacs-client-contract-text []
+  (slurp "docs/specs/emacs-client-contract.md"))
+
 (defn- yaml-file-parses? [path]
   (= 0 (os/execute ["python3" "-c" "import sys, yaml; yaml.safe_load(open(sys.argv[1]))" path] :p)))
 
@@ -236,6 +242,71 @@
            (assert-true (contains text token) (string "gap analysis mentions " token)))
          (assert-true (contains text "The acceptable claim") "gap analysis states release claim boundary")
          (assert-true (contains text "The unacceptable claim") "gap analysis states non-goal boundary"))})
+
+
+(register-test
+  {:name "janet extension candidates record workaround extension and acceptance rules"
+   :tags [:inventory :phase10 :spec-index :janet-extension-candidates]
+   :fn (fn []
+         (def index (spec-index-text))
+         (def overview (slurp "docs/specs/cl-janet-equivalence-contracts.md"))
+         (def gap (gap-analysis-text))
+         (def matrix (support-matrix-text))
+         (def text (janet-extension-candidates-text))
+         (assert-true (contains index "janet-extension-candidates.md") "spec index references Janet extension candidates")
+         (assert-true (contains overview "janet-extension-candidates.md") "overview references Janet extension candidates")
+         (assert-true (contains gap "janet-extension-candidates.md") "gap analysis references detailed extension candidate contract")
+         (assert-true (contains matrix "janet_extension_candidates:") "support matrix has machine-readable candidate section")
+         (each candidate @["stable_eval_source_maps"
+                           "rich_debug_frame_locals"
+                           "resumable_debugger_control_api"
+                           "structured_signal_metadata"
+                           "function_arg_metadata"
+                           "instrumentation_hooks"]
+           (assert-true (contains text candidate) (string "candidate spec mentions " candidate))
+           (assert-true (contains matrix candidate) (string "support matrix mentions " candidate)))
+         (each token @["Current workaround"
+                       "Potential Janet extension"
+                       "SLYNET acceptance rule"
+                       "source-index fallback and snippets"
+                       "debug-stack slots"
+                       "condition records and diagnostic envelopes"
+                       "arglist cache"
+                       "wrapper and recording layer"
+                       "pending-design"
+                       "SLYNET workaround facade"
+                       "Janet runtime extension"
+                       "not the same thing as extending Janet"
+                       "must mark support as"
+                       "must not invent lexical local names"
+                       "must not hide a Janet substrate gap"]
+           (assert-true (contains text token) (string "candidate spec preserves " token))))})
+
+
+(register-test
+  {:name "emacs client contract documents daily-use package surface"
+   :tags [:inventory :phase14 :emacs-client :daily-use]
+   :fn (fn []
+         (def text (emacs-client-contract-text))
+         (def readme (slurp "README.md"))
+         (each token @["Daily-use package contract"
+                       "slynet-mode"
+                       "slynet-command-map"
+                       "slynet-menu"
+                       "slynet-status"
+                       "slynet-health"
+                       "slynet-reconnect"
+                       "slynet-quit"
+                       "live"
+                       "stale"
+                       "off"]
+           (assert-true (contains text token) (string "Emacs client contract mentions " token)))
+         (each token @["Emacs quick start"
+                       "slynet-mode"
+                       "C-c C-s h"
+                       "C-c C-s q"
+                       "support matrix"]
+           (assert-true (contains readme token) (string "README mentions " token))))})
 
 (register-test
   {:name "protocol inventory records validation stage and owning spec"

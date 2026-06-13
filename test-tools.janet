@@ -18,7 +18,13 @@
 
   (ensure-send-handler)
   (def prev-debug slynk/*slynk-debug-p*)
+  (def prev-inspector-stack slynk/*inspector-stack*)
+  (def prev-inspector-counter slynk/*inspector-counter*)
+  (def prev-inspector-object-counter slynk/*inspector-object-counter*)
   (set slynk/*slynk-debug-p* true)
+  (set slynk/*inspector-stack* @[])
+  (set slynk/*inspector-counter* 0)
+  (set slynk/*inspector-object-counter* 0)
 
   (def ch (ev/chan 32))
   (var replies @[])
@@ -69,6 +75,9 @@
   {:conn conn
    :dispose (fn []
               (set slynk/*slynk-debug-p* prev-debug)
+              (set slynk/*inspector-stack* prev-inspector-stack)
+              (set slynk/*inspector-counter* prev-inspector-counter)
+              (set slynk/*inspector-object-counter* prev-inspector-object-counter)
               (when prev-send (rpc/set-send-handler prev-send))
               (when prev-resolve (rpc/set-conn-resolver prev-resolve)))
    :chan ch

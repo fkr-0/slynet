@@ -1254,3 +1254,44 @@ p10_spec_consolidation_support_matrix:
     - "JANET_PATH=$PWD janet test/run_tests.janet :match 'phase10' :report compact failed on missing owning_spec, validation_stage, and support_rationale inventory fields."
   green:
     - "JANET_PATH=$PWD janet test/run_tests.janet :match 'protocol inventory' :report compact passed 89 tests / 499 assertions; full verification pending final gate."
+
+p17_protocol_interface_registry_alignment:
+  status: done
+  date: "2026-06-13"
+  scope:
+    - add interface declarations for implemented extension RPCs introduced by the staged phases
+    - preserve declared-but-unimplemented historical SLY/SLYNK gaps as inventory signal
+    - document the registry alignment rule in docs/specs/protocol-interface-registry.md
+  files:
+    created:
+      - docs/specs/protocol-interface-registry.md
+    updated:
+      - slynet/interfaces.janet
+      - test/project_core_tests.janet
+      - phases.yml
+      - docs/specs/support-matrix.yml
+      - docs/specs/README.md
+      - docs/specs/cl-janet-equivalence-contracts.md
+      - tasks.yml
+  red:
+    - "JANET_PATH=$PWD janet test/run_tests.janet :match 'implemented extension RPCs have interface declarations' :report compact failed 10 assertions on missing interface declarations."
+  green:
+    - "JANET_PATH=$PWD janet test/run_tests.janet :match 'implemented extension RPCs have interface declarations' :report compact passed 92 tests / 560 assertions."
+
+phase_18_20_progress:
+  date: "2026-06-13"
+  status: done
+  phases:
+    - id: P18_source_index_v2
+      summary: "Added slynet/source_index.janet and made find-definitions-for-emacs prefer source-index v2 hits with spans/module/form-kind metadata."
+    - id: P19_inspector_ranges_history_actions
+      summary: "Added inspector-range, inspector-history, inspector-actions and reset inspector harness state per in-memory server."
+    - id: P20_debugger_restart_scopes
+      summary: "Added instrumented-eval-with-restarts and invoke-synthetic-restart with explicit synthetic/emulated and unsupported metadata."
+  verification:
+    red:
+      - "P18 failed first on missing slynet/source_index.janet."
+      - "P19 failed first on missing inspector range/history/action RPC behavior."
+      - "P20 failed first on missing instrumented restart-scope RPC behavior."
+    green:
+      - "bridge.yml:test passed 104 tests / 669 assertions."

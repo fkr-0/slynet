@@ -192,6 +192,7 @@ operations:
     source_files:
       - sly_source/slynk/slynk.lisp
     janet_files:
+      - slynet/slynk.janet
       - slynet/interfaces.janet
       - slynet/contrib/slynet-fancy-inspector.janet
     test_files: []
@@ -3713,6 +3714,7 @@ operations:
     source_files:
       - sly_source/slynk/slynk.lisp
     janet_files:
+      - slynet/slynk.janet
       - slynet/interfaces.janet
       - slynet/contrib/slynet-fancy-inspector.janet
     test_files: []
@@ -3901,6 +3903,7 @@ operations:
       - sly_source/slynk/slynk-backend.lisp
     janet_files:
       - slynet/slynk.janet
+      - slynet/interfaces.janet
     test_files:
       - test/project_core_tests.janet
     constraint: none
@@ -4056,15 +4059,17 @@ operations:
     kind: definterface
     frontend_surface: compile_load
     support_class: native
-    state: implemented_untested
-    state_detail: implemented_native_untested
+    state: implemented
+    state_detail: implemented_native_tested
     validation_stage: P13_diagnostics_ui
     owning_spec: docs/specs/emacs-client-contract.md
     source_files:
       - sly_source/slynk/slynk-backend.lisp
     janet_files:
       - slynet/slynk.janet
-    test_files: []
+      - slynet/interfaces.janet
+    test_files:
+      - test/project_core_tests.janet
     constraint: none
     missing_protocol_state: not_listed_missing
     missing_protocol_files: []

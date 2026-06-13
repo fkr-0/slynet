@@ -56,5 +56,52 @@
     (should (equal deleted (list fake-process)))
     (should-not slynet-current-connection)))
 
+
+(ert-deftest slynet-status-and-health-render-connection-state ()
+  (slynet-test-with-fake-transport
+    (let ((connection (slynet-connect :host "127.0.0.1" :port 4999)))
+      (puthash 99 #'ignore (slynet-client-connection-pending-requests connection))
+      (let ((status (slynet-connection-status)))
+        (should (plist-get status :connected))
+        (should (plist-get status :live))
+        (should (equal (plist-get status :host) "127.0.0.1"))
+        (should (= (plist-get status :port) 4999))
+        (should (= (plist-get status :pending-requests) 1))
+        (should (string-match-p "SLYNET:live" (slynet--status-label))))
+      (let ((buffer (slynet-health)))
+        (with-current-buffer buffer
+          (should (search-forward "SLYNET Health" nil t))
+          (should (search-forward "State: live" nil t))
+          (should (search-forward "Endpoint: 127.0.0.1:4999" nil t))
+          (should (search-forward "Pending requests: 1" nil t)))))))
+
+(ert-deftest slynet-reconnect-uses-last-endpoint-when-current-connection-is-gone ()
+  (slynet-test-with-fake-transport
+    (setq slynet-current-connection nil
+          slynet-last-host "localhost"
+          slynet-last-port 4777)
+    (let ((connection (slynet-reconnect)))
+      (should (slynet-client-connection-p connection))
+      (should (eq slynet-current-connection connection))
+      (should (equal opened '("slynet" nil "localhost" 4777))))))
+
+(ert-deftest slynet-mode-exposes-sane-prefix-map-and-quit-lifecycle ()
+  (slynet-test-with-fake-transport
+    (let ((connection (slynet-connect :host "127.0.0.1" :port 4005))
+          (server-deleted nil)
+          (fake-server (list :fake-server)))
+      (should (eq (lookup-key slynet-mode-map (kbd "C-c C-s c")) #'slynet-connect))
+      (should (eq (lookup-key slynet-mode-map (kbd "C-c C-s h")) #'slynet-health))
+      (cl-letf (((symbol-function 'process-live-p)
+                 (lambda (process) (eq process fake-server)))
+                ((symbol-function 'delete-process)
+                 (lambda (process) (setq server-deleted process))))
+        (setq slynet-server-process fake-server)
+        (slynet-quit)
+        (should (equal deleted (list (slynet-client-connection-process connection))))
+        (should (eq server-deleted fake-server))
+        (should-not slynet-current-connection)
+        (should-not slynet-server-process)))))
+
 (provide 'slynet-tests)
 ;;; slynet-tests.el ends here

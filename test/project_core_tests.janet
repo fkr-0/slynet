@@ -83,6 +83,26 @@
          (assert-true (init/initialize-rpc)))})
 
 (register-test
+  {:name "implemented extension RPCs have interface declarations"
+   :tags [:unit :phase17 :rpc-contract]
+   :fn (fn []
+         (inf/ensure-interfaces-initialized!)
+         (slynk/ensure-core-implementations!)
+         (each rpc ['source-aware-eval
+                    'list-restart-scopes
+                    'interrupt-execution-unit
+                    'debugger-step-checkpoint
+                    'debugger-frame-details
+                    'thread-info
+                    'inspect-for-emacs
+                    'macroexpand-1-for-emacs
+                    'macroexpand-all-for-emacs]
+           (assert-true (inf/get-implementation rpc) (string rpc " has an implementation"))
+           (assert-true (inf/get-interface rpc) (string rpc " has a declared interface")))
+         (assert-true (inf/get-interface 'slynet-apropos)
+                      "slynet-apropos contrib implementation has a declared interface"))})
+
+(register-test
   {:name "ping roundtrip"
    :tags [:integration :server]
    :fn (fn []

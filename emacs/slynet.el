@@ -11,13 +11,16 @@
 ;;; Commentary:
 
 ;; Public Emacs-side entrypoint for connecting to and operating a Janet
-;; SLYNET server.  This file intentionally starts small: transport,
-;; request construction, and connection lifecycle are tested first; REPL,
-;; completion UI, inspector, and debugger buffers can grow from these seams.
+;; SLYNET server.  The package provides a daily-use command surface around the
+;; low-level transport: connection lifecycle, status/health display, REPL,
+;; completion, inspector, xref, diagnostics, and debugger buffers.  SLYNET is
+;; Janet-oriented; compatibility facades are marked explicitly when they are not
+;; Common Lisp / SLYNK semantic equivalents.
 
 ;;; Code:
 
 (require 'cl-lib)
+(require 'easymenu)
 (require 'slynet-client)
 
 (defgroup slynet nil
@@ -34,6 +37,33 @@
   "Default port used by `slynet-connect'."
   :type 'integer
   :group 'slynet)
+
+(defcustom slynet-server-command '("janet" "slynet/cli.janet" "--tcp")
+  "Command used by `slynet-start-server'.
+The first element is the program; remaining elements are arguments."
+  :type '(repeat string)
+  :group 'slynet)
+
+(defcustom slynet-display-status-in-mode-line t
+  "When non-nil, show compact SLYNET connection status in the mode line."
+  :type 'boolean
+  :group 'slynet)
+
+(defvar slynet-last-host slynet-host
+  "Most recent host used by `slynet-connect'.")
+
+(defvar slynet-last-port slynet-port
+  "Most recent port used by `slynet-connect'.")
+
+(defvar slynet-last-error nil
+  "Most recent user-visible SLYNET lifecycle error, or nil.")
+
+(defvar slynet-status-buffer-name "*slynet-status*"
+  "Buffer name used by `slynet-health'.")
+
+(defvar slynet-mode-line-string " SLYNET:off"
+  "Compact mode-line status for SLYNET.")
+
 
 (defvar slynet-current-connection nil
   "Current SLYNET client connection, or nil when disconnected.")
@@ -54,6 +84,56 @@
   (add-hook 'completion-at-point-functions
             #'slynet-completion-at-point-function nil t))
 
+(defvar slynet-command-map
+  (let ((map (make-sparse-keymap)))
+    (define-key map (kbd "c") #'slynet-connect)
+    (define-key map (kbd "d") #'slynet-disconnect)
+    (define-key map (kbd "r") #'slynet-reconnect)
+    (define-key map (kbd "q") #'slynet-quit)
+    (define-key map (kbd "s") #'slynet-status)
+    (define-key map (kbd "h") #'slynet-health)
+    (define-key map (kbd "e") #'slynet-eval-string)
+    (define-key map (kbd "m") #'slynet-create-mrepl)
+    (define-key map (kbd "i") #'slynet-inspect-value)
+    (define-key map (kbd "x") #'slynet-find-definitions)
+    (define-key map (kbd "b") #'slynet-debugger-info)
+    map)
+  "Prefix keymap for user-facing SLYNET commands.")
+
+(defvar slynet-mode-map
+  (let ((map (make-sparse-keymap)))
+    (define-key map (kbd "C-c C-s") slynet-command-map)
+    map)
+  "Keymap used by `slynet-mode'.")
+
+(define-minor-mode slynet-mode
+  "Minor mode for a sane Janet SLYNET daily-use command surface.
+The prefix key is defined in `slynet-mode-map'.  The mode does not start a
+server by itself; use `slynet-connect', `slynet-start-server', or
+`slynet-reconnect' explicitly."
+  :global t
+  :lighter (:eval (when slynet-display-status-in-mode-line slynet-mode-line-string))
+  :keymap slynet-mode-map
+  (slynet--refresh-mode-line))
+
+(easy-menu-define slynet-menu slynet-mode-map
+  "Menu for SLYNET daily-use commands."
+  '("SLYNET"
+    ["Connect" slynet-connect t]
+    ["Disconnect" slynet-disconnect t]
+    ["Reconnect" slynet-reconnect t]
+    ["Quit" slynet-quit t]
+    "---"
+    ["Status" slynet-status t]
+    ["Health" slynet-health t]
+    "---"
+    ["REPL" slynet-repl t]
+    ["Eval string" slynet-eval-string t]
+    ["Inspector" slynet-inspect-value t]
+    ["Find definitions" slynet-find-definitions t]
+    ["Debugger" slynet-debugger-info t]))
+
+
 (defun slynet--handle-wire-message (message)
   "Handle decoded unsolicited SLYNET wire MESSAGE."
   (let ((op (car-safe message)))
@@ -67,22 +147,112 @@
 (cl-defun slynet-connect (&key host port on-message)
   "Connect to a SLYNET server and store `slynet-current-connection'.
 HOST and PORT default to `slynet-host' and `slynet-port'.  ON-MESSAGE
-receives decoded protocol messages."
+receives decoded protocol messages.  The endpoint is remembered for
+`slynet-reconnect'."
   (interactive)
-  (setq slynet-current-connection
-        (slynet-client-connect :host (or host slynet-host)
-                               :port (or port slynet-port)
-                               :on-message (lambda (message)
-                                             (slynet--handle-wire-message message)
-                                             (when on-message
-                                               (funcall on-message message))))))
+  (let ((host (or host slynet-host))
+        (port (or port slynet-port)))
+    (setq slynet-last-host host)
+    (setq slynet-last-port port)
+    (setq slynet-last-error nil)
+    (setq slynet-current-connection
+          (slynet-client-connect :host host
+                                 :port port
+                                 :on-message (lambda (message)
+                                               (slynet--handle-wire-message message)
+                                               (when on-message
+                                                 (funcall on-message message)))))
+    (slynet--refresh-mode-line)
+    slynet-current-connection))
 
 (defun slynet-disconnect ()
   "Disconnect `slynet-current-connection' when present."
   (interactive)
   (when slynet-current-connection
     (slynet-client-disconnect slynet-current-connection)
-    (setq slynet-current-connection nil)))
+    (setq slynet-current-connection nil))
+  (slynet--refresh-mode-line)
+  nil)
+
+
+(defun slynet--connection-live-p (&optional connection)
+  "Return non-nil when CONNECTION, or the current connection, has a live process."
+  (let* ((connection (or connection slynet-current-connection))
+         (process (and connection (slynet-client-connection-process connection))))
+    (and process (slynet-client--process-live-p process))))
+
+(defun slynet-connection-status (&optional connection)
+  "Return a plist describing CONNECTION health for display and test assertions."
+  (let* ((connection (or connection slynet-current-connection))
+         (connected (and connection t))
+         (live (and connection (slynet--connection-live-p connection)))
+         (pending (and connection
+                       (hash-table-count
+                        (slynet-client-connection-pending-requests connection)))))
+    (list :connected connected
+          :live live
+          :host (or (and connection (slynet-client-connection-host connection)) slynet-last-host)
+          :port (or (and connection (slynet-client-connection-port connection)) slynet-last-port)
+          :package (and connection (slynet-client-connection-package connection))
+          :pending-requests (or pending 0)
+          :last-error slynet-last-error)))
+
+(defun slynet--status-label (&optional connection)
+  "Return a compact human-readable status label for CONNECTION."
+  (let* ((status (slynet-connection-status connection))
+         (state (cond
+                 ((plist-get status :live) "live")
+                 ((plist-get status :connected) "stale")
+                 (t "off"))))
+    (format "SLYNET:%s %s:%s pending=%s"
+            state
+            (or (plist-get status :host) "?")
+            (or (plist-get status :port) "?")
+            (plist-get status :pending-requests))))
+
+(defun slynet--refresh-mode-line ()
+  "Refresh `slynet-mode-line-string' from current connection state."
+  (setq slynet-mode-line-string (concat " " (slynet--status-label)))
+  (force-mode-line-update t))
+
+(defun slynet-status ()
+  "Echo and return the current SLYNET connection status plist."
+  (interactive)
+  (let ((status (slynet-connection-status)))
+    (message "%s" (slynet--status-label))
+    status))
+
+(defun slynet-health ()
+  "Display a small health buffer for the current SLYNET session."
+  (interactive)
+  (let ((buffer (get-buffer-create slynet-status-buffer-name))
+        (status (slynet-connection-status)))
+    (with-current-buffer buffer
+      (let ((inhibit-read-only t))
+        (erase-buffer)
+        (special-mode)
+        (insert "SLYNET Health
+
+")
+        (insert (format "State: %s
+" (cond
+                                      ((plist-get status :live) "live")
+                                      ((plist-get status :connected) "stale")
+                                      (t "off"))))
+        (insert (format "Endpoint: %s:%s
+"
+                        (or (plist-get status :host) "?")
+                        (or (plist-get status :port) "?")))
+        (insert (format "Package: %s
+" (or (plist-get status :package) "-")))
+        (insert (format "Pending requests: %s
+" (plist-get status :pending-requests)))
+        (insert (format "Last error: %s
+" (or (plist-get status :last-error) "-")))
+        (goto-char (point-min))))
+    (when (called-interactively-p 'interactive)
+      (display-buffer buffer))
+    buffer))
 
 (defun slynet--require-connection ()
   "Return the active SLYNET connection or signal a user-facing error."
@@ -748,23 +918,38 @@ This interactive version buttonizes restart actions and frame source metadata."
        default-directory)))
 
 (defun slynet-start-server (&optional command)
-  "Start a SLYNET server process using COMMAND or a default Janet CLI command."
+  "Start a SLYNET server process using COMMAND or `slynet-server-command'.
+COMMAND may be a string program name or a list of program plus arguments."
   (interactive)
   (when (and slynet-server-process (process-live-p slynet-server-process))
     (delete-process slynet-server-process))
-  (let ((cmd (or command "janet")))
+  (let* ((command (or command slynet-server-command))
+         (argv (if (listp command) command (list command)))
+         (program (car argv))
+         (args (cdr argv)))
     (setq slynet-server-process
-          (start-process "slynet-server" "*slynet-server*" cmd "slynet/cli.janet" "--tcp"))
+          (apply #'start-process "slynet-server" "*slynet-server*" program args))
     slynet-server-process))
 
 (defun slynet-reconnect ()
-  "Reconnect the current SLYNET connection using its stored host and port."
+  "Reconnect using the current connection endpoint or last remembered endpoint."
   (interactive)
-  (let* ((old (slynet--require-connection))
-         (host (slynet-client-connection-host old))
-         (port (slynet-client-connection-port old)))
-    (slynet-client-disconnect old)
-    (setq slynet-current-connection (slynet-client-connect :host host :port port))))
+  (let* ((old slynet-current-connection)
+         (host (or (and old (slynet-client-connection-host old)) slynet-last-host slynet-host))
+         (port (or (and old (slynet-client-connection-port old)) slynet-last-port slynet-port)))
+    (when old
+      (slynet-client-disconnect old))
+    (slynet-connect :host host :port port)))
+
+(defun slynet-quit ()
+  "Stop local SLYNET process if present and disconnect from the current server."
+  (interactive)
+  (slynet-disconnect)
+  (when (and slynet-server-process (process-live-p slynet-server-process))
+    (delete-process slynet-server-process))
+  (setq slynet-server-process nil)
+  (slynet--refresh-mode-line)
+  nil)
 
 (defun slynet-clear-completion-cache ()
   "Clear cached SLYNET completion candidates."
