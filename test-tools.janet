@@ -3,12 +3,23 @@
 
 (import ./slynet/slynk :as slynk)
 (import ./slynet/rpc :as rpc)
+(import ./slynet/infrastructure :as inf)
 (import ./test-runner :prefix "tr/")
 
 (defn- ensure-send-handler []
   (when (nil? slynk/*emacs-io*)
     (set slynk/*emacs-io* @{:id "_test" :socket :mem :addr "in-memory" :package slynk/cl-package
                             :rex-handlers @{} :repl-results @{}})))
+
+(defn reset-test-state! []
+  (set slynk/*slynk-debug-p* true)
+  (set slynk/*inspector-stack* @[])
+  (set slynk/*inspector-counter* 0)
+  (set slynk/*inspector-object-counter* 0)
+  (inf/ensure-interfaces-initialized!)
+  (slynk/ensure-core-implementations!)
+  (inf/slynet-sync-rpc-registries!)
+  true)
 
 (defn make-server
   [&opt opts]

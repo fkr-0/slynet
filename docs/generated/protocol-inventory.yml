@@ -752,6 +752,7 @@ operations:
     source_files:
       - sly_source/contrib/slynk-arglists.lisp
     janet_files:
+      - slynet/slynk.janet
       - slynet/interfaces.janet
     test_files: []
     constraint: none
@@ -2859,6 +2860,7 @@ operations:
     source_files:
       - sly_source/contrib/slynk-arglists.lisp
     janet_files:
+      - slynet/slynk.janet
       - slynet/interfaces.janet
     test_files: []
     constraint: none
@@ -3780,6 +3782,7 @@ operations:
     source_files:
       - sly_source/slynk/slynk.lisp
     janet_files:
+      - slynet/slynk.janet
       - slynet/interfaces.janet
       - slynet/proto/core.janet
     test_files: []

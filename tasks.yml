@@ -1528,3 +1528,7 @@ phase_25_28_progress:
   verification:
     red: "Initial P25-P28 tests failed on missing RPC behavior and tuple-shaped interface arg metadata."
     green: "bridge.yml:test passed 122 tests / 842 assertions."
+
+phase_29_suite_architecture:
+  status: done
+  summary: "Added focused Janet suite selection and shared test reset helper."

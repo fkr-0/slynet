@@ -236,7 +236,7 @@
 (defn name-matches? [nm opts]
   (cond
     (get opts :only) (some (fn [x] (= (string x) nm)) (get opts :only))
-    (get opts :match) (not (= -1 (string/find nm (get opts :match))))
+    (get opts :match) (not (= -1 (string/find (get opts :match) nm)))
     true :true))
 
 (defn tags-match? [test-tags opts]

@@ -174,6 +174,7 @@
   (definterface 'describe-function [:function-name] "Describe a function.")
   (definterface 'describe-definition-for-emacs [:name :type] "Describe a definition for Emacs.")
   (definterface 'documentation-symbol [:symbol-name] "Return the documentation for a symbol.")
+  (definterface 'slynet-documentation-symbol [:symbol-name] "Return SLYNET doc-browser payload for a Janet symbol.")
   (definterface 'list-all-package-names [:&optional :nicknames] "List all package names.")
   (definterface 'slynk-toggle-trace [:spec] "Toggle tracing for a function.")
   (definterface 'untrace-all [] "Untrace all functions.")

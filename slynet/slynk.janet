@@ -1355,6 +1355,94 @@
     (set i (+ i 2)))
   out)
 
+# P29 doc browser / autodoc / complete-form facades -------------------------
+(defn- doc-token-delim? [ch]
+  (or (nil? ch) (= ch 9) (= ch 10) (= ch 13) (= ch 32)
+      (= ch 40) (= ch 41) (= ch 91) (= ch 93) (= ch 123) (= ch 125) (= ch 34)))
+
+(defn- read-doc-token [text start]
+  (var end start)
+  (while (and (< end (length text)) (not (doc-token-delim? (text end)))) (++ end))
+  (string/slice text start end))
+
+(defn- form-operator-name [form]
+  (def text (string/trim (string (or form ""))))
+  (if (and (> (length text) 0) (= (text 0) 40))
+    (let [start (do (var i 1) (while (and (< i (length text)) (doc-token-delim? (text i))) (++ i)) i)]
+      (read-doc-token text start))
+    (read-doc-token text 0)))
+
+(defn- form-prefix [form]
+  (def text (string (or form "")))
+  (var end (length text))
+  (while (and (> end 0) (doc-token-delim? (text (dec end)))) (-- end))
+  (var start end)
+  (while (and (> start 0) (not (doc-token-delim? (text (dec start))))) (-- start))
+  (string/slice text start end))
+
+(defn- doc-source-locations [name]
+  (def hits @[])
+  (each hit (source-index/find-definition-hits (os/cwd) name)
+    (array/push hits @[:file (plist-value hit :file)
+                       :line (plist-value hit :line)
+                       :column (plist-value hit :column)
+                       :snippet (plist-value hit :snippet)
+                       :source-index (or (plist-value hit :source-index) :slynet-source-index-v2)
+                       :form-kind (plist-value hit :form-kind)
+                       :module (plist-value hit :module)]))
+  hits)
+
+(defn- doc-summary-for-name [name]
+  (def locations (doc-source-locations name))
+  (if (> (length locations) 0) (or (plist-value (locations 0) :snippet) name) name))
+
+(defn- doc-string-for-name [name]
+  (def sym (try (symbol name) ([_ _] nil)))
+  (def from-doc (if sym (try (callable-doc sym) ([_ _] nil)) nil))
+  (if (and (string? from-doc) (> (length from-doc) 0))
+    from-doc
+    (string "No Janet docstring available. Source: " (doc-summary-for-name name))))
+
+(defn documentation-symbol [symbol-name]
+  (def name (string symbol-name))
+  (def locations (doc-source-locations name))
+  @[:status :ok :name name :frontend-surface :doc-browser :support-class :native
+    :doc-source :janet-doc-or-source-index :cl-documentation-equivalent false
+    :documentation (doc-string-for-name name)
+    :arglist (try (callable-arglist (symbol name)) ([_ _] "(?)"))
+    :source-locations locations :scroll-model :emacs-buffer])
+
+(defn slynet-documentation-symbol [symbol-name]
+  (documentation-symbol symbol-name))
+
+(defn autodoc [form]
+  (def operator (form-operator-name form))
+  (def doc (documentation-symbol operator))
+  @[:status :ok :operator operator :frontend-surface :autodoc :support-class :workaround
+    :cl-autodoc-equivalent false :arglist (plist-value doc :arglist)
+    :documentation (plist-value doc :documentation)
+    :source-locations (plist-value doc :source-locations)
+    :doc-source (plist-value doc :doc-source)])
+
+(defn- complete-form-candidate [candidate]
+  (def name (plist-value candidate :name))
+  @[:name name :candidate (or (plist-value candidate :candidate) name)
+    :doc-summary (or (plist-value candidate :doc-summary) (doc-summary-for-name name))
+    :file (plist-value candidate :file) :line (plist-value candidate :line)
+    :column (plist-value candidate :column) :module (plist-value candidate :module)
+    :form-kind (plist-value candidate :form-kind)
+    :source-index (or (plist-value candidate :source-index) :slynet-source-index-v2)
+    :support-class (or (plist-value candidate :support-class) :workaround)
+    :completion-source :complete-form])
+
+(defn complete-form [form]
+  (def prefix (form-prefix form))
+  (def result (namespace-completions prefix (os/cwd) (or (*package* :name) "core")))
+  (def candidates @[])
+  (each candidate (result 0) (array/push candidates (complete-form-candidate candidate)))
+  @[:status :ok :prefix prefix :frontend-surface :completion :support-class :workaround
+    :cl-complete-form-equivalent false :common-prefix (result 1) :candidates candidates])
+
 (defn compile-string-for-emacs [code &opt path line column]
   (default code "")
   (default path nil)
@@ -2382,6 +2470,10 @@
   (inf/defimpl 'slynet-project-snapshot slynet-project-snapshot)
   (inf/defimpl 'slynet-record-session-event slynet-record-session-event)
   (inf/defimpl 'slynet-session-metadata slynet-session-metadata)
+  (inf/defimpl 'documentation-symbol documentation-symbol)
+  (inf/defimpl 'slynet-documentation-symbol slynet-documentation-symbol)
+  (inf/defimpl 'autodoc autodoc)
+  (inf/defimpl 'complete-form complete-form)
   (inf/slynet-sync-rpc-registries!)
   true)
 
@@ -2424,10 +2516,14 @@
                            (symbol? op) op
                            (string? op) (symbol op)
                            :else nil)]
-            (if (and rpc-name
-                     (or (inf/get-interface rpc-name)
-                         (inf/get-implementation rpc-name)))
+            (cond
+              (= rpc-name 'slynet-documentation-symbol)
+              (slynet-documentation-symbol (args 0))
+              (and rpc-name
+                   (or (inf/get-interface rpc-name)
+                       (inf/get-implementation rpc-name)))
               (apply inf/run-implementation rpc-name args)
+              true
               (eval form)))
           (eval form)))
       [:ok result])

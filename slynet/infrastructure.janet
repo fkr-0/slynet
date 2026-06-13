@@ -117,7 +117,9 @@
   true)
 
 (defn ensure-interfaces-initialized! []
-  (when (empty? *slynet-rpc-interfaces-registry*)
+  (when (or (empty? *slynet-rpc-interfaces-registry*)
+            (nil? (get *slynet-rpc-interfaces-registry* 'source-aware-eval))
+            (nil? (get *slynet-rpc-interfaces-registry* 'slynet-apropos)))
     (i/define-core-interfaces slynet-definterface)
     (slynet-sync-rpc-registries!))
   true)
