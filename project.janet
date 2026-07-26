@@ -1,7 +1,8 @@
 (declare-project
   :name "slynet"
-  :description "sly trans"
-  :version "0.0.0")
+  :description "Janet development environment for Emacs with a SLY/SLYNK-style protocol"
+  :version "1.0.1"
+  :license "MIT")
 
 (declare-source
   :prefix "slynet"

@@ -1,34 +1,45 @@
 version: 1
+name: slynet
+description: Janet development environment for Emacs
 
 commands:
+  lint:
+    description: Parse Janet sources and run Emacs package lint
+    category: lint
+    run: [make, lint]
+
+  compile:
+    description: Byte-compile the Emacs package through Eldev
+    category: build
+    run: [make, compile]
+
   test:
     description: Run the Janet test suite
     category: test
-    run:
-      - sh
-      - -lc
-      - export JANET_PATH="${JANET_PATH}:$(pwd)" && janet test/run_tests.janet
-
-  test-runner:
-    description: Run the Janet test runner entrypoint
-    category: test
-    run:
-      - sh
-      - -lc
-      - export JANET_PATH="${JANET_PATH}:$(pwd)" && janet test-runner.janet
+    run: [make, test]
 
   test-emacs:
-    description: Run the Eldev-backed Emacs client ERT suite
+    description: Run the Eldev-backed Emacs ERT suite
     category: test
-    run:
-      - sh
-      - -lc
-      - eldev test --expect 35
+    run: [make, test-emacs]
 
-  smoke-client:
-    description: Run the CLI client in batch mode against a local server
+  test-e2e:
+    description: Repeat live Janet/Emacs lifecycle tests and check for leaks
     category: test
-    run:
-      - sh
-      - -lc
-      - export JANET_PATH="${JANET_PATH}:$(pwd)" && janet slynet-client.janet --help
+    run: [make, test-e2e]
+
+  package:
+    description: Build Janet and Emacs release artifacts
+    category: build
+    run: [make, package]
+
+  clean:
+    description: Remove generated release and build artifacts
+    category: custom
+    run: [make, clean]
+
+  release-verify:
+    description: Run the complete local 1.0.1 release gate without tagging
+    category: test
+    timeoutMs: 180000
+    run: [make, release-verify]

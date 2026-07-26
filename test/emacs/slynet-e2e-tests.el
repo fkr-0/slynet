@@ -97,5 +97,31 @@ run, then checks PREDICATE again."
       (ignore-errors (slynet-disconnect))
       (slynet-e2e--cleanup-process server))))
 
+(ert-deftest slynet-e2e-inflight-rpc-aborts-when-live-server-disappears ()
+  (let* ((port (slynet-e2e--free-port))
+         (server (slynet-e2e--start-server port))
+         (result nil))
+    (unwind-protect
+        (progn
+          (slynet-e2e--wait-until
+           (lambda ()
+             (and (process-live-p server)
+                  (slynet-e2e--tcp-accepts-p port)))
+           "Janet server TCP readiness")
+          (let ((connection (slynet-connect :host "127.0.0.1" :port port)))
+            (slynet-client-send-rex-async
+             connection '(interactive-eval-region "(os/sleep 10)")
+             (lambda (payload) (setq result payload)))
+            (delete-process server)
+            (slynet-e2e--wait-until
+             (lambda () result) "in-flight RPC connection-loss callback")
+            (should (equal result '(:abort :connection-lost)))
+            (should-not (slynet-client-connection-process connection))
+            (should (= (hash-table-count
+                        (slynet-client-connection-pending-requests connection))
+                       0))))
+      (ignore-errors (slynet-disconnect))
+      (slynet-e2e--cleanup-process server))))
+
 (provide 'slynet-e2e-tests)
 ;;; slynet-e2e-tests.el ends here

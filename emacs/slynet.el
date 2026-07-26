@@ -3,10 +3,9 @@
 ;; Copyright (C) 2026
 
 ;; Author: SLYNET contributors
-;; Version: 0.1.0
+;; Version: 1.0.1
 ;; Package-Requires: ((emacs "27.1"))
-;; Keywords: lisp, janet, sly, processes
-;; URL: https://example.invalid/slynet
+;; Keywords: languages, lisp, janet, tools, processes
 
 ;;; Commentary:
 
@@ -42,6 +41,14 @@
   "Command used by `slynet-start-server'.
 The first element is the program; remaining elements are arguments."
   :type '(repeat string)
+  :group 'slynet)
+
+(defcustom slynet-server-directory nil
+  "Directory in which local SLYNET server commands run.
+When nil, use the project root detected from `default-directory'.  Set this to
+the SLYNET source checkout when starting the bundled server from a directory
+that is not inside that checkout."
+  :type '(choice (const :tag "Detected project root" nil) directory)
   :group 'slynet)
 
 (defcustom slynet-display-status-in-mode-line t
@@ -138,6 +145,9 @@ server by itself; use `slynet-connect', `slynet-start-server', or
     ["Debugger" slynet-debugger-info t]
     ["Docs" slynet-doc-symbol t]))
 
+
+(defvar slynet-debugger-buffer-name "*slynet-debugger*"
+  "Default buffer name for SLYNET debugger state.")
 
 (defun slynet--handle-wire-message (message)
   "Handle decoded unsolicited SLYNET wire MESSAGE."
@@ -478,29 +488,6 @@ When KEY is absent or nil, return DEFAULT or the empty string."
      ((symbolp value) (symbol-name value))
      (t (format "%S" value)))))
 
-(defun slynet--render-inspector (payload buffer)
-  "Render inspector PAYLOAD into BUFFER and return BUFFER."
-  (with-current-buffer buffer
-    (let ((inhibit-read-only t)
-          (title (slynet--plist-string payload :title "<untitled>"))
-          (content (slynet--sequence-to-list (plist-get payload :content))))
-      (erase-buffer)
-      (slynet-inspector-mode)
-      (setq-local slynet-inspector-object-id (plist-get payload :object-id))
-      (setq-local slynet-inspector-parent-object-id (plist-get payload :parent-object-id))
-      (setq-local slynet-inspector-part-key (plist-get payload :part-key))
-      (slynet--insert-line "Inspector: %s" title)
-      (when slynet-inspector-object-id
-        (slynet--insert-line "Object id: %s" slynet-inspector-object-id))
-      (when slynet-inspector-parent-object-id
-        (slynet--insert-line "Parent object id: %s" slynet-inspector-parent-object-id))
-      (when slynet-inspector-part-key
-        (slynet--insert-line "Part key: %s" slynet-inspector-part-key))
-      (insert "\n")
-      (dolist (line content)
-        (slynet--insert-line "%s" (slynet--plist-string (list :line line) :line))))
-    buffer))
-
 (defun slynet-inspect-value (value)
   "Inspect VALUE through SLYNET and render the result in an inspector buffer."
   (let ((buffer (slynet--display-buffer slynet-inspector-buffer-name #'slynet-inspector-mode)))
@@ -582,37 +569,6 @@ When KEY is absent or nil, return DEFAULT or the empty string."
               (or (plist-get location :line) 0)
               (or (plist-get location :column) 0))
     "<unknown location>"))
-
-(defun slynet--render-debugger-info (payload buffer)
-  "Render debugger info PAYLOAD into BUFFER and return BUFFER."
-  (with-current-buffer buffer
-    (let ((inhibit-read-only t)
-          (condition (plist-get payload :condition-record))
-          (restarts (slynet--sequence-to-list (plist-get payload :restarts)))
-          (frames (slynet--sequence-to-list (plist-get payload :frames))))
-      (erase-buffer)
-      (slynet-debugger-mode)
-      (slynet--insert-line "Condition: %s"
-                           (slynet--plist-string condition :message "<no condition>"))
-      (slynet--insert-line "Kind: %s" (slynet--plist-string condition :kind "unknown"))
-      (slynet--insert-line "Condition support: %s"
-                           (slynet--plist-string condition :support-class "unknown"))
-      (slynet--insert-line "CL condition equivalent: %S"
-                           (plist-get condition :cl-condition-equivalent))
-      (insert "\nRestarts:\n")
-      (dolist (restart restarts)
-        (slynet--insert-line "  %s [%s/%s]"
-                             (slynet--plist-string restart :name "<unnamed>")
-                             (slynet--plist-string restart :restart-kind "unknown")
-                             (slynet--plist-string restart :support-class "unknown")))
-      (insert "\nFrames:\n")
-      (dolist (frame frames)
-        (slynet--insert-line "  %s %s at %s"
-                             (slynet--plist-string frame :index "?")
-                             (slynet--plist-string frame :callable "<unknown>")
-                             (slynet--render-location-string
-                              (plist-get frame :location)))))
-    buffer))
 
 (defun slynet-debugger-info ()
   "Request current SLYNET debugger info and render it in a debugger buffer."
@@ -966,10 +922,18 @@ This interactive version buttonizes restart actions and frame source metadata."
          (argv (if (listp command) command (list command)))
          (program (car argv))
          (args (cdr argv))
-         (process (apply #'start-process
-                         (format "slynet-%s" project-name)
-                         (format "*slynet-%s*" project-name)
-                         program args))
+         (default-directory (file-name-as-directory
+                             (or slynet-server-directory
+                                 (locate-dominating-file default-directory "project.janet")
+                                 default-directory)))
+         (process (condition-case err
+                      (apply #'start-process
+                             (format "slynet-%s" project-name)
+                             (format "*slynet-%s*" project-name)
+                             program args)
+                    (file-missing
+                     (user-error "Cannot start SLYNET: executable `%s' is unavailable (%s)"
+                                 program (error-message-string err)))))
          (ready (slynet--wait-for-server-ready host port (or readiness-timeout 5.0)))
          (record (list :project project-name
                        :process process
@@ -1028,9 +992,18 @@ COMMAND may be a string program name or a list of program plus arguments."
   (let* ((command (or command slynet-server-command))
          (argv (if (listp command) command (list command)))
          (program (car argv))
-         (args (cdr argv)))
+         (args (cdr argv))
+         (default-directory (file-name-as-directory
+                             (or slynet-server-directory
+                                 (locate-dominating-file default-directory "project.janet")
+                                 default-directory))))
     (setq slynet-server-process
-          (apply #'start-process "slynet-server" "*slynet-server*" program args))
+          (condition-case err
+              (apply #'start-process "slynet-server" "*slynet-server*" program args)
+            (file-missing
+             (setq slynet-last-error (error-message-string err))
+             (user-error "Cannot start SLYNET: executable `%s' is unavailable (%s)"
+                         program slynet-last-error))))
     slynet-server-process))
 
 (defun slynet-reconnect ()
@@ -1193,7 +1166,8 @@ Return the request id assigned to the wire message."
   (slynet-autodoc (format "(%s" symbol-name)))
 
 (defun slynet-complete-form (form &optional callback)
-  "Request SLYNET complete-form metadata for FORM."
+  "Request SLYNET complete-form metadata for FORM.
+When CALLBACK is non-nil, call it with the decoded response."
   (interactive "sComplete form: ")
   (slynet-client-send-rex-async
    (slynet--require-connection)

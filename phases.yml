@@ -1,0 +1,883 @@
+version: 1
+project: slynet
+purpose: >-
+  Staged route from the current SLYNET prototype to frontend-behavior equivalence
+  with SLY/SLYNK where Janet can support it through native behavior, runtime
+  tooling, source indexing, or explicit emulation layers.
+
+status_model:
+  support_class_values:
+    - native
+    - emulated
+    - unsupported
+    - internal
+    - pending_design
+  state_detail_values:
+    - implemented_native_tested
+    - implemented_native_untested
+    - implemented_emulated_tested
+    - implemented_emulated_untested
+    - missing_constrained
+    - missing_unconstrained
+  validation_rule: >-
+    A phase is done only when its listed verification commands pass freshly and
+    its inventory/support changes are reflected in docs/generated/protocol-inventory.yml.
+
+phases:
+  - id: P0_inventory_truth
+    title: "Precise protocol support inventory"
+    status: done
+    goal: >-
+      Make the generated inventory precise enough to measure support instead of
+      only saying implemented or missing.
+    contracts:
+      - Every operation has frontend_surface.
+      - Every operation has support_class.
+      - Every operation has state_detail.
+      - Constraint-bearing operations are classified as emulated or constrained, not plain native.
+      - All used constraints are documented in tasks.yml and the equivalence contracts spec.
+    files:
+      update:
+        - tools/protocol_inventory.janet
+        - test/protocol_inventory_tests.janet
+        - docs/generated/protocol-inventory.yml
+        - tasks.yml
+      create:
+        - docs/specs/cl-janet-equivalence-contracts.md
+        - phases.yml
+    tests:
+      red:
+        - "JANET_PATH=$PWD janet test/protocol_inventory_tests.janet :match 'precise support fields'"
+        - "JANET_PATH=$PWD janet test/protocol_inventory_tests.janet :match 'frontend surface mapping'"
+      green:
+        - "JANET_PATH=$PWD janet test/protocol_inventory_tests.janet :report compact"
+      aggregate:
+        - "JANET_PATH=$PWD janet test/run_tests.janet :report compact"
+    done_when:
+      - "Inventory schema_version is at least 3."
+      - "Representative operations ping, create-mrepl, simple-completions, backtrace, inspect-nth-part, and find-definitions-for-emacs carry frontend_surface/support_class/state_detail."
+    verification_log:
+      - date: "2026-06-12"
+        command: "JANET_PATH=$PWD janet tmp-protocol-red-runner.janet"
+        result: "passed: 8 tests, 48/48 asserts after RED failure confirmed missing precise support fields."
+
+  - id: P1_transport_session_protocol
+    title: "Deterministic transport and session protocol"
+    status: done
+    goal: >-
+      Establish deterministic wire framing and session-message behavior before
+      deeper Emacs E2E work depends on it.
+    contracts:
+      - Six-byte hexadecimal length prefixes count UTF-8 bytes.
+      - Fragmented frames remain incomplete until enough bytes arrive.
+      - Multiple frames in one buffer can be consumed without data loss.
+      - Malformed frame prefixes yield explicit protocol errors.
+      - Message helpers are available to both backend tests and client/E2E tests.
+    files:
+      update:
+        - slynet/rpc.janet
+        - test/message-tests.janet
+        - test/run_tests.janet
+        - bridge.yml
+    tests:
+      red:
+        - "JANET_PATH=$PWD janet test/message-tests.janet :match 'transport frame'"
+      green:
+        - "JANET_PATH=$PWD janet test/message-tests.janet :report compact"
+      aggregate:
+        - "JANET_PATH=$PWD janet test/run_tests.janet :report compact"
+        - "eldev test --expect 6"
+    done_when:
+      - "Backend transport helper tests pass for encode, incomplete, multi-frame, and malformed-frame cases."
+      - "Existing client codec tests still pass under Eldev."
+    verification_log:
+      - date: "2026-06-12"
+        command: "JANET_PATH=$PWD janet test/run_tests.janet :match 'transport frame' :report compact"
+        result: "passed within 65-test suite: 216/216 assertions."
+
+  - id: P2_eval_mrepl_first_real_e2e
+    title: "First real Emacs ↔ Janet MREPL E2E"
+    status: done
+    depends_on:
+      - P1_transport_session_protocol
+    goal: >-
+      Make Eldev/ERT start a real Janet SLYNET server, connect the Emacs client,
+      create an MREPL, evaluate code, receive values, and close cleanly.
+    contracts:
+      - create-mrepl returns remote channel and thread/execution-unit id.
+      - eval sends channel process messages.
+      - :write-values resolves a pending request/callback.
+      - prompt updates and listener output are tracked in client connection state.
+      - Full user-facing REPL buffer rendering remains a later client/UI slice.
+    files:
+      update:
+        - emacs/slynet-client.el
+        - emacs/slynet.el
+        - slynet/backend.janet
+        - slynet/cli.janet
+        - slynet/contrib/slynet-mrepl.janet
+        - slynet/rpc.janet
+        - slynet/slynk.janet
+        - test/emacs/slynet-e2e-tests.el
+        - test/project_core_tests.janet
+        - test/server_integration_tests.janet
+        - Makefile
+        - bridge.yml
+    tests:
+      red:
+        - "eldev test --file test/emacs/slynet-e2e-tests.el"
+      green:
+        - "eldev test --file test/emacs/slynet-e2e-tests.el"
+        - "eldev test --expect 7"
+      aggregate:
+        - "JANET_PATH=$PWD janet test/run_tests.janet :report compact"
+        - "make test-emacs"
+    done_when:
+      - "Eldev/ERT starts a live Janet TCP SLYNET server without fixed sleeps."
+      - "Emacs creates an MREPL through the live wire protocol."
+      - "Emacs channel eval of (+ 1 2) resolves with a value containing 3."
+      - "Client state records prompt text and MREPL listener output."
+    verification_log:
+      - date: "2026-06-12"
+        red: >-
+          eldev test --file test/emacs/slynet-e2e-tests.el failed first at missing
+          slynet-create-mrepl, then at backend startup/registry/wire/parser/eval
+          defects before value delivery.
+        green: >-
+          eldev test --file test/emacs/slynet-e2e-tests.el passed: live Janet TCP
+          server, Emacs connect, create-mrepl, eval, value callback, prompt/output
+          state, and clean disconnect.
+
+  - id: P3_thread_debugger_condition_facade
+    title: "Thread/execution-unit and debugger condition facade"
+    status: done
+    depends_on:
+      - P0_inventory_truth
+      - P1_transport_session_protocol
+    goal: >-
+      Begin replacing CL thread and condition assumptions with SLYNET-managed
+      execution units and condition/restart facade objects.
+    contracts:
+      - list-threads returns SLYNET execution units.
+      - eval errors create condition records.
+      - debugger-info-for-emacs exposes condition text, frames, and synthetic restarts.
+      - invoke-nth-restart works for abort-to-repl synthetic restart.
+      - Debugger facade behavior follows docs/specs/debugger-condition-facade-contract.md.
+    files:
+      update:
+        - slynet/slynk.janet
+        - test/run_tests.janet
+      create:
+        - docs/specs/debugger-condition-facade-contract.md
+        - test/debugger_facade_tests.janet
+    tests:
+      red:
+        - "JANET_PATH=$PWD janet test/run_tests.janet :match 'execution units expose Janet thread facade metadata' :report compact"
+        - "JANET_PATH=$PWD janet test/run_tests.janet :match 'eval errors create condition records with synthetic abort restart' :report compact"
+      green:
+        - "JANET_PATH=$PWD janet test/run_tests.janet :report compact"
+    done_when:
+      - "list-threads returns SLYNET execution-unit metadata, including thread-model and CL equivalence flag."
+      - "eval errors create structured condition-record payloads."
+      - "debugger restarts expose synthetic abort-to-repl metadata and invoke-nth-restart returns that restart name."
+    verification_log:
+      - date: "2026-06-12"
+        red: "New phase3 tests failed on missing execution-unit metadata and structured condition/restart records."
+        green: "JANET_PATH=$PWD janet test/run_tests.janet :report compact passed 73 tests / 256 assertions after implementation."
+      - date: "2026-06-12"
+        docs: "docs/specs/debugger-condition-facade-contract.md added and structurally checked: status, execution-unit, condition-record, restart-facade, and done-criteria sections present."
+        green: "JANET_PATH=$PWD janet test/run_tests.janet :report compact passed 79 tests / 304 assertions after P3 spec and P4/P5 contract additions."
+      - date: "2026-06-12"
+        contract_refinement: "P3 frame facade locations now explicitly expose synthetic-location=true and source-kind=:synthetic-facade."
+        green: "JANET_PATH=$PWD janet test/run_tests.janet :report compact passed 80 tests / 309 assertions."
+      - date: "2026-06-12"
+        debugger_source_index_first_pass: "Known debugger facade frames now carry callable metadata and resolve source locations through the P4 source index; unresolved frames retain synthetic-facade metadata."
+        focused: "JANET_PATH=$PWD janet test/run_tests.janet :match 'debugger frame locations use source index when callable is known' :report compact passed inside 81-test suite with 321/321 assertions."
+
+      - date: "2026-06-12"
+        native_janet_debug_stack_frames: "Debugger state now captures the caught Janet error fiber, normalizes available debug/stack frames as source-kind=:janet-debug-stack, and keeps source-index plus synthetic-facade fallbacks."
+        focused: "JANET_PATH=$PWD janet test/run_tests.janet :match 'debugger frames prefer native Janet debug stack facts' :report compact passed inside 82-test suite with 334/334 assertions."
+        green: "JANET_PATH=$PWD janet test/run_tests.janet :report compact passed 82 tests / 334 assertions."
+      - date: "2026-06-13"
+        frontend_event_green: "eldev test --expect 28 passed 28/28 ERT tests; backend focused event test passed 15/15 assertions."
+
+  - id: P4_inspector_xref_source_index
+    title: "Inspector and xref source-index foundation"
+    status: done
+    depends_on:
+      - P0_inventory_truth
+      - P1_transport_session_protocol
+    goal: >-
+      Provide stable inspection object navigation and source-index-backed xref
+      locations for the first fixture project.
+    contracts:
+      - Inspector values have stable ids and navigable parts.
+      - find-definitions-for-emacs returns exact fixture file/line/column/snippet.
+      - Unsupported xref classes return explicit support metadata.
+      - Xref/source-index behavior follows docs/specs/xref-source-index-contract.md.
+    files:
+      create:
+        - docs/specs/xref-source-index-contract.md
+        - test/fixtures/xref/sample_a.janet
+        - test/fixtures/xref/sample_b.janet
+        - test/fixtures/xref/generated_ignore.janet
+        - test/inspector_xref_contract_tests.janet
+      update:
+        - slynet/slynk.janet
+        - test/run_tests.janet
+        - docs/generated/protocol-inventory.yml
+    tests:
+      red:
+        - "JANET_PATH=$PWD janet test/run_tests.janet :match 'inspector responses expose stable object identity metadata' :report compact"
+        - "JANET_PATH=$PWD janet test/run_tests.janet :match 'xref responses expose source-index contract metadata' :report compact"
+      green:
+        - "JANET_PATH=$PWD janet test/run_tests.janet :report compact"
+    done_when:
+      - "Inspector responses carry stable object-id, parent-object-id, and part-key metadata."
+      - "inspector-pop returns the original parent object-id after nth-part navigation."
+      - "find-definitions-for-emacs emits source-index and xref-kind metadata with file/line/column/snippet."
+    verification_log:
+      - date: "2026-06-12"
+        red: "New phase4 tests initially failed on fixture-backed xref exact line/column matching and token-boundary handling."
+        green: "JANET_PATH=$PWD janet test/run_tests.janet :report compact passed 79 tests / 304 assertions after fixture and scanner contract implementation."
+
+
+  - id: P5_compile_load_diagnostics
+    title: "Compile/load diagnostics and source-note envelopes"
+    status: done
+    depends_on:
+      - P0_inventory_truth
+      - P4_inspector_xref_source_index
+    goal: >-
+      Give compile-string, compile-file, and load-file a structured Janet
+      diagnostic envelope that the Emacs client can render like SLY compiler
+      notes without claiming CL compiler-note semantic equivalence.
+    contracts:
+      - compile-string-for-emacs preserves legacy :notes and adds :diagnostics.
+      - diagnostic entries carry severity, phase, message, diagnostic-model, and CL-equivalence flag.
+      - load-file diagnostics include the attempted path.
+      - successful compile/load calls expose empty diagnostics and explicit Janet diagnostic model metadata.
+    files:
+      update:
+        - slynet/slynk.janet
+        - test/run_tests.janet
+        - test/project_core_tests.janet
+        - phases.yml
+        - docs/specs/cl-janet-equivalence-contracts.md
+      create:
+        - test/compile_load_contract_tests.janet
+    tests:
+      red:
+        - "JANET_PATH=$PWD janet test/run_tests.janet :match 'diagnostic' :report compact"
+      green:
+        - "JANET_PATH=$PWD janet test/run_tests.janet :match 'diagnostic' :report compact"
+      aggregate:
+        - "JANET_PATH=$PWD janet test/run_tests.janet :report compact"
+        - "eldev test --expect 7"
+    done_when:
+      - "compile-string success returns :diagnostics @[], :diagnostic-model :janet-diagnostics, and CL-equivalence false."
+      - "compile-string failure returns one structured :compile-string diagnostic."
+      - "load-file failure returns one structured :load-file diagnostic including :path."
+    verification_log:
+      - date: "2026-06-12"
+        red: "New P5 diagnostic tests failed on missing :diagnostics/:diagnostic-model fields."
+        green: "JANET_PATH=$PWD janet test/run_tests.janet :match 'diagnostic' :report compact passed 79 tests / 304 assertions."
+
+  - id: P6_emacs_repl_buffer_ui
+    title: "User-facing Emacs REPL buffer"
+    status: done
+    depends_on:
+      - P2_eval_mrepl_first_real_e2e
+      - P5_compile_load_diagnostics
+    goal: >-
+      Move the Emacs client from transport/state callbacks into a usable REPL
+      buffer with prompt rendering, input history, output insertion, eval-region,
+      and diagnostic display.
+    contracts:
+      - slynet-repl opens or reuses a per-connection REPL buffer.
+      - MREPL prompt updates are rendered as read-only prompt text.
+      - write-string and write-values are inserted in order.
+      - input history survives multiple evals within a session.
+      - compile/load diagnostics render as clickable source-note candidates once source mapping is available.
+    tests:
+      red:
+        - "eldev test --file test/emacs/slynet-repl-tests.el"
+      green:
+        - "eldev test --expect 13"
+    done_when:
+      - "slynet-repl opens and reuses a per-connection REPL buffer."
+      - "Channel write-string/write-values/prompt payloads render into the buffer in order."
+      - "Rendered prompt text is read-only."
+      - "slynet-repl-submit-string records buffer-local input history and dispatches MREPL eval."
+    verification_log:
+      - date: "2026-06-13"
+        red: "eldev test --file test/emacs/slynet-repl-tests.el failed first on missing slynet-repl and REPL buffer API."
+        green: "eldev test --file test/emacs/slynet-repl-tests.el passed 3 REPL buffer tests; full Eldev gate updated to 13 tests."
+
+  - id: P7_completion_autodoc_capf
+    title: "Completion-at-point and autodoc surface"
+    status: done
+    depends_on:
+      - P2_eval_mrepl_first_real_e2e
+      - P4_inspector_xref_source_index
+    goal: >-
+      Provide the first normal editor-facing assistance workflow: CAPF-backed
+      completions plus minibuffer/echo-area arglist/autodoc metadata.
+    contracts:
+      - slynet-completion-at-point-function queries simple/flex completions.
+      - completion candidates carry source/support metadata where available.
+      - arglist/operator-arglist results render in an Emacs-friendly shape.
+      - unsupported autodoc subfeatures return structured pending/unsupported metadata rather than hanging.
+    tests:
+      red:
+        - "eldev test --file test/emacs/slynet-completion-tests.el"
+      green:
+        - "eldev test --expect 13"
+    done_when:
+      - "slynet-completion-at-point-function computes symbol bounds and sends simple-completions requests."
+      - "Completion candidates carry source/support metadata as text properties."
+      - "slynet-arglist wraps operator-arglist replies in frontend-surface/support-class autodoc metadata."
+    verification_log:
+      - date: "2026-06-13"
+        red: "eldev test --file test/emacs/slynet-completion-tests.el failed first on missing slynet-completion-at-point-function and slynet-arglist."
+        green: "timeout 30s eldev test --file test/emacs/slynet-completion-tests.el passed 3 completion/autodoc tests."
+
+
+  - id: P8_inspector_xref_emacs_ui
+    title: "Inspector and xref Emacs buffers"
+    status: done
+    depends_on:
+      - P4_inspector_xref_source_index
+      - P7_completion_autodoc_capf
+    goal: >-
+      Expose the P4 inspector and source-index contracts through first-class
+      Emacs buffers so users can inspect values, navigate parts, and browse
+      definition hits without reading raw protocol payloads.
+    contracts:
+      - slynet-inspect-value requests inspect-for-emacs and renders a stable-object inspector buffer.
+      - slynet-inspector-nth-part requests inspector-nth-part and records parent/object/part metadata.
+      - slynet-inspector-pop remains available for parent navigation.
+      - slynet-find-definitions requests find-definitions-for-emacs and renders source-index hits with navigation text properties.
+    tests:
+      red:
+        - "eldev test --file test/emacs/slynet-inspector-xref-tests.el"
+      green:
+        - "eldev test --expect 19"
+    done_when:
+      - "Inspector buffer displays title/content and stores object-id metadata."
+      - "Inspector nth-part displays child title/content plus parent-object-id and part-key metadata."
+      - "Xref buffer displays file/line/column/snippet and annotates hits with source-index text properties."
+    verification_log:
+      - date: "2026-06-13"
+        red: "New inspector/xref ERT tests failed first on missing slynet-inspect-value, slynet-inspector-nth-part, and slynet-find-definitions APIs."
+        green: "timeout 45s eldev test --file test/emacs/slynet-inspector-xref-tests.el test/emacs/slynet-d*.el passed 6 focused P8/P9 tests."
+
+  - id: P9_debugger_execution_unit_emacs_ui
+    title: "Debugger and execution-unit Emacs buffers"
+    status: done
+    depends_on:
+      - P3_thread_debugger_condition_facade
+      - P4_inspector_xref_source_index
+    goal: >-
+      Expose the P3 debugger facade and execution-unit registry through an
+      Emacs buffer foundation that can later grow into SLY-like interactive
+      debugger controls.
+    contracts:
+      - slynet-debugger-info requests debugger-info-for-emacs and renders condition/restarts/frames.
+      - frame locations render source-index or Janet debug-stack file/line/column data when present.
+      - slynet-debugger-invoke-restart sends invoke-nth-restart and renders the result.
+      - slynet-list-execution-units requests list-threads and displays SLYNET execution-unit metadata.
+    tests:
+      red:
+        - "eldev test --file test/emacs/slynet-debugger-tests.el"
+      green:
+        - "eldev test --expect 19"
+    done_when:
+      - "Debugger buffer displays condition message, synthetic restart names, and frame source locations."
+      - "Restart invocation sends invoke-nth-restart and renders the backend result."
+      - "Execution-unit list displays thread-model and CL-equivalence metadata."
+    verification_log:
+      - date: "2026-06-13"
+        red: "New debugger ERT tests failed first on missing slynet-debugger-info, slynet-debugger-invoke-restart, and slynet-list-execution-units APIs."
+        green: "timeout 45s eldev test --file test/emacs/slynet-inspector-xref-tests.el test/emacs/slynet-d*.el passed 6 focused P8/P9 tests."
+
+
+  - id: P10_spec_consolidation_support_matrix
+    title: "Spec consolidation and support matrix"
+    status: done
+    depends_on:
+      - P0_inventory_truth
+      - P9_debugger_execution_unit_emacs_ui
+    goal: >-
+      Convert the working-draft equivalence material into a staged contract suite
+      with split owning specs, a parseable support matrix, and generated inventory
+      ownership/rationale fields.
+    files:
+      create:
+        - docs/specs/README.md
+        - docs/specs/support-matrix.yml
+        - docs/specs/threading-execution-units.md
+        - docs/specs/debugger-condition-restarts.md
+        - docs/specs/inspector-xref-source-index.md
+        - docs/specs/emacs-client-contract.md
+      update:
+        - docs/specs/cl-janet-equivalence-contracts.md
+        - phases.yml
+        - tasks.yml
+        - tools/protocol_inventory.janet
+        - test/protocol_inventory_tests.janet
+        - docs/generated/protocol-inventory.yml
+    contracts:
+      - Every phase P0-P16 is represented in the spec index and support matrix.
+      - Every frontend surface has an owning spec file.
+      - Every protocol inventory operation maps to frontend_surface, support_class, state_detail, validation_stage, and owning_spec.
+      - Emulated, unsupported, and pending-design operations have rationale fields.
+      - The support matrix parses as YAML and is checked by tests.
+    tests:
+      red:
+        - "JANET_PATH=$PWD janet test/run_tests.janet :match 'support matrix' :report compact failed on missing docs/specs/support-matrix.yml."
+        - "JANET_PATH=$PWD janet test/run_tests.janet :match 'phase10' :report compact failed on missing owning_spec, validation_stage, and support_rationale fields."
+      green:
+        - "JANET_PATH=$PWD janet test/protocol_inventory_tests.janet :report compact"
+        - "JANET_PATH=$PWD janet test/run_tests.janet :report compact"
+        - "eldev test --expect 27"
+    done_when:
+      - "docs/specs/README.md indexes all split spec files."
+      - "docs/specs/support-matrix.yml parses as YAML and lists P0-P16."
+      - "Generated protocol inventory emits validation_stage and owning_spec for representative operations."
+      - "Generated protocol inventory emits support_rationale for constrained support entries."
+    verification_log:
+      - date: "2026-06-13"
+        red: "P10 tests first failed with missing support matrix/spec index files and missing generated owning_spec/validation_stage/support_rationale fields."
+        green: "JANET_PATH=$PWD janet test/run_tests.janet :match 'protocol inventory' :report compact passed 89 tests / 499 assertions; full verification pending final gate."
+
+  - id: P11_interactive_inspector_xref
+    title: "Interactive inspector and xref navigation"
+    status: done
+    depends_on:
+      - P8_inspector_xref_emacs_ui
+    goal: >-
+      Turn the P8 inspector/xref buffers into interactive editor affordances
+      while keeping the source-index and inspector contracts explicitly visible.
+    contracts:
+      - Inspector parts render as clickable buttons that request inspector-nth-part.
+      - Xref hits can be visited from the xref buffer using stored file/line/column properties.
+    tests:
+      red:
+        - "eldev test --file test/emacs/slynet-interactive-ui-tests.el failed first on missing interactive inspector/xref APIs."
+      green:
+        - "timeout 60s eldev test --file test/emacs/slynet-interactive-ui-tests.el passed 8 tests."
+    done_when:
+      - "Inspector part buttons activate inspector-nth-part requests."
+      - "Xref source navigation opens the recorded file and moves to line/column."
+
+  - id: P12_interactive_debugger_controls
+    title: "Interactive debugger controls"
+    status: done
+    depends_on:
+      - P9_debugger_execution_unit_emacs_ui
+    goal: >-
+      Turn rendered debugger facade data into clickable restart and frame-source
+      actions without claiming CL restart/stack semantic equivalence.
+    contracts:
+      - Synthetic restarts render as buttons that invoke invoke-nth-restart.
+      - Debugger frames carry source metadata that can be visited from the debugger buffer.
+    tests:
+      red:
+        - "eldev test --file test/emacs/slynet-interactive-ui-tests.el failed first on missing debugger interaction APIs."
+      green:
+        - "timeout 60s eldev test --file test/emacs/slynet-interactive-ui-tests.el passed 8 tests."
+    done_when:
+      - "Restart buttons dispatch invoke-nth-restart with the selected index."
+      - "Frame source navigation opens the recorded frame location."
+
+  - id: P13_diagnostics_ui
+    title: "Diagnostics UI for compile/load envelopes"
+    status: done
+    depends_on:
+      - P5_compile_load_diagnostics
+      - P6_emacs_repl_buffer_ui
+    goal: >-
+      Render structured Janet diagnostics as first-class Emacs buffer entries
+      with clickable source locations.
+    contracts:
+      - slynet-compile-string sends compile-string-for-emacs and renders slynet-diagnostics-mode.
+      - Diagnostics carry path/line/column text properties and can be visited from the diagnostics buffer.
+    tests:
+      red:
+        - "eldev test --file test/emacs/slynet-interactive-ui-tests.el failed first on missing slynet-compile-string diagnostics UI."
+      green:
+        - "timeout 60s eldev test --file test/emacs/slynet-interactive-ui-tests.el passed 8 tests."
+    done_when:
+      - "Diagnostic buffers render Janet diagnostic messages and source metadata."
+      - "Diagnostic source navigation opens the recorded file and moves to line/column."
+
+  - id: P14_project_connection_management
+    title: "Project and named connection management"
+    status: done
+    depends_on:
+      - P2_eval_mrepl_first_real_e2e
+      - P6_emacs_repl_buffer_ui
+    goal: >-
+      Provide the first daily-use connection management layer: named
+      connections, project-root discovery, reconnect, and server-process seams.
+    contracts:
+      - slynet-connect-named stores connections by label and makes them current.
+      - slynet-switch-connection switches the active connection by label.
+      - slynet-project-root detects Janet project roots from project.janet, jpm_tree, or .git.
+      - slynet-start-server and slynet-reconnect expose process/reconnect seams for later hardening.
+    tests:
+      red:
+        - "eldev test --file test/emacs/slynet-interactive-ui-tests.el failed first on missing named connection/project root APIs."
+      green:
+        - "timeout 60s eldev test --file test/emacs/slynet-interactive-ui-tests.el passed 8 tests."
+    done_when:
+      - "Named connections can be created and switched without losing current-connection state."
+      - "Project root detection returns canonical root paths."
+
+  - id: P15_completion_parity_deepening
+    title: "Flex completion cache and candidate metadata"
+    status: done
+    depends_on:
+      - P7_completion_autodoc_capf
+    goal: >-
+      Deepen the completion foundation with flex-completion requests, candidate
+      documentation metadata, and cache invalidation.
+    contracts:
+      - slynet-flex-completions-for-pattern sends flex-completions requests and caches candidates by pattern.
+      - Completion candidates preserve source/support/doc metadata as text properties.
+      - slynet-clear-completion-cache invalidates cached candidates.
+    tests:
+      red:
+        - "eldev test --file test/emacs/slynet-interactive-ui-tests.el failed first on missing flex completion cache APIs."
+      green:
+        - "timeout 60s eldev test --file test/emacs/slynet-interactive-ui-tests.el passed 8 tests."
+    done_when:
+      - "Repeated flex-completion requests for the same pattern use the cache."
+      - "Candidate documentation metadata survives normalization."
+
+  - id: P16_runtime_instrumentation
+    title: "Runtime instrumentation foundation"
+    status: done
+    depends_on:
+      - P3_thread_debugger_condition_facade
+      - P12_interactive_debugger_controls
+    goal: >-
+      Add the first speccable Janet runtime-instrumentation hooks for source-aware
+      eval, restart scopes, cooperative execution-unit interruption, and debugger checkpoints.
+    contracts:
+      - source-aware-eval returns values plus source-context metadata.
+      - list-restart-scopes exposes current synthetic restart scopes with CL-equivalence metadata.
+      - interrupt-execution-unit records cooperative interruption request metadata.
+      - debugger-step-checkpoint exposes pending emulated stepping checkpoints.
+    tests:
+      red:
+        - "JANET_PATH=$PWD janet test/run_tests.janet :match 'runtime instrumentation' :report compact failed first on missing runtime instrumentation RPCs."
+      green:
+        - "JANET_PATH=$PWD janet test/run_tests.janet :match 'runtime instrumentation' :report compact passed 85 tests / 365 assertions."
+    done_when:
+      - "Source-aware eval returns source-context and value payloads."
+      - "Restart scopes, cooperative interrupts, and step checkpoints return explicit emulated metadata."
+
+  - id: P17_protocol_interface_registry_alignment
+    title: "Protocol interface registry alignment"
+    status: done
+    depends_on:
+      - P10_spec_consolidation_support_matrix
+      - P16_runtime_instrumentation
+    goal: >-
+      Close the implementation-without-interface gap for staged extension RPCs so
+      the public protocol registry, inventory, docs, and runtime warning surface
+      agree about implemented extension operations.
+    contracts:
+      - Every implemented extension RPC introduced by P11-P16 has a matching definterface declaration unless explicitly private/internal.
+      - Runtime instrumentation, debugger helper, inspector rendering, macroexpand helper, thread metadata, and apropos extension RPCs are declared.
+      - Historical declared-but-unimplemented SLY/SLYNK gaps remain inventory signal rather than being hidden.
+    files:
+      update:
+        - slynet/interfaces.janet
+        - test/project_core_tests.janet
+        - phases.yml
+        - docs/specs/support-matrix.yml
+        - docs/specs/README.md
+        - docs/specs/cl-janet-equivalence-contracts.md
+      create:
+        - docs/specs/protocol-interface-registry.md
+    tests:
+      red:
+        - "JANET_PATH=$PWD janet test/run_tests.janet :match 'implemented extension RPCs have interface declarations' :report compact failed on missing extension RPC interface declarations."
+      green:
+        - "JANET_PATH=$PWD janet test/run_tests.janet :match 'implemented extension RPCs have interface declarations' :report compact passed 92 tests / 560 assertions."
+    done_when:
+      - "Representative implemented extension RPCs have both inf/get-implementation and inf/get-interface."
+      - "slynet-apropos has a contrib interface declaration matching its registered implementation."
+
+  - id: P18_source_index_v2
+    title: "Span-aware Janet source index"
+    status: done
+    depends_on:
+      - P4_inspector_xref_source_index
+      - P17_protocol_interface_registry_alignment
+    goal: >-
+      Replace the simple definition scanner with a conservative span-aware Janet
+      source index that records definitions, imports, uses, modules, snippets,
+      source ranges, and cache invalidation facts.
+    contracts:
+      - source-index/index-project records file, line, column, end-line, end-column, module, snippet, and form-kind.
+      - source-index/find-definitions invalidates stale cache entries when a file changes.
+      - find-definitions-for-emacs prefers source-index v2 hits and returns :slynet-source-index-v2 metadata.
+    tests:
+      red:
+        - "JANET_PATH=$PWD janet test/run_tests.janet :match 'source index v2' :report compact failed first on missing slynet/source_index.janet."
+      green:
+        - "bridge.yml:test passed 104 tests / 669 assertions."
+    done_when:
+      - "P18 source-index v2 contract tests pass."
+      - "Existing P4 xref fixture tests still pass with source-index v2 facts."
+
+  - id: P19_inspector_ranges_history_actions
+    title: "Inspector ranges, history, and actions"
+    status: done
+    depends_on:
+      - P11_interactive_inspector_xref
+    goal: >-
+      Make the inspector backend useful for larger structures by adding range
+      paging, history metadata, and explicit action support/unsupported records.
+    contracts:
+      - inspector-range pages array/tuple/table parts with start/end/total metadata.
+      - inspector-history preserves stable object identity and current entry metadata.
+      - inspector-actions exposes safe native actions and explicit unsupported unsafe actions.
+    tests:
+      red:
+        - "P19 tests failed first on missing inspector-range, inspector-history, and inspector-actions behavior."
+      green:
+        - "bridge.yml:test passed 104 tests / 669 assertions."
+    done_when:
+      - "Range, history, and action tests pass under the in-memory server harness."
+      - "Inspector test harness resets state per server to avoid order-dependent failures."
+
+  - id: P20_debugger_restart_scopes
+    title: "Instrumented debugger restart scopes"
+    status: done
+    depends_on:
+      - P12_interactive_debugger_controls
+      - P16_runtime_instrumentation
+    goal: >-
+      Provide a first honest fake-it-till-we-make-it restart substrate: SLYNET-owned
+      instrumented evaluation wrappers can continue-as-nil, retry retained safe
+      thunks, or report unsupported restarts explicitly outside a scope.
+    contracts:
+      - instrumented-eval-with-restarts returns synthetic scope metadata.
+      - continue-as-nil returns a nil value payload with emulated support metadata.
+      - retry evaluates the retained retry thunk and returns values.
+      - invoke-synthetic-restart outside a SLYNET-owned scope returns explicit unsupported metadata.
+    tests:
+      red:
+        - "P20 tests failed first on missing instrumented restart-scope RPCs."
+      green:
+        - "bridge.yml:test passed 104 tests / 669 assertions."
+    done_when:
+      - "P20 restart-scope tests pass."
+      - "The CL restart equivalence flag remains false for synthetic scopes."
+
+  - id: P21_execution_unit_registry
+    title: "Execution-unit registry and cooperative interruption"
+    status: done
+    depends_on:
+      - P3_thread_debugger_condition_facade
+      - P16_runtime_instrumentation
+    goal: >-
+      Track Janet-native execution units with stable ids, lifecycle state,
+      source context, last output, and cooperative interruption flags.
+    contracts:
+      - register-execution-unit creates named managed execution units.
+      - list-execution-units includes managed units alongside connection units.
+      - interrupt-execution-unit records cooperative interruption requests.
+      - execution-unit-status and complete-execution-unit expose state transitions.
+    tests:
+      red:
+        - "bridge.yml:test failed first on missing register-execution-unit / execution-unit-status / complete-execution-unit behavior."
+      green:
+        - "bridge.yml:test passed 115 tests / 762 assertions."
+    done_when:
+      - "Execution unit lifecycle and interruption tests pass."
+      - "CL thread-equivalence remains explicitly false/emulated."
+
+  - id: P22_diagnostics_source_integration
+    title: "Unified source-aware diagnostics"
+    status: done
+    depends_on:
+      - P13_diagnostics_ui
+      - P18_source_index_v2
+    goal: >-
+      Normalize compile-string, runtime-eval, and test-failure diagnostics into
+      source-aware Janet diagnostics that the Emacs diagnostics buffer can render.
+    contracts:
+      - compile-string-for-emacs accepts optional path/line/column metadata.
+      - runtime-error-diagnostics and runtime-eval-diagnostics emit Janet diagnostic envelopes.
+      - test-failure-diagnostic and normalize-test-failure-diagnostic expose test failure entries.
+      - Emacs diagnostics rendering includes the diagnostic phase and source jump metadata.
+    tests:
+      red:
+        - "bridge.yml:test and focused ERT failed first on missing runtime diagnostics wrappers and phase rendering."
+      green:
+        - "bridge.yml:test passed 115 tests / 762 assertions; focused diagnostics ERT passed."
+    done_when:
+      - "Compile/runtime/test diagnostic contracts pass."
+      - "Diagnostics remain Janet diagnostics, not CL compiler-note equivalents."
+
+  - id: P23_completion_docs_namespace
+    title: "Source-index-backed completion docs and namespace awareness"
+    status: done
+    depends_on:
+      - P15_completion_parity_deepening
+      - P18_source_index_v2
+    goal: >-
+      Provide Janet-native namespace completions backed by the source index,
+      including candidate documentation/source/module metadata and cache invalidation by project signature.
+    contracts:
+      - namespace-completions returns source-index-backed candidate plists plus common prefix.
+      - Candidate metadata includes name, module, form-kind, file, line, doc-summary, and support class.
+      - Source edits invalidate stale completion results through the source-index project signature.
+    tests:
+      red:
+        - "bridge.yml:test failed first on missing namespace-completions behavior."
+      green:
+        - "bridge.yml:test passed 115 tests / 762 assertions."
+    done_when:
+      - "Namespace completion tests pass for source-index docs and invalidation."
+      - "No CL package-equivalence claim is introduced."
+
+  - id: P24_project_server_lifecycle
+    title: "Project server lifecycle and reconnect hardening"
+    status: done
+    depends_on:
+      - P14_project_connection_management
+      - P21_execution_unit_registry
+    goal: >-
+      Add first daily-use project server lifecycle seams: observable readiness,
+      named reconnect preservation, stale process status, and an Emacs status buffer.
+    contracts:
+      - slynet-start-project-server waits on a readiness predicate instead of sleeping blindly.
+      - slynet-reconnect-project preserves named project identity.
+      - slynet-project-server-status renders stale/live endpoint state.
+      - backend project-server status/reconnect/stale RPCs retain project identity metadata.
+    tests:
+      red:
+        - "Focused ERT failed first on missing project lifecycle APIs."
+      green:
+        - "Focused ERT passed 4/4; bridge.yml:test passed 115 tests / 762 assertions."
+    done_when:
+      - "Project lifecycle ERT tests pass."
+      - "Backend P24 lifecycle tests pass."
+
+  - id: P25_trace_timing_runtime_utility
+    title: "Janet-native trace/timing and backend runtime utility records"
+    status: done
+    depends_on:
+      - P16_runtime_instrumentation
+      - P18_source_index_v2
+    goal: >-
+      Add source-linked trace/timing records and explicit backend runtime utility
+      capability metadata for native Janet development workflows.
+    contracts:
+      - slynet-trace-eval records result, elapsed-us, source location, and source-index metadata.
+      - backend-runtime-capabilities distinguishes callable native utilities from abandoned/unsupported CL runtime operations.
+      - backend-runtime-operation returns structured unsupported metadata for save-image and unsafe runtime gaps.
+    tests:
+      red:
+        - "P25 tests failed first on missing trace/backend-runtime RPC behavior."
+      green:
+        - "bridge.yml:test passed 122 tests / 842 assertions."
+    done_when:
+      - "Trace/timing and runtime utility capability tests pass."
+      - "CL trace/image equivalence flags remain false where applicable."
+
+  - id: P26_profile_protocol_browser
+    title: "Wrapper profiling and protocol/interface browser"
+    status: done
+    depends_on:
+      - P17_protocol_interface_registry_alignment
+      - P25_trace_timing_runtime_utility
+    goal: >-
+      Provide SLYNET wrapper profiling records plus a browser for Janet-native
+      protocol/interface metadata.
+    contracts:
+      - profile/profile-package/profile-report/profile-reset expose workaround metadata and native-profiler false.
+      - slynet-protocol-interfaces filters interface records and returns array-shaped arg metadata.
+      - slynet-describe-protocol-interface describes declared interfaces.
+    tests:
+      red:
+        - "P26 tests failed first on missing profile/reporting and interface-browser behavior."
+      green:
+        - "bridge.yml:test passed 122 tests / 842 assertions."
+    done_when:
+      - "Wrapper profile and protocol browser tests pass."
+      - "No CLOS/MOP or native-profiler equivalence is claimed."
+
+  - id: P27_compile_macroexpand_snapshot_compatibility
+    title: "SLYNK-shaped compile/macroexpand wrappers and Janet project snapshots"
+    status: done
+    depends_on:
+      - P5_compile_load_diagnostics
+      - P24_project_server_lifecycle
+    goal: >-
+      Add SLYNK-shaped compatibility wrappers for compile/macroexpand commands
+      and Janet-native project snapshot/session metadata.
+    contracts:
+      - slynk-compile-string wraps Janet diagnostics with emulated SLYNK operation metadata.
+      - slynk-compiler-macroexpand-1 and slynk-expand expose string expansions with CL-equivalence flags false.
+      - slynet-project-snapshot and slynet-session-metadata record Janet-native session facts with CL image equivalence false.
+    tests:
+      red:
+        - "P27 tests failed first on missing compile/macroexpand wrappers and snapshot/session RPC behavior."
+      green:
+        - "bridge.yml:test passed 122 tests / 842 assertions."
+    done_when:
+      - "Compatibility wrapper and project snapshot/session metadata tests pass."
+      - "CL compiler-note, compiler-macroexpand, and image-save equivalence flags remain false."
+
+  - id: P28_namespace_browser_package_boundary
+    title: "Janet namespace browser and explicit CL package boundary"
+    status: done
+    depends_on:
+      - P23_completion_docs_namespace
+      - P10_spec_consolidation_support_matrix
+    goal: >-
+      Expose Janet namespaces/modules directly and return structured unsupported
+      metadata for CL package-local nickname operations.
+    contracts:
+      - namespace-browser returns Janet namespace/module records and cl-package-equivalent false.
+      - package-local-nicknames returns explicit unsupported metadata.
+      - find-locally-nicknamed-package returns explicit unsupported metadata.
+    tests:
+      red:
+        - "P28 tests failed first on missing namespace browser and CL package-boundary RPC behavior."
+      green:
+        - "bridge.yml:test passed 122 tests / 842 assertions."
+    done_when:
+      - "Namespace browser tests pass."
+      - "CL package-local nickname behavior remains abandoned with structured unsupported metadata."
+
+  - id: P29_janet_suite_architecture
+    title: "Janet suite architecture and checks"
+    status: done
+    depends_on:
+      - P10_spec_consolidation_support_matrix
+      - P17_protocol_interface_registry_alignment
+    goal: >-
+      Make the Janet contract suite targetable and isolated with focused suite
+      selection, an explicit protocol-check script, and shared reset helpers.
+    contracts:
+      - test/run_tests.janet accepts :suite and loads files from test/suite_manifest.janet.
+      - source-index suite runs only source-index-v2 tests.
+      - tools/protocol_warning_policy.janet reports declared gaps while failing forbidden classes.
+      - test-tools/reset-test-state! restores shared debugger and inspector state.
+    tests:
+      red:
+        - "P29 failed first on missing reset helper, spec file, suite selector, and policy script."
+      green:
+        - "janet test/run_tests.janet :suite source-index :report compact passed 3 tests / 24 assertions."
+    done_when:
+      - "Focused suites avoid importing unrelated phase files."
+      - "Protocol gap policy is explicit and machine-checkable."

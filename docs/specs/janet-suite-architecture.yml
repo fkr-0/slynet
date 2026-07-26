@@ -1,0 +1,82 @@
+id: P29_janet_suite_architecture
+title: "Janet suite architecture and warning policy"
+status: done
+phase: P29
+purpose: >-
+  Make the Janet contract suite targetable, policy-aware, and less noisy as the
+  backend grows beyond P28. This phase does not add product behavior; it keeps
+  future behavior work fast to verify and safe to extend.
+
+suite_selector:
+  runner: test/run_tests.janet
+  manifest: test/suite_manifest.janet
+  default_suite: all
+  cli:
+    examples:
+      - "janet test/run_tests.janet :suite source-index :report compact"
+      - "janet test/run_tests.janet :suite protocol-inventory :report compact"
+      - "janet test/run_tests.janet :suite all :report compact"
+  suites:
+    unit:
+      description: "Runner/self-tests and suite architecture checks."
+    contract:
+      description: "Alias for all current contract tests."
+    protocol-inventory:
+      description: "Inventory generation, support matrix, ownership, and warning-policy contracts."
+    source-index:
+      description: "P18 source-index-v2 tests only."
+    debugger:
+      description: "Debugger facade and restart-scope tests."
+    inspector:
+      description: "Inspector/xref object navigation and range/history/action tests."
+    diagnostics:
+      description: "Compile/load/runtime/test diagnostics contracts."
+    completion:
+      description: "Completion docs and namespace contracts."
+    execution-units:
+      description: "Execution-unit registry and lifecycle contracts."
+    integration:
+      description: "Server/client integration tests."
+    compatibility-boundaries:
+      description: "Janet-native compatibility and abandonment-boundary tests."
+
+warning_policy:
+  tool: tools/protocol_warning_policy.janet
+  allowed:
+    declared_but_not_implemented:
+      action: report
+      reason: >-
+        Historical SLY/SLYNK interfaces remain declared so the gap is visible.
+  forbidden:
+    implemented_without_interface:
+      action: fail
+      reason: "P17 requires every implemented RPC to have an interface declaration."
+    missing_owning_spec:
+      action: fail
+      reason: "P10 requires generated inventory ownership metadata."
+    missing_validation_stage:
+      action: fail
+      reason: "P10 requires every generated operation to map to a validation stage."
+
+isolation:
+  shared_reset_helper: test-tools/reset-test-state!
+  resets:
+    - debugger_mode
+    - inspector_stack
+    - inspector_counters
+  fixture_rule: >-
+    Tests that allocate in-memory servers or mutate shared backend registries
+    must restore global state through test-tools helpers rather than assuming
+    runner ordering.
+
+red_tests:
+  - "P29 spec exists and documents suite_selector, warning_policy, and isolation."
+  - "source-index suite runs only the source-index-v2 test file."
+  - "protocol warning policy reports declared gaps but forbids implemented-without-interface."
+  - "test-tools reset helper restores shared global state."
+
+green_gates:
+  - "JANET_PATH=$PWD janet test/run_tests.janet :match p29 :report compact"
+  - "JANET_PATH=$PWD janet test/run_tests.janet :suite source-index :report compact"
+  - "JANET_PATH=$PWD janet tools/protocol_warning_policy.janet --check"
+  - "JANET_PATH=$PWD janet test/run_tests.janet :report compact"

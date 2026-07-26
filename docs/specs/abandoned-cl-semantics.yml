@@ -1,0 +1,242 @@
+# SLYNET abandoned Common Lisp semantic-equivalence boundaries.
+# The `abandon` side is intentionally not implemented as literal parity.
+# The `keep` side is part of the SLYNET Janet-native roadmap and should be
+# implemented and tested unless already covered by earlier phases.
+
+schema_version: 1
+status: todo
+purpose: >-
+  Define the Common Lisp / SLYNK semantic areas SLYNET will not promise as
+  literal Janet behavior, while preserving a tested Janet-native frontend
+  workflow where that remains useful.
+
+policy:
+  abandon_rule: >-
+    Do not implement the abandoned side as compatibility theater. If Janet has
+    no safe substrate for literal CL behavior, return explicit emulated or
+    unsupported metadata instead of pretending equivalence.
+  keep_rule: >-
+    Treat every keep item as backlog work unless the support matrix and tests
+    already prove it. Keep items should become concrete phases, tests, or
+    support-matrix contracts.
+  user_experience_rule: >-
+    Preserve frontend workflow equivalence where feasible: users should get a
+    useful REPL, debugger facade, inspector, xref, diagnostics, completion,
+    execution-unit browser, and runtime tooling without false CL claims.
+
+abandonments:
+  - id: CL_RESTART_STACK_SEMANTICS
+    title: "True Common Lisp condition/restart stack semantics"
+    decision: abandon_literal_semantic_equivalence
+    rationale: >-
+      Janet does not provide the same dynamic condition/restart system as Common
+      Lisp. SLYNET-owned restart scopes can approximate frontend workflows, but
+      arbitrary CL restart semantics would be dishonest.
+    abandon:
+      - "True CL condition/restart stack semantics"
+      - "Arbitrary restart discovery outside SLYNET-owned scopes"
+      - "Claiming synthetic restart actions are semantic CL restarts"
+    keep:
+      - id: restart_scopes
+        status: planned
+        phase: P20_debugger_restart_scopes
+        description: "SLYNET-owned synthetic restart scopes with explicit metadata."
+        tests_required: true
+      - id: abort_to_repl
+        status: implemented_foundation
+        phases:
+          - P3_thread_debugger_condition_facade
+          - P12_interactive_debugger_controls
+        description: "Abort-to-REPL restart affordance for debugger workflow."
+        tests_required: true
+      - id: retry_continue_when_instrumented
+        status: planned
+        phase: P20_debugger_restart_scopes
+        description: "Retry/continue only where an instrumented wrapper explicitly supports it."
+        tests_required: true
+
+  - id: CL_FRAME_MUTATION
+    title: "General CL stack frame mutation"
+    decision: abandon_literal_semantic_equivalence
+    rationale: >-
+      Janet stack frames are not a safe general substrate for CL-style return
+      from frame, restart frame, or arbitrary frame variable mutation.
+    abandon:
+      - "return-from-frame as a general primitive"
+      - "restart-frame as a general primitive"
+      - "arbitrary frame variable mutation"
+      - "claiming Janet debug frames are CL stack frames"
+    keep:
+      - id: frame_display
+        status: implemented_foundation
+        phases:
+          - P3_thread_debugger_condition_facade
+          - P9_debugger_execution_unit_emacs_ui
+        description: "Display Janet/debugger facade frames with explicit source metadata."
+        tests_required: true
+      - id: frame_source_jumps
+        status: implemented_foundation
+        phases:
+          - P12_interactive_debugger_controls
+          - P18_source_index_v2
+        description: "Jump from frame entries to source-index-backed locations."
+        tests_required: true
+      - id: safe_locals_display
+        status: planned
+        phase: P20_debugger_restart_scopes
+        description: "Expose locals only where Janet/debug metadata safely provides them."
+        tests_required: true
+      - id: source_aware_eval
+        status: implemented_foundation
+        phase: P16_runtime_instrumentation
+        description: "Source-aware eval wrapper carrying source context metadata."
+        tests_required: true
+
+  - id: HARD_THREAD_CONTROL
+    title: "Unsafe hard thread control"
+    decision: abandon_literal_semantic_equivalence
+    rationale: >-
+      Hard thread kill/preemptive interruption is unsafe or unavailable in the
+      Janet substrate. Janet-native execution units should expose cooperative
+      lifecycle controls instead.
+    abandon:
+      - "unsafe kill-thread equivalence"
+      - "preemptive interrupt equivalence when Janet cannot guarantee safety"
+      - "pretending fibers/connections are OS threads"
+    keep:
+      - id: execution_unit_registry
+        status: planned
+        phase: P21_execution_unit_registry
+        description: "Registry for evals, fibers, workers, and server connections."
+        tests_required: true
+      - id: cooperative_cancellation
+        status: planned
+        phase: P21_execution_unit_registry
+        description: "Cooperative cancellation flags observed by managed execution units."
+        tests_required: true
+      - id: debugger_focus
+        status: implemented_foundation
+        phases:
+          - P3_thread_debugger_condition_facade
+          - P9_debugger_execution_unit_emacs_ui
+        description: "Debugger/execution-unit association with explicit non-CL metadata."
+        tests_required: true
+
+  - id: CLOS_MOP_PARITY
+    title: "CLOS/MOP parity"
+    decision: abandon_literal_semantic_equivalence
+    rationale: >-
+      Janet has different object and dispatch facilities. Exact CLOS/MOP
+      behavior is out of scope, but Janet-native protocols/interfaces can be
+      surfaced usefully.
+    abandon:
+      - "CLOS/MOP parity"
+      - "generic-method-specs as CL semantics"
+      - "class/metaobject compatibility claims"
+    keep:
+      - id: janet_protocol_interface_docs
+        status: planned
+        phase: P23_completion_docs_namespace
+        description: "Browse Janet protocols/interfaces and documentation as Janet-native entities."
+        tests_required: true
+      - id: implementation_registry_views
+        status: implemented_foundation
+        phase: P17_protocol_interface_registry_alignment
+        description: "Declared interfaces and implementations are aligned for implemented extension RPCs."
+        tests_required: true
+      - id: method_like_browsing
+        status: planned
+        phase: P23_completion_docs_namespace
+        description: "Expose method-like registry views without claiming CLOS semantics."
+        tests_required: true
+
+  - id: CL_PACKAGE_MODEL
+    title: "Exact Common Lisp package model"
+    decision: abandon_literal_semantic_equivalence
+    rationale: >-
+      Janet modules/environments do not match CL packages, imports, exports, or
+      package-local nickname semantics. SLYNET should expose Janet namespaces
+      directly.
+    abandon:
+      - "exact CL package-local nickname behavior"
+      - "exact CL import/export/package equality behavior"
+      - "pretending Janet modules are CL packages"
+    keep:
+      - id: janet_namespace_browser
+        status: planned
+        phase: P23_completion_docs_namespace
+        description: "Browse Janet modules, imports, aliases, and source-defined names."
+        tests_required: true
+      - id: project_root_namespaces
+        status: implemented_foundation
+        phase: P14_project_connection_management
+        description: "Project-root-aware connection and namespace context."
+        tests_required: true
+      - id: namespace_aware_completion
+        status: planned
+        phase: P23_completion_docs_namespace
+        description: "Complete local and imported Janet names with source/doc metadata."
+        tests_required: true
+
+  - id: SAVE_IMAGE_PARITY
+    title: "Common Lisp image save parity"
+    decision: abandon_literal_semantic_equivalence
+    rationale: >-
+      Janet does not expose a direct portable equivalent to CL image save in the
+      SLY sense. Project reproducibility should be handled through Janet-native
+      startup and snapshot helpers.
+    abandon:
+      - "save-image parity"
+      - "background-save-image parity"
+      - "claiming SLYNET can persist arbitrary Janet runtime state as a CL image"
+    keep:
+      - id: project_snapshot_helpers
+        status: planned
+        phase: P24_project_server_lifecycle
+        description: "Project reproducibility helpers, startup scripts, and optional metadata snapshots."
+        tests_required: true
+      - id: repl_session_metadata
+        status: planned
+        phase: P24_project_server_lifecycle
+        description: "Record useful REPL/server session metadata without pretending image save semantics."
+        tests_required: true
+
+  - id: CL_COMPILER_NOTES_EQUIVALENCE
+    title: "Common Lisp compiler-note equivalence"
+    decision: abandon_literal_semantic_equivalence
+    rationale: >-
+      Janet diagnostics are not CL compiler notes. They should be represented as
+      structured Janet diagnostics with source metadata and explicit non-equivalence.
+    abandon:
+      - "claiming Janet diagnostics are CL compiler notes"
+      - "forcing CL compiler-note fields where Janet cannot supply truthful data"
+    keep:
+      - id: janet_diagnostics_envelope
+        status: implemented_foundation
+        phases:
+          - P5_compile_load_diagnostics
+          - P13_diagnostics_ui
+        description: "Structured Janet diagnostics with diagnostic-model and CL-equivalence flags."
+        tests_required: true
+      - id: diagnostics_source_index_integration
+        status: planned
+        phase: P22_diagnostics_source_integration
+        description: "Attach file/line/column/source-index facts to compile/load/runtime/test diagnostics."
+        tests_required: true
+      - id: diagnostics_emacs_ui
+        status: implemented_foundation
+        phase: P13_diagnostics_ui
+        description: "Diagnostics buffer and clickable diagnostic source navigation."
+        tests_required: true
+
+validation:
+  todo_rule: >-
+    Planned keep items must be represented in next-implementation-roadmap.yml
+    or support-matrix.yml before implementation starts.
+  already_implemented_rule: >-
+    Implemented-foundation keep items must remain covered by existing tests and
+    should not regress when the planned deeper phases are implemented.
+  unsupported_result_rule: >-
+    Any abandoned operation that remains exposed through compatibility inventory
+    must return structured unsupported/emulated rationale instead of silent
+    failure or misleading native support.

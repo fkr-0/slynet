@@ -10,6 +10,8 @@
   `(let ((opened nil)
          (sent nil)
          (deleted nil)
+         (coding nil)
+         (installed-sentinel nil)
          (fake-process (list :fake-process)))
      (cl-letf (((symbol-function 'slynet-client--open-network-stream)
                 (lambda (name buffer host service)
@@ -18,7 +20,11 @@
                ((symbol-function 'slynet-client--set-process-filter)
                 (lambda (_process _filter) :filter-installed))
                ((symbol-function 'slynet-client--set-process-sentinel)
-                (lambda (_process _sentinel) :sentinel-installed))
+                (lambda (_process sentinel)
+                  (setq installed-sentinel sentinel)))
+               ((symbol-function 'slynet-client--set-process-coding-system)
+                (lambda (_process decoding encoding)
+                  (setq coding (list decoding encoding))))
                ((symbol-function 'slynet-client--process-send-string)
                 (lambda (_process wire)
                   (push wire sent)))
@@ -39,7 +45,183 @@
     (let ((connection (slynet-connect :host "127.0.0.1" :port 4005)))
       (should (slynet-client-connection-p connection))
       (should (eq connection slynet-current-connection))
-      (should (equal opened '("slynet" nil "127.0.0.1" 4005))))))
+      (should (equal opened '("slynet" nil "127.0.0.1" 4005)))
+      (should (equal coding '(binary binary))))))
+
+(ert-deftest slynet-client-roundtrips-unicode-across-fragmented-frame ()
+  (let* ((message '(:return (:ok "λ猫") 7))
+         (wire (slynet-client-encode-message message))
+         (seen nil)
+         (connection (slynet-client-make-test-connection
+                      (lambda (decoded) (push decoded seen)))))
+    (slynet-client-filter connection (substring wire 0 8))
+    (should-not seen)
+    (slynet-client-filter connection (substring wire 8))
+    (should (equal seen (list message)))
+    (should (equal (slynet-client-connection-buffer connection) ""))))
+
+(ert-deftest slynet-client-rejects-malformed-prefix-and-recovers-buffer ()
+  (let ((connection (slynet-client-make-test-connection #'ignore)))
+    (should-error (slynet-client-filter connection "zzzzzzpayload")
+                  :type 'slynet-client-protocol-error)
+    (should (equal (slynet-client-connection-buffer connection) ""))
+    (slynet-client-filter connection (slynet-client-encode-message '(:ok 1)))
+    (should (equal (slynet-client-connection-buffer connection) ""))))
+
+(ert-deftest slynet-client-rejects-invalid-sexp-payload ()
+  (let ((connection (slynet-client-make-test-connection #'ignore)))
+    (should-error (slynet-client-filter connection "000001(")
+                  :type 'slynet-client-protocol-error)
+    (should (equal (slynet-client-connection-buffer connection) ""))))
+
+(ert-deftest slynet-client-rejects-trailing-frame-garbage ()
+  (let ((connection (slynet-client-make-test-connection #'ignore)))
+    (should-error (slynet-client-filter connection "000008(:ok)bad")
+                  :type 'slynet-client-protocol-error)
+    (should (equal (slynet-client-connection-buffer connection) ""))))
+
+(ert-deftest slynet-client-rejects-oversized-outbound-frame ()
+  (let ((slynet-client-max-frame-bytes 4))
+    (should-error (slynet-client-encode-message "12345")
+                  :type 'slynet-client-protocol-error)))
+
+(ert-deftest slynet-client-rejects-oversized-inbound-frame-before-buffering ()
+  (let ((slynet-client-max-frame-bytes 4)
+        (connection (slynet-client-make-test-connection #'ignore)))
+    (should-error (slynet-client-filter connection "000005")
+                  :type 'slynet-client-protocol-error)
+    (should (equal (slynet-client-connection-buffer connection) ""))))
+
+(ert-deftest slynet-client-callback-errors-are-isolated ()
+  (let* ((connection (make-slynet-client-connection))
+         (hook-call nil)
+         (slynet-client-callback-error-functions
+          (list (lambda (_connection request-id payload error-data)
+                  (setq hook-call (list request-id payload error-data))))))
+    (puthash 7
+             (make-slynet-client-request
+              :callback (lambda (_payload) (error "callback exploded")))
+             (slynet-client-connection-pending-requests connection))
+    (should-not (slynet-client--complete-request connection 7 :ok))
+    (should (= (hash-table-count
+                (slynet-client-connection-pending-requests connection))
+               0))
+    (should (equal (car hook-call) 7))
+    (should (eq (cadr hook-call) :ok))
+    (should (string-match-p "callback exploded"
+                            (error-message-string (caddr hook-call))))))
+
+(ert-deftest slynet-client-cancel-request-is-idempotent-and-ignores-late-reply ()
+  (let* ((connection (make-slynet-client-connection))
+         (seen nil)
+         (cancelled-timer nil)
+         (request (make-slynet-client-request
+                   :callback (lambda (payload) (push payload seen))
+                   :timer :timer)))
+    (puthash 9 request
+             (slynet-client-connection-pending-requests connection))
+    (cl-letf (((symbol-function 'slynet-client--cancel-timer)
+               (lambda (timer) (setq cancelled-timer timer))))
+      (should (slynet-client-cancel-request connection 9))
+      (should-not (slynet-client-cancel-request connection 9))
+      (slynet-client--complete-request connection 9 :late))
+    (should (eq cancelled-timer :timer))
+    (should (equal seen '((:abort :cancelled))))))
+
+(ert-deftest slynet-client-request-timeout-cancels-and-notifies-once ()
+  (slynet-test-with-fake-transport
+    (let ((scheduled nil)
+          (seen nil)
+          (slynet-client-request-timeout 2.5))
+      (cl-letf (((symbol-function 'slynet-client--run-at-time)
+                 (lambda (seconds function &rest args)
+                   (setq scheduled (list seconds function args))
+                   :timer))
+                ((symbol-function 'slynet-client--cancel-timer)
+                 (lambda (_timer) nil)))
+        (let ((request-id
+               (slynet-client-send-rex-async
+                (slynet-connect) '(slow-operation)
+                (lambda (payload) (push payload seen)))))
+          (should (= (car scheduled) 2.5))
+          (apply (cadr scheduled) (caddr scheduled))
+          (slynet-client--complete-request
+           slynet-current-connection request-id :late)
+          (should (equal seen '((:abort :timeout))))
+          (should (= (hash-table-count
+                      (slynet-client-connection-pending-requests
+                       slynet-current-connection))
+                     0)))))))
+
+(ert-deftest slynet-client-frame-parser-property-roundtrip-fragmentation ()
+  (let ((state 2463534242))
+    (cl-labels ((next-random
+                 (limit)
+                 (setq state (logand #xffffffff
+                                     (logxor state (lsh state 13))))
+                 (setq state (logand #xffffffff
+                                     (logxor state (lsh state -17))))
+                 (setq state (logand #xffffffff
+                                     (logxor state (lsh state 5))))
+                 (mod state limit)))
+      (dotimes (case 100)
+        (let* ((message (list :case case
+                              (make-string (1+ (next-random 40))
+                                           (+ ?a (next-random 26)))
+                              (if (= 0 (mod case 3)) "λ猫" case)))
+               (wire (slynet-client-encode-message message))
+               (position 0)
+               (seen nil)
+               (connection
+                (slynet-client-make-test-connection
+                 (lambda (decoded) (push decoded seen)))))
+          (while (< position (length wire))
+            (let ((end (min (length wire)
+                            (+ position 1 (next-random 9)))))
+              (slynet-client-filter connection (substring wire position end))
+              (setq position end)))
+          (should (equal seen (list message)))
+          (should (equal (slynet-client-connection-buffer connection) "")))))))
+
+(ert-deftest slynet-client-frame-parser-rejects-fuzzed-prefixes ()
+  (dolist (prefix '("gggggg" "-00001" " 00001" "00000z" "!!!!!!"))
+    (let ((connection (slynet-client-make-test-connection #'ignore)))
+      (should-error (slynet-client-filter connection (concat prefix "payload"))
+                    :type 'slynet-client-protocol-error)
+      (should (equal (slynet-client-connection-buffer connection) "")))))
+
+(ert-deftest slynet-client-send-failure-does-not-leak-pending-callback ()
+  (let ((connection (make-slynet-client-connection
+                     :process :dead
+                     :pending-requests (make-hash-table :test 'eql))))
+    (cl-letf (((symbol-function 'slynet-client--process-live-p)
+               (lambda (_process) nil)))
+      (should-error
+       (slynet-client-send-rex-async connection '(ping) #'ignore))
+      (should (= (hash-table-count
+                  (slynet-client-connection-pending-requests connection))
+                 0)))))
+
+(ert-deftest slynet-client-sentinel-invalidates-closed-connection-state ()
+  (slynet-test-with-fake-transport
+    (let ((connection (slynet-connect)))
+      (puthash 4 #'ignore
+               (slynet-client-connection-pending-requests connection))
+      (setf (slynet-client-connection-channel-id connection) 12
+            (slynet-client-connection-mrepl-thread connection) 3
+            (slynet-client-connection-thread connection) 3
+            (slynet-client-connection-mrepl-eval-callback connection) #'ignore)
+      (cl-letf (((symbol-function 'slynet-client--process-live-p)
+                 (lambda (_process) nil)))
+        (funcall installed-sentinel fake-process "connection broken"))
+      (should-not (slynet-client-connection-process connection))
+      (should-not (slynet-client-connection-channel-id connection))
+      (should-not (slynet-client-connection-mrepl-thread connection))
+      (should-not (slynet-client-connection-thread connection))
+      (should-not (slynet-client-connection-mrepl-eval-callback connection))
+      (should (= (hash-table-count
+                  (slynet-client-connection-pending-requests connection))
+                 0)))))
 
 (ert-deftest slynet-eval-string-sends-interactive-eval-rex ()
   (slynet-test-with-fake-transport
@@ -51,10 +233,20 @@
 
 (ert-deftest slynet-disconnect-closes-current-connection ()
   (slynet-test-with-fake-transport
-    (slynet-connect)
-    (slynet-disconnect)
-    (should (equal deleted (list fake-process)))
-    (should-not slynet-current-connection)))
+    (let ((connection (slynet-connect)))
+      (puthash 8 #'ignore
+               (slynet-client-connection-pending-requests connection))
+      (setf (slynet-client-connection-channel-id connection) 9
+            (slynet-client-connection-mrepl-eval-callback connection) #'ignore)
+      (slynet-disconnect)
+      (should (equal deleted (list fake-process)))
+      (should-not (slynet-client-connection-process connection))
+      (should-not (slynet-client-connection-channel-id connection))
+      (should-not (slynet-client-connection-mrepl-eval-callback connection))
+      (should (= (hash-table-count
+                  (slynet-client-connection-pending-requests connection))
+                 0))
+      (should-not slynet-current-connection))))
 
 
 (ert-deftest slynet-status-and-health-render-connection-state ()
@@ -87,9 +279,10 @@
 
 (ert-deftest slynet-mode-exposes-sane-prefix-map-and-quit-lifecycle ()
   (slynet-test-with-fake-transport
-    (let ((connection (slynet-connect :host "127.0.0.1" :port 4005))
-          (server-deleted nil)
-          (fake-server (list :fake-server)))
+    (let* ((connection (slynet-connect :host "127.0.0.1" :port 4005))
+           (client-process (slynet-client-connection-process connection))
+           (server-deleted nil)
+           (fake-server (list :fake-server)))
       (should (eq (lookup-key slynet-mode-map (kbd "C-c C-s c")) #'slynet-connect))
       (should (eq (lookup-key slynet-mode-map (kbd "C-c C-s h")) #'slynet-health))
       (should (eq (lookup-key slynet-mode-map (kbd "C-c C-s D")) #'slynet-doc-symbol))
@@ -99,10 +292,37 @@
                  (lambda (process) (setq server-deleted process))))
         (setq slynet-server-process fake-server)
         (slynet-quit)
-        (should (equal deleted (list (slynet-client-connection-process connection))))
+        (should (equal deleted (list client-process)))
         (should (eq server-deleted fake-server))
         (should-not slynet-current-connection)
         (should-not slynet-server-process)))))
+
+(ert-deftest slynet-start-server-reports-missing-executable ()
+  (let ((slynet-server-process nil)
+        (slynet-server-directory default-directory)
+        (slynet-last-error nil))
+    (should-error
+     (slynet-start-server '("slynet-definitely-missing-executable" "--tcp"))
+     :type 'user-error)
+    (should (string-match-p "No such file or directory" slynet-last-error))))
+
+(ert-deftest slynet-start-server-preserves-argv-and-spaced-directory ()
+  (let* ((root (make-temp-file "slynet path with spaces " t))
+         (slynet-server-process nil)
+         (slynet-server-directory root)
+         captured-directory
+         captured-args)
+    (unwind-protect
+        (cl-letf (((symbol-function 'start-process)
+                   (lambda (_name _buffer program &rest args)
+                     (setq captured-directory default-directory
+                           captured-args (cons program args))
+                     :fake-process)))
+          (should (eq (slynet-start-server '("janet" "script with spaces.janet" "--tcp"))
+                      :fake-process))
+          (should (equal captured-directory (file-name-as-directory root)))
+          (should (equal captured-args '("janet" "script with spaces.janet" "--tcp"))))
+      (delete-directory root t))))
 
 (provide 'slynet-tests)
 ;;; slynet-tests.el ends here

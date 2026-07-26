@@ -3,10 +3,9 @@
 ;; Copyright (C) 2026
 
 ;; Author: SLYNET contributors
-;; Version: 0.1.0
+;; Version: 1.0.1
 ;; Package-Requires: ((emacs "27.1"))
-;; Keywords: lisp, janet, sly, processes
-;; URL: https://example.invalid/slynet
+;; Keywords: languages, lisp, janet, tools, processes
 
 ;;; Commentary:
 
@@ -16,6 +15,26 @@
 ;;; Code:
 
 (require 'cl-lib)
+
+(define-error 'slynet-client-protocol-error "Malformed SLYNET protocol frame")
+(define-error 'slynet-client-request-error "SLYNET request failed")
+
+(defcustom slynet-client-request-timeout nil
+  "Default RPC timeout in seconds, or nil to wait indefinitely."
+  :type '(choice (const :tag "No timeout" nil) number)
+  :group 'slynet)
+
+(defvar slynet-client-callback-error-functions nil
+  "Abnormal hook run when a request callback signals an error.
+Each function receives CONNECTION, REQUEST-ID, PAYLOAD, and ERROR-DATA.")
+
+(defconst slynet-client-max-frame-bytes #xffffff
+  "Largest payload representable by the six-hex-digit SLYNET frame prefix.")
+
+(cl-defstruct slynet-client-request
+  "Bookkeeping for one asynchronous SLYNET request."
+  callback
+  timer)
 
 (cl-defstruct slynet-client-connection
   "State carried by an Emacs-side SLYNET transport filter."
@@ -52,6 +71,10 @@ Each function receives CONNECTION, CHANNEL-ID, and PAYLOAD.")
   "Set PROCESS sentinel to SENTINEL."
   (set-process-sentinel process sentinel))
 
+(defun slynet-client--set-process-coding-system (process decoding encoding)
+  "Set PROCESS coding systems to DECODING and ENCODING."
+  (set-process-coding-system process decoding encoding))
+
 (defun slynet-client--process-send-string (process string)
   "Send STRING to PROCESS."
   (process-send-string process string))
@@ -64,11 +87,25 @@ Each function receives CONNECTION, CHANNEL-ID, and PAYLOAD.")
   "Delete PROCESS."
   (delete-process process))
 
+(defun slynet-client--run-at-time (seconds function &rest args)
+  "Run FUNCTION with ARGS after SECONDS."
+  (apply #'run-at-time seconds nil function args))
+
+(defun slynet-client--cancel-timer (timer)
+  "Cancel TIMER when it is still active."
+  (when (timerp timer)
+    (cancel-timer timer)))
+
 (defun slynet-client-encode-message (message)
   "Encode MESSAGE as a SLY/SLYNK-style six-hex-byte length-prefixed sexp."
-  (let* ((payload (prin1-to-string message))
-         (length-prefix (format "%06x" (string-bytes payload))))
-    (concat length-prefix payload)))
+  (let* ((payload (encode-coding-string (prin1-to-string message) 'utf-8 t))
+         (payload-length (length payload)))
+    (when (> payload-length slynet-client-max-frame-bytes)
+      (signal 'slynet-client-protocol-error
+              (list (format "Frame payload is %d bytes; maximum is %d"
+                            payload-length slynet-client-max-frame-bytes))))
+    (let ((length-prefix (format "%06x" payload-length)))
+      (concat length-prefix payload))))
 
 (defun slynet-client-make-test-connection (on-message)
   "Create an in-memory connection for batch ERT and `process-filter' test code.
@@ -79,14 +116,38 @@ ON-MESSAGE is called with each decoded protocol message."
   "Return one complete decoded message from CONNECTION, or nil if incomplete."
   (let ((buffer (slynet-client-connection-buffer connection)))
     (when (>= (length buffer) 6)
-      (let* ((payload-length (string-to-number (substring buffer 0 6) 16))
-             (message-end (+ 6 payload-length)))
-        (when (>= (length buffer) message-end)
-          (let* ((payload (substring buffer 6 message-end))
-                 (decoded (car (read-from-string payload))))
-            (setf (slynet-client-connection-buffer connection)
-                  (substring buffer message-end))
-            decoded))))))
+      (let ((prefix (substring buffer 0 6)))
+        (unless (string-match-p "\\`[[:xdigit:]]\\{6\\}\\'" prefix)
+          (setf (slynet-client-connection-buffer connection) "")
+          (signal 'slynet-client-protocol-error
+                  (list (format "Invalid frame length prefix: %S" prefix))))
+        (let* ((payload-length (string-to-number prefix 16))
+               (message-end (+ 6 payload-length)))
+          (when (> payload-length slynet-client-max-frame-bytes)
+            (setf (slynet-client-connection-buffer connection) "")
+            (signal 'slynet-client-protocol-error
+                    (list (format "Frame payload is %d bytes; maximum is %d"
+                                  payload-length
+                                  slynet-client-max-frame-bytes))))
+          (when (>= (length buffer) message-end)
+            (let ((payload (substring buffer 6 message-end)))
+              (condition-case err
+                  (let* ((decoded-payload
+                          (decode-coding-string payload 'utf-8 t))
+                         (read-result (read-from-string decoded-payload))
+                         (decoded (car read-result))
+                         (read-end (cdr read-result)))
+                    (unless (string-match-p "\\`[[:space:]]*\\'"
+                                            (substring decoded-payload read-end))
+                      (error "Trailing data after protocol expression"))
+                    (setf (slynet-client-connection-buffer connection)
+                          (substring buffer message-end))
+                    decoded)
+                (error
+                 (setf (slynet-client-connection-buffer connection) "")
+                 (signal 'slynet-client-protocol-error
+                         (list (format "Invalid frame payload: %s"
+                                       (error-message-string err)))))))))))))
 
 (defun slynet-client-filter (connection chunk)
   "Append CHUNK to CONNECTION and deliver all complete decoded messages."
@@ -116,10 +177,14 @@ are passed to `open-network-stream'."
      process
      (lambda (_process chunk)
        (slynet-client-filter connection chunk)))
+    (slynet-client--set-process-coding-system process 'binary 'binary)
     (slynet-client--set-process-sentinel
      process
-     (lambda (_process _event)
-       nil))
+     (lambda (sentinel-process _event)
+       (unless (slynet-client--process-live-p sentinel-process)
+         (when (eq sentinel-process
+                   (slynet-client-connection-process connection))
+           (slynet-client--reset-connection-state connection :connection-lost)))))
     connection))
 
 (defun slynet-client-send (connection message)
@@ -138,18 +203,72 @@ are passed to `open-network-stream'."
     (setf (slynet-client-connection-next-id connection) (1+ id))
     id))
 
+(defun slynet-client--invoke-callback (connection request-id callback payload)
+  "Invoke CALLBACK for REQUEST-ID without destabilizing CONNECTION."
+  (when callback
+    (condition-case err
+        (funcall callback payload)
+      (error
+       (run-hook-with-args 'slynet-client-callback-error-functions
+                           connection request-id payload err)))))
+
+(defun slynet-client--take-request (connection request-id)
+  "Remove and return REQUEST-ID from CONNECTION, cancelling its timer."
+  (let* ((pending (slynet-client-connection-pending-requests connection))
+         (request (gethash request-id pending)))
+    (when request
+      (remhash request-id pending)
+      (when (slynet-client-request-p request)
+        (slynet-client--cancel-timer (slynet-client-request-timer request))))
+    request))
+
 (defun slynet-client--complete-request (connection request-id payload)
   "Complete REQUEST-ID on CONNECTION with PAYLOAD."
-  (let* ((pending (slynet-client-connection-pending-requests connection))
-         (callback (gethash request-id pending)))
-    (when callback
-      (remhash request-id pending)
-      (funcall callback payload))))
+  (when-let ((request (slynet-client--take-request connection request-id)))
+    (slynet-client--invoke-callback
+     connection request-id (if (slynet-client-request-p request)
+         (slynet-client-request-callback request)
+       request)
+     payload)))
+
+(defun slynet-client-cancel-request (connection request-id &optional reason)
+  "Cancel REQUEST-ID on CONNECTION and notify its callback.
+REASON defaults to `:cancelled'.  Return non-nil when a request was pending."
+  (when-let ((request (slynet-client--take-request connection request-id)))
+    (slynet-client--invoke-callback
+     connection request-id (if (slynet-client-request-p request)
+         (slynet-client-request-callback request)
+       request)
+     (list :abort (or reason :cancelled)))
+    t))
+
+(defun slynet-client--timeout-request (connection request-id)
+  "Expire REQUEST-ID on CONNECTION."
+  (slynet-client-cancel-request connection request-id :timeout))
 
 (defun slynet-client--append-output (connection text)
   "Append TEXT to CONNECTION's accumulated MREPL output."
   (setf (slynet-client-connection-repl-output connection)
         (concat (slynet-client-connection-repl-output connection) text)))
+
+(defun slynet-client--reset-connection-state (connection &optional reason)
+  "Clear transient transport and MREPL state on CONNECTION.
+Pending callbacks receive an abort payload using REASON or `:connection-lost'."
+  (let ((request-ids nil)
+        (pending (slynet-client-connection-pending-requests connection)))
+    (maphash (lambda (request-id _request) (push request-id request-ids)) pending)
+    (dolist (request-id request-ids)
+      (slynet-client-cancel-request
+       connection request-id (or reason :connection-lost))))
+  (when-let ((callback (slynet-client-connection-mrepl-eval-callback connection)))
+    (setf (slynet-client-connection-mrepl-eval-callback connection) nil)
+    (slynet-client--invoke-callback
+     connection nil callback (list :abort (or reason :connection-lost))))
+  (setf (slynet-client-connection-process connection) nil
+        (slynet-client-connection-buffer connection) ""
+        (slynet-client-connection-channel-id connection) nil
+        (slynet-client-connection-mrepl-thread connection) nil
+        (slynet-client-connection-thread connection) nil))
 
 (defun slynet-client--payload-op (payload)
   "Return the operation symbol or keyword at the head of PAYLOAD."
@@ -179,11 +298,12 @@ are passed to `open-network-stream'."
         (setf (slynet-client-connection-last-values connection) values)
         (when-let ((callback (slynet-client-connection-mrepl-eval-callback connection)))
           (setf (slynet-client-connection-mrepl-eval-callback connection) nil)
-          (funcall callback values))))
+          (slynet-client--invoke-callback connection nil callback values))))
      ((slynet-client--op= op :evaluation-aborted 'evaluation-aborted)
       (when-let ((callback (slynet-client-connection-mrepl-eval-callback connection)))
         (setf (slynet-client-connection-mrepl-eval-callback connection) nil)
-        (funcall callback (list :abort (cadr payload)))))
+        (slynet-client--invoke-callback
+         connection nil callback (list :abort (cadr payload)))))
      ((slynet-client--op= op :server-side-repl-close 'server-side-repl-close)
       (setf (slynet-client-connection-channel-id connection) nil))
      (t nil))
@@ -214,19 +334,34 @@ are passed to `open-network-stream'."
           (setf (slynet-client-connection-channel-id connection) nil))))
      (t nil))))
 
-(defun slynet-client-send-rex-async (connection form callback &optional package thread)
+(defun slynet-client-send-rex-async
+    (connection form callback &optional package thread timeout)
   "Send FORM over CONNECTION and call CALLBACK with the :return payload.
-Return the request id used for the message."
-  (let ((request-id (slynet-client-next-id connection)))
+TIMEOUT overrides `slynet-client-request-timeout'.  Return the request id."
+  (let* ((request-id (slynet-client-next-id connection))
+         (effective-timeout (if (null timeout)
+                                slynet-client-request-timeout
+                              timeout))
+         (request (make-slynet-client-request :callback callback)))
     (when callback
-      (puthash request-id callback
+      (puthash request-id request
                (slynet-client-connection-pending-requests connection)))
-    (slynet-client-send connection
-                        (list :emacs-rex
-                              form
-                              (or package (slynet-client-connection-package connection))
-                              (or thread (slynet-client-connection-thread connection))
-                              request-id))
+    (condition-case err
+        (progn
+          (slynet-client-send connection
+                              (list :emacs-rex
+                                    form
+                                    (or package (slynet-client-connection-package connection))
+                                    (or thread (slynet-client-connection-thread connection))
+                                    request-id))
+          (when (and callback effective-timeout (> effective-timeout 0))
+            (setf (slynet-client-request-timer request)
+                  (slynet-client--run-at-time
+                   effective-timeout #'slynet-client--timeout-request
+                   connection request-id))))
+      (error
+       (slynet-client--take-request connection request-id)
+       (signal (car err) (cdr err))))
     request-id))
 
 (defun slynet-client-send-rex (connection form &optional package thread)
@@ -260,11 +395,12 @@ Return the request id used for the message."
     (slynet-client-send-channel connection channel-id (list :process string))))
 
 (defun slynet-client-disconnect (connection)
-  "Close CONNECTION's process if it is live."
+  "Close CONNECTION and clear pending transport and MREPL state."
   (when (slynet-client-connection-p connection)
     (let ((process (slynet-client-connection-process connection)))
       (when (and process (slynet-client--process-live-p process))
-        (slynet-client--delete-process process)))))
+        (slynet-client--delete-process process)))
+    (slynet-client--reset-connection-state connection :disconnected)))
 
 (provide 'slynet-client)
 ;;; slynet-client.el ends here

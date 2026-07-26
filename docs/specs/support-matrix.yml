@@ -1,0 +1,281 @@
+version: 1
+project: slynet
+purpose: Machine-readable support matrix for SLY/SLYNK frontend-behavior equivalence
+  on Janet. This file is checked by P10 protocol inventory tests and is the bridge
+  between phase planning, split specifications, and generated operation ownership.
+support_classes:
+  native: Janet exposes the behavior directly with small protocol adaptation.
+  emulated: SLYNET provides metadata, source indexes, wrappers, registries, or side
+    channels to approximate the frontend behavior.
+  unsupported: Janet currently exposes no safe substrate and no SLYNET shim exists
+    for the operation.
+  internal: Implementation detail not intended as a user-facing frontend contract.
+  pending_design: Accepted target whose final staged contract is not yet written.
+state_details:
+  implemented_native_tested: Native behavior is implemented and has executable coverage.
+  implemented_native_untested: Native behavior exists but needs direct contract tests.
+  implemented_emulated_tested: Emulated behavior is implemented and has executable
+    coverage.
+  implemented_emulated_untested: Emulated behavior exists but needs direct contract
+    tests.
+  missing_constrained: Missing because of a known CL-vs-Janet mismatch.
+  missing_unconstrained: Missing without a known semantic constraint.
+frontend_surfaces:
+  transport:
+    owning_spec: docs/specs/emacs-client-contract.md
+    validation_stage: P1_transport_session_protocol
+  repl:
+    owning_spec: docs/specs/emacs-client-contract.md
+    validation_stage: P6_emacs_repl_buffer_ui
+  completion:
+    owning_spec: docs/specs/emacs-client-contract.md
+    validation_stage: P7_completion_autodoc_capf
+  inspector:
+    owning_spec: docs/specs/inspector-xref-source-index.md
+    validation_stage: P8_inspector_xref_emacs_ui
+  xref:
+    owning_spec: docs/specs/inspector-xref-source-index.md
+    validation_stage: P8_inspector_xref_emacs_ui
+  debugger:
+    owning_spec: docs/specs/debugger-condition-restarts.md
+    validation_stage: P9_debugger_execution_unit_emacs_ui
+  compile_load:
+    owning_spec: docs/specs/emacs-client-contract.md
+    validation_stage: P13_diagnostics_ui
+  namespace:
+    owning_spec: docs/specs/emacs-client-contract.md
+    validation_stage: P14_project_connection_management
+  backend:
+    owning_spec: docs/specs/emacs-client-contract.md
+    validation_stage: P0_inventory_truth
+constraints:
+  cl_packages:
+    support_class: emulated
+    owning_spec: docs/specs/emacs-client-contract.md
+    rationale: Janet has modules and environments, not CL package and reader package
+      semantics.
+  conditions_restarts:
+    support_class: emulated
+    owning_spec: docs/specs/debugger-condition-restarts.md
+    rationale: Janet exceptions and stack traces do not expose CL condition and restart
+      semantics.
+  clos_mop:
+    support_class: unsupported
+    owning_spec: docs/specs/debugger-condition-restarts.md
+    rationale: Janet does not expose CLOS/MOP generic function and method metadata.
+  compiler_notes:
+    support_class: emulated
+    owning_spec: docs/specs/emacs-client-contract.md
+    rationale: Janet diagnostics differ from CL compiler-note objects and source-note
+      semantics.
+  threads:
+    support_class: emulated
+    owning_spec: docs/specs/threading-execution-units.md
+    rationale: Janet fibers, tasks, and server connections do not map one-to-one to
+      CL thread APIs.
+phases:
+- id: P0_inventory_truth
+  title: Precise protocol support inventory
+  owning_spec: docs/specs/cl-janet-equivalence-contracts.md
+  status: done
+- id: P1_transport_session_protocol
+  title: Deterministic transport and session protocol
+  owning_spec: docs/specs/emacs-client-contract.md
+  status: done
+- id: P2_eval_mrepl_first_real_e2e
+  title: First real Emacs to Janet MREPL E2E
+  owning_spec: docs/specs/emacs-client-contract.md
+  status: done
+- id: P3_thread_debugger_condition_facade
+  title: Thread/execution-unit and debugger condition facade
+  owning_spec: docs/specs/threading-execution-units.md
+  status: done
+- id: P4_inspector_xref_source_index
+  title: Inspector and xref source-index foundation
+  owning_spec: docs/specs/inspector-xref-source-index.md
+  status: done
+- id: P5_compile_load_diagnostics
+  title: Compile/load diagnostics and source-note envelopes
+  owning_spec: docs/specs/emacs-client-contract.md
+  status: done
+- id: P6_emacs_repl_buffer_ui
+  title: User-facing Emacs REPL buffer
+  owning_spec: docs/specs/emacs-client-contract.md
+  status: done
+- id: P7_completion_autodoc_capf
+  title: Completion-at-point and autodoc surface
+  owning_spec: docs/specs/emacs-client-contract.md
+  status: done
+- id: P8_inspector_xref_emacs_ui
+  title: Inspector and xref Emacs buffers
+  owning_spec: docs/specs/inspector-xref-source-index.md
+  status: done
+- id: P9_debugger_execution_unit_emacs_ui
+  title: Debugger and execution-unit Emacs buffers
+  owning_spec: docs/specs/debugger-condition-restarts.md
+  status: done
+- id: P10_spec_consolidation_support_matrix
+  title: Spec consolidation and support matrix
+  owning_spec: docs/specs/cl-janet-equivalence-contracts.md
+  status: done
+- id: P11_interactive_inspector_xref
+  title: Interactive inspector and xref navigation
+  owning_spec: docs/specs/inspector-xref-source-index.md
+  status: done
+- id: P12_interactive_debugger_controls
+  title: Interactive debugger controls
+  owning_spec: docs/specs/debugger-condition-restarts.md
+  status: done
+- id: P13_diagnostics_ui
+  title: Diagnostics UI for compile/load envelopes
+  owning_spec: docs/specs/emacs-client-contract.md
+  status: done
+- id: P14_project_connection_management
+  title: Project and named connection management
+  owning_spec: docs/specs/emacs-client-contract.md
+  status: done
+- id: P15_completion_parity_deepening
+  title: Flex completion cache and candidate metadata
+  owning_spec: docs/specs/emacs-client-contract.md
+  status: done
+- id: P16_runtime_instrumentation
+  title: Runtime instrumentation foundation
+  owning_spec: docs/specs/threading-execution-units.md
+  status: done
+- id: P17_protocol_interface_registry_alignment
+  title: Protocol interface registry alignment
+  owning_spec: docs/specs/protocol-interface-registry.md
+  status: done
+- id: P18_source_index_v2
+  title: Span-aware Janet source index
+  owning_spec: docs/specs/next-implementation-roadmap.yml
+  status: done
+- id: P19_inspector_ranges_history_actions
+  title: Inspector ranges, history, and actions
+  owning_spec: docs/specs/next-implementation-roadmap.yml
+  status: done
+- id: P20_debugger_restart_scopes
+  title: Instrumented debugger restart scopes
+  owning_spec: docs/specs/next-implementation-roadmap.yml
+  status: done
+- id: P21_execution_unit_registry
+  title: Execution-unit registry and cooperative interruption
+  owning_spec: docs/specs/next-implementation-roadmap.yml
+  status: done
+- id: P22_diagnostics_source_integration
+  title: Unified source-aware diagnostics
+  owning_spec: docs/specs/next-implementation-roadmap.yml
+  status: done
+- id: P23_completion_docs_namespace
+  title: Source-index-backed completion docs and namespace awareness
+  owning_spec: docs/specs/next-implementation-roadmap.yml
+  status: done
+- id: P24_project_server_lifecycle
+  title: Project server lifecycle and reconnect hardening
+  owning_spec: docs/specs/next-implementation-roadmap.yml
+  status: done
+- id: P25_backend_runtime_utilities
+  title: Backend runtime utility capability records and source-linked trace timing
+  owning_spec: docs/specs/next-implementation-roadmap.yml
+  status: done
+- id: P26_protocol_profile_browser
+  title: Protocol interface browser and SLYNET profile/report facade
+  owning_spec: docs/specs/protocol-interface-registry.md
+  status: done
+- id: P27_compile_project_session_compatibility
+  title: Compile/macroexpand compatibility wrappers and Janet project/session metadata
+  owning_spec: docs/specs/next-implementation-roadmap.yml
+  status: done
+- id: P28_namespace_browser_package_boundary
+  title: Janet namespace browser and CL package-local nickname boundary
+  owning_spec: docs/specs/emacs-client-contract.md
+  status: done
+- id: P25_trace_timing_runtime_utility
+  title: Janet-native trace/timing and backend runtime utility records
+  owning_spec: docs/specs/next-implementation-roadmap.yml
+  status: done
+- id: P26_profile_protocol_browser
+  title: Wrapper profiling and protocol/interface browser
+  owning_spec: docs/specs/next-implementation-roadmap.yml
+  status: done
+- id: P27_compile_macroexpand_snapshot_compatibility
+  title: SLYNK-shaped compile/macroexpand wrappers and Janet project snapshots
+  owning_spec: docs/specs/next-implementation-roadmap.yml
+  status: done
+- id: P28_namespace_browser_package_boundary
+  title: Janet namespace browser and explicit CL package boundary
+  owning_spec: docs/specs/next-implementation-roadmap.yml
+  status: done
+- id: P29_janet_suite_architecture
+  title: Janet suite architecture and warning policy
+  owning_spec: docs/specs/janet-suite-architecture.yml
+  status: done
+- id: P29_doc_browser_autodoc_completion
+  title: Scrollable Janet docs, autodoc, and complete-form metadata
+  owning_spec: docs/specs/emacs-client-contract.md
+  status: done
+janet_extension_candidates:
+  stable_eval_source_maps:
+    current_support_class: workaround
+    owning_spec: docs/specs/janet-extension-candidates.md
+    workaround: source-index fallback and snippets
+    extension_value: stable source maps for evaled forms, diagnostics, debugger frames,
+      and xref
+    release_rule: do not mark dynamic or eval locations native unless native source-map
+      data exists
+    implemented_api:
+    - source-aware-eval
+    - lookup-eval-source-map
+  rich_debug_frame_locals:
+    current_support_class: workaround
+    owning_spec: docs/specs/janet-extension-candidates.md
+    workaround: debug-stack slots, limited locals, printed values
+    extension_value: stable named lexical locals and slot provenance for debugger
+      frames
+    release_rule: do not invent local names; mark placeholders synthetic or SLYNET-produced
+    implemented_api:
+    - debugger-info-for-emacs
+    - debugger-frame-details
+    - frame-locals-and-catch-tags
+  resumable_debugger_control_api:
+    current_support_class: pending_design
+    owning_spec: docs/specs/janet-extension-candidates.md
+    workaround: wrap current Janet debugger controls where available; otherwise mark
+      unsupported
+    extension_value: resumable debug session API for step, next, out, continue, and
+      control identity
+    release_rule: expose controls only with support metadata and real Janet debug-fiber
+      backing
+    implemented_api:
+    - debugger-control-capabilities
+    - debugger-control-action
+  structured_signal_metadata:
+    current_support_class: emulated
+    owning_spec: docs/specs/janet-extension-candidates.md
+    workaround: SLYNET condition records and diagnostic envelopes
+    extension_value: structured signal phase, cause, fiber, stack, and source-map
+      metadata
+    release_rule: keep CL condition and restart equivalence false for synthetic facades
+  function_arg_metadata:
+    current_support_class: workaround
+    owning_spec: docs/specs/janet-extension-candidates.md
+    workaround: arglist cache, overrides, metadata registry
+    extension_value: uniform metadata for user functions, macros, native functions,
+      and callable types
+    release_rule: display provenance for inferred, cached, or overridden signatures
+    implemented_api:
+    - register-function-metadata
+    - function-metadata
+    - list-function-metadata
+  instrumentation_hooks:
+    current_support_class: workaround
+    owning_spec: docs/specs/janet-extension-candidates.md
+    workaround: SLYNET wrapper and recording layer
+    extension_value: low-overhead function, call-site, timing, profiling, debugger-event,
+      and sticker hooks
+    release_rule: state whether records came from wrapper, source transform, debugger
+      control, or native hook
+    implemented_api:
+    - record-instrumentation-event
+    - list-instrumentation-events
+    - clear-instrumentation-events

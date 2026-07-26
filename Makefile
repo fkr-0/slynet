@@ -1,68 +1,64 @@
-.PHONY: test clean lint core-tests contrib-tests all-tests test-emacs install
+.PHONY: all lint compile test test-janet test-emacs test-e2e package clean release-verify
 
-# Default Janet executable
 JANET ?= janet
+ELDEV ?= eldev
+VERSION := $(shell sed -n 's/.*:version "\([^"]*\)".*/\1/p' project.janet)
+DIST_DIR := dist
 
-# Source directories
-SLYNET_SRC_DIR = slynet/slynk_janet
-CONTRIB_DIR = $(SLYNET_SRC_DIR)/contrib
-TEST_DIR = test
-
-# Source files
-CORE_SRC_FILES = $(wildcard $(SLYNET_SRC_DIR)/*.janet)
-CONTRIB_SRC_FILES = $(wildcard $(CONTRIB_DIR)/*.janet)
-
-# Test files
-CORE_TEST_FILE = $(TEST_DIR)/project_core_tests.janet
-BASIC_TEST_FILE = $(TEST_DIR)/basic.janet
-SERVER_TEST_FILE = $(TEST_DIR)/server_integration_tests.janet
-CONTRIB_TEST_FILE = $(TEST_DIR)/contrib_tests.janet
-TEST_RUNNER = $(TEST_DIR)/run_tests.janet
-
-# Default target
 all: test
 
-# Run all tests
-test: all-tests
-
-# Run tests using the test runner
-all-tests:
-	@echo "Running all SLYNET tests..."
-	$(JANET) $(TEST_RUNNER)
-
-# Run only the core tests
-core-tests:
-	@echo "Running SLYNET core tests..."
-	$(JANET) $(CORE_TEST_FILE)
-	$(JANET) $(SERVER_TEST_FILE)
-	$(JANET) $(BASIC_TEST_FILE)
-
-# Run only the contrib module tests
-contrib-tests:
-	@echo "Running SLYNET contrib module tests..."
-	$(JANET) $(CONTRIB_TEST_FILE)
-
-# Run Emacs batch ERT tests through Eldev for package-aware load paths.
-test-emacs:
-	@if ! command -v eldev >/dev/null 2>&1; then \
-		echo "SKIP: eldev not available; frontend ERT tests not run"; \
-		exit 77; \
-	fi
-	@echo "Running SLYNET Emacs ERT tests through Eldev..."
-	eldev test --expect 38
-
-# Lint Janet code (using janet-format if available)
 lint:
-	@echo "Linting SLYNET code..."
-	@which janet-format > /dev/null && find $(SLYNET_SRC_DIR) -name "*.janet" -exec janet-format -c {} \; || echo "janet-format not found, skipping lint"
+	@echo "Checking Janet release entrypoints parse and load..."
+	@JANET_PATH="$${JANET_PATH}:$(CURDIR)" $(JANET) -e '(import slynet/init) (import slynet/cli) (print "Janet load lint passed")'
+	@echo "Running Emacs byte-compiler and documentation linters..."
+	$(ELDEV) lint doc re
 
-# Clean build artifacts
+compile:
+	@echo "Byte-compiling Emacs package through Eldev..."
+	$(ELDEV) compile
+
+test: test-janet
+
+test-janet:
+	@echo "Running all SLYNET Janet tests..."
+	JANET_PATH="$${JANET_PATH}:$(CURDIR)" $(JANET) test/run_tests.janet
+
+test-emacs:
+	@echo "Running SLYNET Emacs ERT tests through Eldev..."
+	$(ELDEV) test --expect 54
+
+test-e2e:
+	@echo "Running repeated Emacs/Janet lifecycle verification..."
+	@before=$$(pgrep -fc 'janet .*slynet/cli.janet.*--tcp' || true); \
+	for run in 1 2 3; do \
+		echo "E2E run $$run/3"; \
+		$(ELDEV) test slynet-e2e-creates-mrepl-evals-and-closes-live-janet-server \
+			slynet-start-server-reports-missing-executable; \
+	done; \
+	after=$$(pgrep -fc 'janet .*slynet/cli.janet.*--tcp' || true); \
+	test "$$before" = "$$after" || { \
+		echo "ERROR: leaked SLYNET server process (before=$$before after=$$after)"; \
+		exit 1; \
+	}
+
+package: clean
+	@echo "Building release artifacts for $(VERSION)..."
+	@mkdir -p $(DIST_DIR)/slynet-$(VERSION)
+	@cp -R slynet bundle project.janet LICENSE README.md CHANGELOG.md \
+		$(DIST_DIR)/slynet-$(VERSION)/
+	@tar -C $(DIST_DIR) -czf $(DIST_DIR)/slynet-$(VERSION).tar.gz slynet-$(VERSION)
+	$(ELDEV) package --output-dir $(DIST_DIR)
+
 clean:
-	@echo "Cleaning up build artifacts..."
-	@find . -name "*.jimage" -delete
-	@find . -name "*.o" -delete
+	@echo "Removing generated artifacts..."
+	rm -rf $(DIST_DIR) .eldev
+	find . -name '*.elc' -o -name '*.jimage' -o -name '*.o' | xargs -r rm -f
 
-# Install SLYNET (WIP - to be implemented)
-install:
-	@echo "Installing SLYNET..."
-	@echo "Note: Installation is not yet implemented."
+release-verify: clean lint test-janet test-emacs compile test-e2e package
+	@echo "Verifying release metadata..."
+	@test -n "$(VERSION)"
+	@grep -q '^;; Version: $(VERSION)$$' emacs/slynet.el
+	@grep -q '^;; Version: $(VERSION)$$' emacs/slynet-client.el
+	@grep -q '^## \[$(VERSION)\]' CHANGELOG.md
+	@git diff --check
+	@echo "SLYNET $(VERSION) release verification passed. No tag or publish action performed."

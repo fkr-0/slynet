@@ -1,0 +1,439 @@
+schema_version: 1
+status: todo
+purpose: Define the next speccable implementation phases after P17. These phases turn
+  the current SLY-like Janet development foundation into useful daily development
+  utility by improving the Janet backend rather than chasing literal Common Lisp runtime
+  semantics.
+policy:
+  implementation_rule: Each phase must be implemented test-first. Add a focused RED
+    contract test, verify it fails for the missing behavior, implement the smallest
+    useful slice, then run focused and aggregate verification.
+  equivalence_rule: Prefer frontend workflow equivalence over literal Common Lisp
+    semantic equivalence. Where Janet cannot provide a native substrate, expose explicit
+    emulated metadata or structured unsupported results.
+  documentation_rule: Update support-matrix.yml, protocol inventory ownership, and
+    the relevant split spec when a phase changes scope or status.
+phases:
+- id: P18_source_index_v2
+  title: Span-aware Janet source index
+  status: done
+  priority: highest
+  depends_on:
+  - P4_inspector_xref_source_index
+  - P10_spec_consolidation_support_matrix
+  - P17_protocol_interface_registry_alignment
+  goal: Replace simple source scanning with a span-aware Janet source index that can
+    serve xref, diagnostics, debugger frames, completion docs, namespace browsing,
+    and trace/profiling links.
+  why: The source index is the highest-leverage backend improvement. It feeds xref,
+    diagnostics, debugger frame source fallback, completion docs, namespace browsing,
+    inspector actions, and later profiling/trace links.
+  contracts:
+  - The index records file, line, column, end-line, end-column, form kind, name, module,
+    and snippet for indexed definitions.
+  - The index recognizes def, defn, defmacro, definterface, import, use, and module/export-like
+    source facts where present.
+  - The index ignores comments, strings, and symbol substrings when matching definitions.
+  - The cache is scoped by project root and invalidated by file mtime or content hash.
+  - Xref APIs prefer source-index facts over synthetic fallback facts.
+  tests:
+    red:
+    - fixture project with definitions/imports/macros/interfaces fails to return span-aware
+      source facts
+    - stale source-index cache is not invalidated after fixture file edit
+    green:
+    - JANET_PATH=$PWD janet test/run_tests.janet :match 'source index v2' :report
+      compact
+    - JANET_PATH=$PWD janet test/run_tests.janet :report compact
+  deliverables:
+  - slynet/source_index.janet or equivalent parser/indexer module
+  - source-index v2 fixture project
+  - regenerated protocol inventory if xref ownership changes
+  verification:
+    red: Focused RED tests failed first on missing source_index module or missing
+      inspector/restart-scope RPC behavior.
+    green: bridge.yml:test passed 104 tests / 669 assertions after P18-P20 implementation.
+- id: P19_inspector_ranges_history_actions
+  title: Inspector ranges, history, and actions
+  status: done
+  priority: high
+  depends_on:
+  - P11_interactive_inspector_xref
+  - P18_source_index_v2
+  goal: Make the inspector practical for larger Janet values by adding range paging,
+    navigation history, safe action metadata, and explicit unsupported action rendering.
+  why: P11 made inspector parts clickable. Daily use needs stable navigation for large
+    tables/arrays and honest action affordances.
+  contracts:
+  - inspector-range pages large values without rendering the full value eagerly.
+  - inspector history supports back/forward or pop semantics with stable object ids.
+  - inspector actions include action id, label, support class, safety level, and unsupported
+    reason where relevant.
+  - Safe value-editing actions remain guarded by explicit type/action contracts.
+  tests:
+    red:
+    - large table/array range paging is missing
+    - inspector history does not preserve stable object identity
+    - unsupported inspector action does not render structured metadata
+    green:
+    - JANET_PATH=$PWD janet test/run_tests.janet :match 'inspector ranges' :report
+      compact
+    - eldev test --expect <updated-count>
+  deliverables:
+  - backend inspector range/history contract tests
+  - Emacs inspector range/history/action tests
+  - updated inspector-xref-source-index.md
+  verification:
+    red: Focused RED tests failed first on missing source_index module or missing
+      inspector/restart-scope RPC behavior.
+    green: bridge.yml:test passed 104 tests / 669 assertions after P18-P20 implementation.
+- id: P20_debugger_restart_scopes
+  title: Instrumented debugger restart scopes
+  status: done
+  priority: high
+  depends_on:
+  - P12_interactive_debugger_controls
+  - P16_runtime_instrumentation
+  goal: Make synthetic restarts real inside SLYNET-owned evaluation wrappers while
+    preserving explicit non-equivalence with Common Lisp restarts.
+  why: 'This is the honest fake-it-till-we-make-it path: restart behavior exists where
+    SLYNET controls the evaluation scope and remains unsupported outside those scopes.'
+  contracts:
+  - abort-to-repl works inside instrumented evaluation scopes.
+  - continue-as-nil works only for wrappers that explicitly opt into it.
+  - retry works only for wrappers that retain a safe retry thunk.
+  - invoking unsupported restarts returns structured unsupported metadata instead
+    of hanging.
+  - restart scopes expose id, label, class, safety level, callable flag, and explanation.
+  tests:
+    red:
+    - continue-as-nil is missing in an instrumented eval wrapper
+    - retry is missing in a retained safe retry wrapper
+    - unsupported restart outside an instrumented wrapper is not explicit
+    green:
+    - JANET_PATH=$PWD janet test/run_tests.janet :match 'restart scopes' :report compact
+    - eldev test --expect <updated-count>
+  deliverables:
+  - restart-scope helper or macro
+  - backend restart scope tests
+  - Emacs restart action result rendering tests
+  - updated debugger-condition-restarts.md
+  verification:
+    red: Focused RED tests failed first on missing source_index module or missing
+      inspector/restart-scope RPC behavior.
+    green: bridge.yml:test passed 104 tests / 669 assertions after P18-P20 implementation.
+- id: P21_execution_unit_registry
+  title: Execution-unit registry and cooperative interruption
+  status: done
+  priority: high
+  depends_on:
+  - P3_thread_debugger_condition_facade
+  - P16_runtime_instrumentation
+  goal: Track REPL evals, fibers, workers, and server connections as Janet-native
+    execution units with lifecycle state and cooperative interruption flags.
+  why: This gives Janet a useful replacement for CL thread-browser semantics without
+    pretending unsafe hard thread control is available.
+  contracts:
+  - Long-running evals appear in list-threads/list-execution-units with stable ids.
+  - Units record name, status, started-at, source context, current role, and last
+    output when available.
+  - interrupt-execution-unit sets a cooperative flag that managed units can observe.
+  - Unit status transitions are visible after completion, error, or cancellation.
+  tests:
+    red:
+    - long-running eval does not appear as an execution unit
+    - cooperative interrupt flag is not observable by managed worker
+    - unit status does not transition after completion/error
+    green:
+    - JANET_PATH=$PWD janet test/run_tests.janet :match 'execution unit registry'
+      :report compact
+    - eldev test --expect <updated-count>
+  deliverables:
+  - execution-unit registry module
+  - cooperative cancellation helper
+  - backend and Emacs execution-unit tests
+  - updated threading-execution-units.md  verification:
+    red: Focused phase tests failed first on missing RPC implementations or incomplete
+      metadata contracts.
+    green: bridge.yml:test passed 115 tests / 762 assertions; Emacs ERT passed
+      35 tests; client help smoke passed; make lint exited 0 with janet-format
+      unavailable/skipped.
+
+- id: P22_diagnostics_source_integration
+  title: Unified source-aware diagnostics
+  status: done
+  priority: high
+  depends_on:
+  - P13_diagnostics_ui
+  - P18_source_index_v2
+  goal: Unify compile, load, runtime, and test diagnostics under the Janet diagnostics
+    envelope, with source-index-backed file/line/column facts.
+  why: Diagnostics are the most useful daily development feedback loop after the REPL.
+    They should be clickable and consistent across compile/load/runtime/test failures.
+  contracts:
+  - compile-string and compile-file diagnostics include source-index positions when
+    available.
+  - runtime eval errors produce diagnostics compatible with the diagnostics UI.
+  - test runner failures can be normalized into diagnostic entries.
+  - diagnostics preserve Janet diagnostic truth and do not claim CL compiler-note
+    equivalence.
+  tests:
+    red:
+    - compile string/file errors lack source-index-backed locations
+    - runtime errors cannot render through diagnostics UI
+    - test failures are not normalized as diagnostics
+    green:
+    - JANET_PATH=$PWD janet test/run_tests.janet :match 'diagnostics source' :report
+      compact
+    - eldev test --expect <updated-count>
+  deliverables:
+  - unified diagnostic normalization helpers
+  - source-index-linked diagnostic tests
+  - Emacs diagnostics navigation tests
+  - updated emacs-client-contract.md  verification:
+    red: Focused phase tests failed first on missing RPC implementations or incomplete
+      metadata contracts.
+    green: bridge.yml:test passed 115 tests / 762 assertions; Emacs ERT passed
+      35 tests; client help smoke passed; make lint exited 0 with janet-format
+      unavailable/skipped.
+
+- id: P23_completion_docs_namespace
+  title: Source-index-backed completion docs and namespace awareness
+  status: done
+  priority: medium_high
+  depends_on:
+  - P15_completion_parity_deepening
+  - P18_source_index_v2
+  goal: Make completion useful for Janet projects by adding source-index-backed candidate
+    documentation, local/imported namespace awareness, and cache invalidation.
+  why: CAPF exists, but daily coding utility depends on local definitions, imports,
+    docstrings, module visibility, and stale cache handling.
+  contracts:
+  - Completion candidates include local definitions, imported symbols, and relevant
+    core symbols.
+  - Candidate metadata includes source, support class, doc summary, module, and source
+    location when available.
+  - Editing source invalidates stale completion cache entries for the affected project
+    root.
+  - Namespace behavior is Janet-native and does not claim CL package equivalence.
+  tests:
+    red:
+    - completion misses local definitions from fixture project
+    - candidate doc/source metadata is absent for source-indexed definitions
+    - completion cache survives a source edit when it should invalidate
+    green:
+    - JANET_PATH=$PWD janet test/run_tests.janet :match 'completion namespace' :report
+      compact
+    - eldev test --expect <updated-count>
+  deliverables:
+  - namespace-aware completion backend
+  - Emacs metadata assertions
+  - updated emacs-client-contract.md  verification:
+    red: Focused phase tests failed first on missing RPC implementations or incomplete
+      metadata contracts.
+    green: bridge.yml:test passed 115 tests / 762 assertions; Emacs ERT passed
+      35 tests; client help smoke passed; make lint exited 0 with janet-format
+      unavailable/skipped.
+
+- id: P24_project_server_lifecycle
+  title: Project server lifecycle and reconnect hardening
+  status: done
+  priority: medium
+  depends_on:
+  - P14_project_connection_management
+  - P21_execution_unit_registry
+  goal: 'Polish daily-use project lifecycle: per-project server start/stop, readiness
+    waiting, reconnect, stale process handling, and a basic status surface.'
+  why: The package becomes practical when users can start a server for a project,
+    reconnect safely, and understand connection/server state.
+  contracts:
+  - Starting a project server waits on observable readiness, not sleeps.
+  - Reconnect preserves named connection/project identity.
+  - Stale processes and dead sockets are detected and surfaced as user-facing status.
+  - Server status is visible through an Emacs command/buffer.
+  tests:
+    red:
+    - server start returns before readiness is observable
+    - reconnect loses named project identity
+    - stale process state is not surfaced
+    green:
+    - eldev test --expect <updated-count>
+    - JANET_PATH=$PWD janet test/run_tests.janet :report compact
+  deliverables:
+  - project server lifecycle tests
+  - readiness wait helper
+  - Emacs status buffer/command
+  - updated emacs-client-contract.md
+  verification:
+    red: Focused phase tests failed first on missing RPC implementations or incomplete
+      metadata contracts.
+    green: bridge.yml:test passed 115 tests / 762 assertions; Emacs ERT passed
+      35 tests; client help smoke passed; make lint exited 0 with janet-format
+      unavailable/skipped.
+
+
+- id: P25_backend_runtime_utilities
+  title: Backend runtime utility capability records and source-linked trace timing
+  status: done
+  priority: medium
+  depends_on:
+  - P16_runtime_instrumentation
+  - P18_source_index_v2
+  goal: Surface useful Janet backend development utilities while returning explicit unsupported records for CL/SLYNK historical runtime utilities that do not map safely to Janet.
+  contracts:
+  - slynet-trace-eval records source-linked trace/timing data with source-index metadata.
+  - backend-runtime-capabilities lists native callable utilities and unsupported historical utilities with rationale.
+  - save-image, background-save-image, create-socket, dup, stream timeout, weak-key hash table, and wait-for-input do not claim CL parity unless real Janet substrate exists.
+  tests:
+    green:
+    - JANET_PATH=$PWD janet test/run_tests.janet :match phase25 :report compact
+  verification:
+    green: JANET_PATH=$PWD janet test/run_tests.janet :report compact passed 122 tests / 842 assertions; Emacs ERT passed 35 tests.
+
+- id: P26_protocol_profile_browser
+  title: Protocol interface browser and SLYNET profile/report facade
+  status: done
+  priority: medium
+  depends_on:
+  - P17_protocol_interface_registry_alignment
+  - P16_runtime_instrumentation
+  goal: Make protocol/interface support introspectable and expose a small profiling/reporting facade without claiming native low-overhead profiler hooks.
+  contracts:
+  - slynet-protocol-interfaces and slynet-describe-protocol-interface return registry-backed interface descriptions with implementation support class.
+  - profile, profile-package, profile-report, and profile-reset return SLYNET wrapper-profile records and native-profiler=false.
+  - The interface browser remains resilient after registry reset/mutation during tests.
+  tests:
+    green:
+    - JANET_PATH=$PWD janet test/run_tests.janet :match phase26 :report compact
+  verification:
+    green: JANET_PATH=$PWD janet test/run_tests.janet :report compact passed 122 tests / 842 assertions; Emacs ERT passed 35 tests.
+
+- id: P27_compile_project_session_compatibility
+  title: Compile/macroexpand compatibility wrappers and Janet project/session metadata
+  status: done
+  priority: medium
+  depends_on:
+  - P5_compile_load_diagnostics
+  - P24_project_server_lifecycle
+  goal: Add SLYNK-shaped compile/macroexpand wrappers and Janet project/session metadata records while keeping CL compiler-note and image equivalence false.
+  contracts:
+  - slynk-compile-string and slynk-compile-file wrap Janet diagnostic envelopes with explicit emulated support metadata.
+  - slynk macroexpand/compiler-macroexpand/expand wrappers expose expansion strings but do not claim CL compiler-macroexpand equivalence.
+  - slynet-project-snapshot and slynet-session-metadata preserve Janet project/session state without CL image equivalence.
+  tests:
+    green:
+    - JANET_PATH=$PWD janet test/run_tests.janet :match phase27 :report compact
+  verification:
+    green: JANET_PATH=$PWD janet test/run_tests.janet :report compact passed 122 tests / 842 assertions; Emacs ERT passed 35 tests.
+
+- id: P28_namespace_browser_package_boundary
+  title: Janet namespace browser and CL package-local nickname boundary
+  status: done
+  priority: medium
+  depends_on:
+  - P23_completion_docs_namespace
+  goal: Provide a Janet module/environment namespace browser and explicit unsupported records for CL package-local nickname behavior.
+  contracts:
+  - namespace-browser returns Janet namespace/module records with cl-package-equivalent=false.
+  - package-local-nicknames and find-locally-nicknamed-package return unsupported records with CL package-local nickname equivalence false.
+  - The feature is a Janet namespace facade, not CL package mutation/import/export parity.
+  tests:
+    green:
+    - JANET_PATH=$PWD janet test/run_tests.janet :match phase28 :report compact
+  verification:
+    green: JANET_PATH=$PWD janet test/run_tests.janet :report compact passed 122 tests / 842 assertions; Emacs ERT passed 35 tests.
+
+- id: P25_trace_timing_runtime_utility
+  title: Janet-native trace/timing and backend runtime utility records
+  status: done
+  priority: medium
+  depends_on:
+  - P16_runtime_instrumentation
+  - P18_source_index_v2
+  goal: Add source-linked trace/timing records and explicit backend runtime utility capability metadata.
+  why: Useful Janet developer utility should expose timing/trace records and honest unsupported boundaries for CL runtime utilities.
+  contracts:
+  - slynet-trace-eval records result, elapsed time, source location, source-index kind, and non-CL trace metadata.
+  - backend-runtime-capabilities lists callable native utilities and unsupported CL/runtime gaps with rationale.
+  - backend-runtime-operation returns structured unsupported metadata for abandoned runtime features such as save-image.
+  tests:
+    red:
+    - P25 tests failed first on missing trace/backend-runtime RPC behavior.
+    green:
+    - bridge.yml:test passed 122 tests / 842 assertions.
+
+- id: P26_profile_protocol_browser
+  title: Wrapper profiling and protocol/interface browser
+  status: done
+  priority: medium
+  depends_on:
+  - P17_protocol_interface_registry_alignment
+  - P25_trace_timing_runtime_utility
+  goal: Provide SLYNET wrapper-profile records plus a Janet-native protocol/interface browser.
+  why: Profiling and interface browsing are high-value Janet dev utilities that do not require CL profiler or CLOS/MOP parity.
+  contracts:
+  - profile/profile-package/profile-report/profile-reset expose workaround metadata and native-profiler false.
+  - slynet-protocol-interfaces filters interface records and returns array-shaped arg metadata.
+  - slynet-describe-protocol-interface describes one declared interface.
+  tests:
+    red:
+    - P26 tests failed first on missing profile/reporting and interface-browser behavior.
+    green:
+    - bridge.yml:test passed 122 tests / 842 assertions.
+
+- id: P27_compile_macroexpand_snapshot_compatibility
+  title: SLYNK-shaped compile/macroexpand wrappers and Janet project snapshots
+  status: done
+  priority: medium
+  depends_on:
+  - P5_compile_load_diagnostics
+  - P24_project_server_lifecycle
+  goal: Add SLYNK-shaped compile/macroexpand compatibility wrappers while recording Janet-native project snapshot/session metadata.
+  why: Users benefit from familiar frontend commands and reproducible project/session metadata without claiming CL image save or compiler-note equivalence.
+  contracts:
+  - slynk-compile-string wraps Janet diagnostics with emulated SLYNK operation metadata.
+  - slynk-compiler-macroexpand-1 and slynk-expand return string expansions with CL-equivalence flags false.
+  - slynet-project-snapshot and slynet-session-metadata record Janet-native session state with CL image equivalence false.
+  tests:
+    red:
+    - P27 tests failed first on missing compile/macroexpand wrappers and project snapshot/session RPCs.
+    green:
+    - bridge.yml:test passed 122 tests / 842 assertions.
+
+- id: P28_namespace_browser_package_boundary
+  title: Janet namespace browser and explicit CL package boundary
+  status: done
+  priority: medium
+  depends_on:
+  - P23_completion_docs_namespace
+  - P10_spec_consolidation_support_matrix
+  goal: Expose Janet namespaces/modules directly and return structured unsupported metadata for CL package-local nickname behavior.
+  why: This keeps useful namespace browsing while abandoning exact CL package semantics honestly.
+  contracts:
+  - namespace-browser returns Janet namespace/module records and cl-package-equivalent false.
+  - package-local-nicknames and find-locally-nicknamed-package return structured unsupported metadata.
+  tests:
+    red:
+    - P28 tests failed first on missing namespace browser and CL package-boundary RPCs.
+    green:
+    - bridge.yml:test passed 122 tests / 842 assertions.
+
+- id: P29_doc_browser_autodoc_completion
+  title: Scrollable Janet docs, autodoc, and complete-form metadata
+  status: done
+  priority: medium
+  depends_on:
+  - P23_completion_docs_namespace
+  - P28_namespace_browser_package_boundary
+  goal: Provide a practical Janet docs/autodoc/complete-form loop for Emacs using Janet docs and source-index facts.
+  contracts:
+  - autodoc returns operator, arglist, doc text, support class, source locations, and CL autodoc equivalence false.
+  - complete-form returns prefix, candidates, doc summaries, source-index metadata, and CL complete-form equivalence false.
+  - Emacs renders doc/autodoc payloads in a normal scrollable slynet-doc buffer.
+  - Suite architecture and warning policy remain explicit.
+  tests:
+    green:
+    - janet test/run_tests.janet
+    - make test-emacs
+  verification:
+    green: Janet aggregate passed 128 tests / 878 assertions before doc update; Emacs ERT passed 38 tests.
