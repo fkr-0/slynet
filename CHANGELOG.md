@@ -7,6 +7,21 @@ Versioning.
 
 ## [Unreleased]
 
+## [1.0.3] - 2026-08-01
+
+### Added
+
+- Added a 10,000-case deterministic fragmented-frame fuzz gate.
+- Added a 1,000-cycle request-lifecycle invariant test covering completion,
+  cancellation, timer cleanup, late replies, and pending-request cleanup.
+- Added a repeated live connect/MREPL/evaluate/disconnect E2E scenario with
+  process-leak detection.
+
+### Changed
+
+- Release verification now includes the extended fuzz gate and thirty live
+  session lifecycle iterations across three E2E runs.
+
 ## [1.0.2] - 2026-08-01
 
 ### Added

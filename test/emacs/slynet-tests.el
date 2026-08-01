@@ -60,6 +60,7 @@
     (should (equal seen (list message)))
     (should (equal (slynet-client-connection-buffer connection) ""))))
 
+
 (ert-deftest slynet-client-delivers-nil-message-and-continues-parsing ()
   (let* ((seen nil)
          (connection (slynet-client-make-test-connection
@@ -185,6 +186,7 @@
       (should-error (slynet-client-handle-message connection message)
                     :type 'slynet-client-protocol-error))))
 
+
 (ert-deftest slynet-client-rejects-malformed-channel-message-shapes ()
   (let ((connection (make-slynet-client-connection)))
     (dolist (message '((:channel-send)
@@ -282,7 +284,8 @@
                  (setq state (logand #xffffffff
                                      (logxor state (lsh state 5))))
                  (mod state limit)))
-      (dotimes (case 100)
+      (dotimes (case (string-to-number
+                      (or (getenv "SLYNET_FUZZ_CASES") "1000")))
         (let* ((message (list :case case
                               (make-string (1+ (next-random 40))
                                            (+ ?a (next-random 26)))
@@ -300,6 +303,36 @@
               (setq position end)))
           (should (equal seen (list message)))
           (should (equal (slynet-client-connection-buffer connection) "")))))))
+
+(ert-deftest slynet-client-request-lifecycle-stress-preserves-invariants ()
+  (let* ((connection
+          (make-slynet-client-connection
+           :process :live
+           :pending-requests (make-hash-table :test 'eql)))
+         (completed 0)
+         (cancelled-timers 0))
+    (cl-letf (((symbol-function 'slynet-client--process-live-p)
+               (lambda (_process) t))
+              ((symbol-function 'slynet-client--process-send-string)
+               (lambda (&rest _ignored) nil))
+              ((symbol-function 'slynet-client--run-at-time)
+               (lambda (&rest _ignored) :timer))
+              ((symbol-function 'slynet-client--cancel-timer)
+               (lambda (_timer) (cl-incf cancelled-timers))))
+      (dotimes (index 1000)
+        (let ((request-id
+               (slynet-client-send-rex-async
+                connection '(ping)
+                (lambda (_payload) (cl-incf completed)) nil nil 5)))
+          (if (= 0 (mod index 3))
+              (slynet-client-cancel-request connection request-id)
+            (slynet-client--complete-request connection request-id :ok))
+          (slynet-client--complete-request connection request-id :late)
+          (should (= (hash-table-count
+                      (slynet-client-connection-pending-requests connection))
+                     0))))
+    (should (= completed 1000))
+    (should (= cancelled-timers 1000)))))
 
 (ert-deftest slynet-client-frame-parser-rejects-fuzzed-prefixes ()
   (dolist (prefix '("gggggg" "-00001" " 00001" "00000z" "!!!!!!"))

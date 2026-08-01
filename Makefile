@@ -1,4 +1,4 @@
-.PHONY: all lint compile test test-janet test-emacs test-e2e package clean release-verify
+.PHONY: all lint compile test test-janet test-emacs test-fuzz test-e2e package clean release-verify
 
 JANET ?= janet
 ELDEV ?= eldev
@@ -25,7 +25,13 @@ test-janet:
 
 test-emacs:
 	@echo "Running SLYNET Emacs ERT tests through Eldev..."
-	$(ELDEV) test --expect 72
+	$(ELDEV) test --expect 74
+
+test-fuzz:
+	@echo "Running extended deterministic transport fuzzing..."
+	SLYNET_FUZZ_CASES=10000 $(ELDEV) test \
+		slynet-client-frame-parser-property-roundtrip-fragmentation \
+		slynet-client-frame-parser-rejects-fuzzed-prefixes
 
 test-e2e:
 	@echo "Running repeated Emacs/Janet lifecycle verification..."
@@ -33,6 +39,7 @@ test-e2e:
 	for run in 1 2 3; do \
 		echo "E2E run $$run/3"; \
 		$(ELDEV) test slynet-e2e-creates-mrepl-evals-and-closes-live-janet-server \
+			slynet-e2e-repeated-sessions-remain-clean \
 			slynet-start-server-reports-missing-executable; \
 	done; \
 	after=$$(pgrep -fc 'janet .*slynet/cli.janet.*--tcp' || true); \
@@ -54,7 +61,7 @@ clean:
 	rm -rf $(DIST_DIR) .eldev
 	find . -name '*.elc' -o -name '*.jimage' -o -name '*.o' | xargs -r rm -f
 
-release-verify: clean lint test-janet test-emacs compile test-e2e package
+release-verify: clean lint test-janet test-emacs test-fuzz compile test-e2e package
 	@echo "Verifying release metadata..."
 	@test -n "$(VERSION)"
 	@grep -q '^;; Version: $(VERSION)$$' emacs/slynet.el

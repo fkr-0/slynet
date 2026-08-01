@@ -97,6 +97,44 @@ run, then checks PREDICATE again."
       (ignore-errors (slynet-disconnect))
       (slynet-e2e--cleanup-process server))))
 
+(ert-deftest slynet-e2e-repeated-sessions-remain-clean ()
+  (let* ((port (slynet-e2e--free-port))
+         (server (slynet-e2e--start-server port))
+         (iterations (string-to-number
+                      (or (getenv "SLYNET_E2E_ITERATIONS") "10"))))
+    (unwind-protect
+        (progn
+          (slynet-e2e--wait-until
+           (lambda ()
+             (and (process-live-p server)
+                  (slynet-e2e--tcp-accepts-p port)))
+           "Janet server TCP readiness")
+          (dotimes (index iterations)
+            (let ((mrepl-result nil)
+                  (eval-result nil)
+                  (connection (slynet-connect :host "127.0.0.1" :port port)))
+              (slynet-create-mrepl
+               (lambda (result) (setq mrepl-result result)))
+              (slynet-e2e--wait-until
+               (lambda () mrepl-result)
+               (format "MREPL creation iteration %d" index))
+              (slynet-eval-mrepl-string
+               (format "(+ %d 1)" index)
+               (lambda (result) (setq eval-result result)))
+              (slynet-e2e--wait-until
+               (lambda () eval-result)
+               (format "MREPL eval iteration %d" index))
+              (should (string-match-p
+                       (number-to-string (1+ index))
+                       (format "%S" eval-result)))
+              (slynet-client-disconnect connection)
+              (should-not (slynet-client-connection-process connection))
+              (should (= 0 (hash-table-count
+                            (slynet-client-connection-pending-requests
+                             connection)))))))
+      (ignore-errors (slynet-disconnect))
+      (slynet-e2e--cleanup-process server))))
+
 (ert-deftest slynet-e2e-inflight-rpc-aborts-when-live-server-disappears ()
   (let* ((port (slynet-e2e--free-port))
          (server (slynet-e2e--start-server port))

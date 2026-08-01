@@ -23,6 +23,11 @@ commands:
     category: test
     run: [make, test-emacs]
 
+  test-fuzz:
+    description: Run 10,000 deterministic fragmented-frame fuzz cases
+    category: test
+    run: [make, test-fuzz]
+
   test-e2e:
     description: Repeat live Janet/Emacs lifecycle tests and check for leaks
     category: test
@@ -39,7 +44,7 @@ commands:
     run: [make, clean]
 
   release-verify:
-    description: Run the complete local 1.0.1 release gate without tagging
+    description: Run the complete local release gate without tagging
     category: test
     timeoutMs: 180000
     run: [make, release-verify]
