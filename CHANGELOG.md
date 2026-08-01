@@ -7,6 +7,21 @@ Versioning.
 
 ## [Unreleased]
 
+## [1.0.5] - 2026-08-01
+
+### Added
+
+- Added an eight-cell CI compatibility matrix covering Emacs 27.1, 28.2,
+  29.4, and 30.1 with Janet 1.40.1 and 1.41.1.
+
+### Changed
+
+- Extended verified Janet support through 1.41.x.
+- Documented Janet 1.39.1 as unsupported after it failed 49 backend tests
+  involving fiber/debug APIs and dependent protocol behavior.
+- Made CI artifact names revision-specific instead of retaining a stale 1.0.0
+  label.
+
 ## [1.0.4] - 2026-08-01
 
 ### Added

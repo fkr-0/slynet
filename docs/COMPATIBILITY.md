@@ -2,9 +2,15 @@
 
 ## 1.0 support window
 
-SLYNET 1.0 supports Emacs 27.1 through 30.x and Janet 1.40.x on GNU/Linux and
-macOS. The project may accept fixes for newer compatible patch releases without
-changing the minor version.
+SLYNET 1.0 supports Emacs 27.1 through 30.x and Janet 1.40.x through 1.41.x on
+GNU/Linux and macOS. CI exercises the complete Emacs/Janet cross product for
+the pinned releases 1.40.1 and 1.41.1. The project may accept fixes for newer
+compatible patch releases without changing the minor version.
+
+Janet 1.39.1 is explicitly unsupported. Compatibility verification produced 49
+backend test failures around fiber/debug APIs and dependent source-index and
+RPC behavior; the project therefore fails closed rather than claiming partial
+or unverified support.
 
 ## Compatibility promises
 
