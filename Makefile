@@ -25,7 +25,7 @@ test-janet:
 
 test-emacs:
 	@echo "Running SLYNET Emacs ERT tests through Eldev..."
-	$(ELDEV) test --expect 54
+	$(ELDEV) test --expect 72
 
 test-e2e:
 	@echo "Running repeated Emacs/Janet lifecycle verification..."

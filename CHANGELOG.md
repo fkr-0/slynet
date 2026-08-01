@@ -7,6 +7,44 @@ Versioning.
 
 ## [Unreleased]
 
+## [1.0.2] - 2026-08-01
+
+### Added
+
+- Expanded the Emacs regression suite from 54 to 72 tests with focused
+  coverage for fragmented Unicode framing, malformed protocol messages,
+  request cancellation and timeout races, callback isolation, reconnect and
+  disconnect behavior, channel ownership, and teardown reentrancy.
+- Added deterministic property-style frame parser coverage and repeated live
+  Janet lifecycle checks with process-leak detection.
+
+### Changed
+
+- Hardened RPC request bookkeeping so timers, callbacks, cancellation, late
+  replies, synchronous replies, send failures, and connection loss resolve
+  exactly once.
+- Isolated wire observers, channel hooks, request callbacks, and callback-error
+  reporters so one failing extension cannot destabilize transport processing or
+  suppress later observers.
+- Made malformed `:return`, `:channel-send`, `:channel-close`, `:write-string`,
+  and `:prompt` messages fail consistently as protocol errors.
+- Invalidated transport and MREPL state before invoking teardown callbacks,
+  preventing reentrant work from being submitted onto dead connections or
+  closing channels.
+
+### Fixed
+
+- Corrected UTF-8 byte-length framing, including fragmented multibyte payloads,
+  valid `nil` messages, trailing payload garbage, invalid prefixes, and the
+  six-hex-digit frame-size boundary.
+- Prevented stale callbacks, request timers, process references, channel IDs,
+  and thread IDs from surviving send failure, channel closure, disconnect,
+  reconnect, or unexpected socket loss.
+- Prevented overlapping MREPL evaluations, including calls without a completion
+  callback, and ignored state-changing events from unrelated channels.
+- Ensured explicit disconnect reports `:disconnected`, while unexpected socket
+  loss reports `:connection-lost`, including for in-flight RPC and MREPL work.
+
 ## [1.0.1] - 2026-07-26
 
 ### Added

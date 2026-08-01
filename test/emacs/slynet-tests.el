@@ -60,6 +60,16 @@
     (should (equal seen (list message)))
     (should (equal (slynet-client-connection-buffer connection) ""))))
 
+(ert-deftest slynet-client-delivers-nil-message-and-continues-parsing ()
+  (let* ((seen nil)
+         (connection (slynet-client-make-test-connection
+                      (lambda (decoded) (push decoded seen))))
+         (wire (concat (slynet-client-encode-message nil)
+                       (slynet-client-encode-message '(:ok 1)))))
+    (slynet-client-filter connection wire)
+    (should (equal (nreverse seen) '(nil (:ok 1))))
+    (should (equal (slynet-client-connection-buffer connection) ""))))
+
 (ert-deftest slynet-client-rejects-malformed-prefix-and-recovers-buffer ()
   (let ((connection (slynet-client-make-test-connection #'ignore)))
     (should-error (slynet-client-filter connection "zzzzzzpayload")
@@ -111,6 +121,91 @@
     (should (string-match-p "callback exploded"
                             (error-message-string (caddr hook-call))))))
 
+(ert-deftest slynet-client-callback-error-hook-errors-are-also-isolated ()
+  (let* ((connection (make-slynet-client-connection))
+         (slynet-client-callback-error-functions
+          (list (lambda (&rest _ignored) (error "hook exploded")))))
+    (puthash 8
+             (make-slynet-client-request
+              :callback (lambda (_payload) (error "callback exploded")))
+             (slynet-client-connection-pending-requests connection))
+    (should-not (slynet-client--complete-request connection 8 :ok))
+    (should (= (hash-table-count
+                (slynet-client-connection-pending-requests connection))
+               0))))
+
+(ert-deftest slynet-client-callback-error-reporters-run-independently ()
+  (let* ((connection (make-slynet-client-connection))
+         (seen nil)
+         (slynet-client-callback-error-functions
+          (list (lambda (&rest _ignored) (error "reporter exploded"))
+                (lambda (_connection request-id payload _error-data)
+                  (setq seen (list request-id payload))))))
+    (puthash 18
+             (make-slynet-client-request
+              :callback (lambda (_payload) (error "callback exploded")))
+             (slynet-client-connection-pending-requests connection))
+    (slynet-client--complete-request connection 18 :ok)
+    (should (equal seen '(18 :ok)))))
+
+(ert-deftest slynet-client-wire-observer-errors-do-not-break-frame-processing ()
+  (slynet-test-with-fake-transport
+    (let ((connection (slynet-client-connect
+                       :on-message
+                       (lambda (_message) (error "observer exploded"))))
+          (reported nil))
+      (let ((slynet-client-callback-error-functions
+             (list (lambda (_connection _request-id payload _error-data)
+                     (push payload reported)))))
+        (slynet-client-filter
+         connection
+         (concat (slynet-client-encode-message '(:unknown 1))
+                 (slynet-client-encode-message '(:unknown 2)))))
+      (should (equal (nreverse reported) '((:unknown 1) (:unknown 2))))
+      (should (equal (slynet-client-connection-buffer connection) "")))))
+
+(ert-deftest slynet-client-channel-hook-errors-do-not-skip-later-hooks ()
+  (let* ((connection (make-slynet-client-connection))
+         (seen nil)
+         (slynet-client-after-channel-message-functions
+         (list (lambda (&rest _ignored) (error "hook exploded"))
+               (lambda (_connection channel-id payload)
+                 (setq seen (list channel-id payload))))))
+    (slynet-client-handle-message
+     connection '(:channel-send 7 (:write-string "hello")))
+    (should (equal seen '(7 (:write-string "hello"))))
+    (should (equal (slynet-client-connection-repl-output connection) "hello"))))
+
+(ert-deftest slynet-client-rejects-malformed-return-shapes ()
+  (let ((connection (make-slynet-client-connection)))
+    (dolist (message '((:return (:ok 1))
+                       (:return (:ok 1) not-an-id)
+                       (:return (:mystery 1) 7)
+                       (:return (:ok 1) 7 extra)))
+      (should-error (slynet-client-handle-message connection message)
+                    :type 'slynet-client-protocol-error))))
+
+(ert-deftest slynet-client-rejects-malformed-channel-message-shapes ()
+  (let ((connection (make-slynet-client-connection)))
+    (dolist (message '((:channel-send)
+                       (:channel-send not-an-id (:write-string "x"))
+                       (:channel-send 7 not-a-payload)
+                       (:channel-close)
+                       (:channel-close not-an-id)))
+      (should-error (slynet-client-handle-message connection message)
+                    :type 'slynet-client-protocol-error))))
+
+(ert-deftest slynet-client-rejects-malformed-channel-state-payloads ()
+  (let ((connection (make-slynet-client-connection)))
+    (should-error
+     (slynet-client-handle-message
+      connection '(:channel-send 7 (:write-string 42)))
+     :type 'slynet-client-protocol-error)
+    (should-error
+     (slynet-client-handle-message
+      connection '(:channel-send 7 (:prompt core)))
+     :type 'slynet-client-protocol-error)))
+
 (ert-deftest slynet-client-cancel-request-is-idempotent-and-ignores-late-reply ()
   (let* ((connection (make-slynet-client-connection))
          (seen nil)
@@ -152,6 +247,29 @@
                       (slynet-client-connection-pending-requests
                        slynet-current-connection))
                      0)))))))
+
+(ert-deftest slynet-client-synchronous-reply-cancels-preinstalled-timeout ()
+  (let* ((connection (make-slynet-client-connection
+                      :process :live
+                      :pending-requests (make-hash-table :test 'eql)))
+         (cancelled nil)
+         (seen nil))
+    (cl-letf (((symbol-function 'slynet-client--process-live-p)
+               (lambda (_process) t))
+              ((symbol-function 'slynet-client--run-at-time)
+               (lambda (&rest _ignored) :timer))
+              ((symbol-function 'slynet-client--cancel-timer)
+               (lambda (timer) (setq cancelled timer)))
+              ((symbol-function 'slynet-client--process-send-string)
+               (lambda (_process _wire)
+                 (slynet-client--complete-request connection 1 :ok))))
+      (slynet-client-send-rex-async
+       connection '(ping) (lambda (payload) (setq seen payload)) nil nil 5))
+    (should (eq seen :ok))
+    (should (eq cancelled :timer))
+    (should (= (hash-table-count
+                (slynet-client-connection-pending-requests connection))
+               0))))
 
 (ert-deftest slynet-client-frame-parser-property-roundtrip-fragmentation ()
   (let ((state 2463534242))
@@ -198,6 +316,162 @@
                (lambda (_process) nil)))
       (should-error
        (slynet-client-send-rex-async connection '(ping) #'ignore))
+      (should (= (hash-table-count
+                  (slynet-client-connection-pending-requests connection))
+                 0)))))
+
+(ert-deftest slynet-client-create-mrepl-does-not-install-abort-as-channel-state ()
+  (let ((connection (make-slynet-client-connection))
+        (seen nil))
+    (cl-letf (((symbol-function 'slynet-client-send-rex-async)
+               (lambda (_connection _form callback &rest _ignored)
+                 (funcall callback '(:abort :connection-lost))
+                 1)))
+      (slynet-client-create-mrepl
+       connection (lambda (result) (setq seen result))))
+    (should (equal seen '(:abort :connection-lost)))
+    (should-not (slynet-client-connection-channel-id connection))
+    (should-not (slynet-client-connection-mrepl-thread connection))
+    (should-not (slynet-client-connection-thread connection))))
+
+(ert-deftest slynet-client-mrepl-send-failure-clears-callback ()
+  (let ((connection (make-slynet-client-connection
+                     :channel-id 12
+                     :process :dead)))
+    (cl-letf (((symbol-function 'slynet-client--process-live-p)
+               (lambda (_process) nil)))
+      (should-error
+       (slynet-client-eval-mrepl-string connection "(+ 1 2)" #'ignore))
+      (should-not
+       (slynet-client-connection-mrepl-eval-callback connection)))))
+
+(ert-deftest slynet-client-rejects-overlapping-mrepl-evaluations ()
+  (let ((connection (make-slynet-client-connection
+                     :channel-id 12
+                     :process :live
+                     :mrepl-eval-callback #'ignore)))
+    (cl-letf (((symbol-function 'slynet-client--process-live-p)
+               (lambda (_process) t)))
+      (should-error
+       (slynet-client-eval-mrepl-string connection "(+ 1 2)" #'ignore)))))
+
+(ert-deftest slynet-client-nil-callback-still-marks-mrepl-evaluation-in-flight ()
+  (let ((connection (make-slynet-client-connection
+                     :channel-id 12
+                     :process :live)))
+    (cl-letf (((symbol-function 'slynet-client--process-live-p)
+               (lambda (_process) t))
+              ((symbol-function 'slynet-client--process-send-string)
+               (lambda (&rest _ignored) nil)))
+      (slynet-client-eval-mrepl-string connection "(+ 1 2)" nil)
+      (should
+       (slynet-client-connection-mrepl-eval-callback connection))
+      (should-error
+       (slynet-client-eval-mrepl-string connection "(+ 3 4)" nil)))))
+
+(ert-deftest slynet-client-channel-close-aborts-active-mrepl-evaluation ()
+  (let* ((seen nil)
+         (connection (make-slynet-client-connection
+                     :channel-id 12
+                     :thread "slynet-mrepl"
+                     :mrepl-thread "slynet-mrepl"
+                     :mrepl-eval-callback
+                     (lambda (payload) (setq seen payload)))))
+    (slynet-client-handle-message connection '(:channel-close 12))
+    (should (equal seen '(:abort :channel-closed)))
+    (should-not (slynet-client-connection-channel-id connection))
+    (should-not (slynet-client-connection-thread connection))
+    (should-not (slynet-client-connection-mrepl-thread connection))
+    (should-not (slynet-client-connection-mrepl-eval-callback connection))))
+
+(ert-deftest slynet-client-channel-close-invalidates-state-before-callback ()
+  (let* ((reentrant-error nil)
+         (connection
+          (make-slynet-client-connection
+           :channel-id 12
+           :thread "slynet-mrepl"
+           :mrepl-thread "slynet-mrepl"
+           :process :live)))
+    (setf (slynet-client-connection-mrepl-eval-callback connection)
+          (lambda (_payload)
+            (condition-case err
+                (slynet-client-eval-mrepl-string connection "(+ 1 2)" nil)
+              (error (setq reentrant-error err)))))
+    (cl-letf (((symbol-function 'slynet-client--process-live-p)
+               (lambda (_process) t)))
+      (slynet-client-handle-message connection '(:channel-close 12)))
+    (should reentrant-error)
+    (should (string-match-p
+             "channel not initialized"
+             (error-message-string reentrant-error)))
+    (should-not (slynet-client-connection-channel-id connection))))
+
+(ert-deftest slynet-client-reset-invalidates-transport-before-callbacks ()
+  (let* ((reentrant-error nil)
+         (connection
+          (make-slynet-client-connection
+           :process :live
+           :pending-requests (make-hash-table :test 'eql))))
+    (puthash
+     21
+     (make-slynet-client-request
+      :callback
+      (lambda (_payload)
+        (condition-case err
+            (slynet-client-send-rex-async connection '(ping) #'ignore)
+          (error (setq reentrant-error err)))))
+     (slynet-client-connection-pending-requests connection))
+    (cl-letf (((symbol-function 'slynet-client--process-live-p)
+               (lambda (_process) t))
+              ((symbol-function 'slynet-client--process-send-string)
+               (lambda (&rest _ignored)
+                 (ert-fail "teardown callback sent on the old process"))))
+      (slynet-client--reset-connection-state connection :connection-lost))
+    (should reentrant-error)
+    (should (string-match-p
+             "connection is not live"
+             (error-message-string reentrant-error)))
+    (should-not (slynet-client-connection-process connection))
+    (should (= (hash-table-count
+                (slynet-client-connection-pending-requests connection))
+               0))))
+
+(ert-deftest slynet-client-ignores-state-events-from-other-channels ()
+  (let* ((seen nil)
+         (callback (lambda (payload) (setq seen payload)))
+         (connection (make-slynet-client-connection
+                      :channel-id 12
+                      :thread "slynet-mrepl"
+                      :mrepl-thread "slynet-mrepl"
+                      :repl-output "original"
+                      :mrepl-eval-callback callback)))
+    (slynet-client-handle-message
+     connection '(:channel-send 99 (:write-string "wrong")))
+    (slynet-client-handle-message
+     connection '(:channel-send 99 (:write-values (42))))
+    (slynet-client-handle-message connection '(:channel-close 99))
+    (should (equal (slynet-client-connection-repl-output connection) "original"))
+    (should-not seen)
+    (should (eq (slynet-client-connection-mrepl-eval-callback connection) callback))
+    (should (= (slynet-client-connection-channel-id connection) 12))
+    (should (equal (slynet-client-connection-thread connection) "slynet-mrepl"))))
+
+(ert-deftest slynet-client-explicit-disconnect-wins-over-synchronous-sentinel ()
+  (slynet-test-with-fake-transport
+    (let ((connection (slynet-connect))
+          (seen nil))
+      (puthash 10
+               (make-slynet-client-request
+                :callback (lambda (payload) (setq seen payload)))
+               (slynet-client-connection-pending-requests connection))
+      (cl-letf (((symbol-function 'slynet-client--delete-process)
+                 (lambda (process)
+                   (push process deleted)
+                   (funcall installed-sentinel process "deleted")))
+                ((symbol-function 'slynet-client--process-live-p)
+                 (lambda (_process) t)))
+        (slynet-client-disconnect connection))
+      (should (equal seen '(:abort :disconnected)))
       (should (= (hash-table-count
                   (slynet-client-connection-pending-requests connection))
                  0)))))
