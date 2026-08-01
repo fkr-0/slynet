@@ -3,7 +3,7 @@
 ;; Copyright (C) 2026
 
 ;; Author: SLYNET contributors
-;; Version: 1.0.5
+;; Version: 1.0.6
 ;; Package-Requires: ((emacs "27.1"))
 ;; Keywords: languages, lisp, janet, tools, processes
 
@@ -18,6 +18,7 @@
 
 (define-error 'slynet-client-protocol-error "Malformed SLYNET protocol frame")
 (define-error 'slynet-client-request-error "SLYNET request failed")
+(define-error 'slynet-client-argument-error "Invalid SLYNET client argument")
 
 (defcustom slynet-client-request-timeout nil
   "Default RPC timeout in seconds, or nil to wait indefinitely."
@@ -95,6 +96,26 @@ Each function receives CONNECTION, CHANNEL-ID, and PAYLOAD.")
   "Cancel TIMER when it is still active."
   (when (timerp timer)
     (cancel-timer timer)))
+
+(defun slynet-client--require (predicate format-string &rest args)
+  "Signal an argument error unless PREDICATE is non-nil.
+FORMAT-STRING and ARGS describe the violated public API contract."
+  (unless predicate
+    (signal 'slynet-client-argument-error
+            (list (apply #'format format-string args)))))
+
+(defun slynet-client--require-connection (connection)
+  "Require CONNECTION to be a SLYNET client connection and return it."
+  (slynet-client--require
+   (slynet-client-connection-p connection)
+   "Expected SLYNET client connection, got %S" connection)
+  connection)
+
+(defun slynet-client--require-callback (callback name)
+  "Require CALLBACK to be nil or callable for argument NAME."
+  (slynet-client--require
+   (or (null callback) (functionp callback))
+   "%s must be nil or a function, got %S" name callback))
 
 (defun slynet-client-encode-message (message)
   "Encode MESSAGE as a SLY/SLYNK-style six-hex-byte length-prefixed sexp."
@@ -240,6 +261,13 @@ ON-MESSAGE is called with each decoded protocol message."
   "Connect to a SLYNET server on HOST and PORT.
 ON-MESSAGE is called with each decoded wire message.  NAME and BUFFER
 are passed to `open-network-stream'."
+  (slynet-client--require
+   (and (stringp host) (> (length host) 0))
+   "HOST must be a non-empty string, got %S" host)
+  (slynet-client--require
+   (and (integerp port) (<= 1 port) (<= port 65535))
+   "PORT must be an integer from 1 through 65535, got %S" port)
+  (slynet-client--require-callback on-message "ON-MESSAGE")
   (let* ((process (slynet-client--open-network-stream (or name "slynet") buffer host port))
          (connection (make-slynet-client-connection
                       :process process
@@ -267,8 +295,7 @@ are passed to `open-network-stream'."
 
 (defun slynet-client-send (connection message)
   "Send MESSAGE over CONNECTION and return MESSAGE."
-  (unless (slynet-client-connection-p connection)
-    (error "Not a SLYNET client connection: %S" connection))
+  (slynet-client--require-connection connection)
   (let ((process (slynet-client-connection-process connection)))
     (unless (and process (slynet-client--process-live-p process))
       (error "SLYNET connection is not live"))
@@ -277,6 +304,7 @@ are passed to `open-network-stream'."
 
 (defun slynet-client-next-id (connection)
   "Return and increment CONNECTION's next request id."
+  (slynet-client--require-connection connection)
   (let ((id (slynet-client-connection-next-id connection)))
     (setf (slynet-client-connection-next-id connection) (1+ id))
     id))
@@ -330,6 +358,10 @@ PAYLOAD is the value delivered to the failing callback."
 (defun slynet-client-cancel-request (connection request-id &optional reason)
   "Cancel REQUEST-ID on CONNECTION and notify its callback.
 REASON defaults to `:cancelled'.  Return non-nil when a request was pending."
+  (slynet-client--require-connection connection)
+  (slynet-client--require
+   (and (integerp request-id) (> request-id 0))
+   "REQUEST-ID must be a positive integer, got %S" request-id)
   (when-let ((request (slynet-client--take-request connection request-id)))
     (slynet-client--invoke-callback
      connection request-id (if (slynet-client-request-p request)
@@ -505,6 +537,17 @@ DETAIL, when non-nil, adds operation-specific context."
     (connection form callback &optional package thread timeout)
   "Send FORM over CONNECTION and call CALLBACK with the :return payload.
 TIMEOUT overrides `slynet-client-request-timeout'.  Return the request id."
+  (slynet-client--require-connection connection)
+  (slynet-client--require-callback callback "CALLBACK")
+  (slynet-client--require
+   (or (null package) (stringp package))
+   "PACKAGE must be nil or a string, got %S" package)
+  (slynet-client--require
+   (or (null thread) (stringp thread))
+   "THREAD must be nil or a string, got %S" thread)
+  (slynet-client--require
+   (or (null timeout) (and (numberp timeout) (>= timeout 0)))
+   "TIMEOUT must be nil or a non-negative number, got %S" timeout)
   (let* ((request-id (slynet-client-next-id connection))
          (effective-timeout (if (null timeout)
                                 slynet-client-request-timeout
@@ -538,6 +581,8 @@ Return the request id used for the message."
 
 (defun slynet-client-create-mrepl (connection callback)
   "Create an MREPL on CONNECTION and call CALLBACK with the backend result."
+  (slynet-client--require-connection connection)
+  (slynet-client--require-callback callback "CALLBACK")
   (slynet-client-send-rex-async
    connection
    '(create-mrepl)
@@ -553,10 +598,20 @@ Return the request id used for the message."
 
 (defun slynet-client-send-channel (connection channel-id payload)
   "Send PAYLOAD over CHANNEL-ID on CONNECTION."
+  (slynet-client--require-connection connection)
+  (slynet-client--require
+   (and (integerp channel-id) (> channel-id 0))
+   "CHANNEL-ID must be a positive integer, got %S" channel-id)
+  (slynet-client--require
+   (consp payload) "PAYLOAD must be a non-empty list, got %S" payload)
   (slynet-client-send connection (list :channel-send channel-id payload)))
 
 (defun slynet-client-eval-mrepl-string (connection string callback)
   "Evaluate STRING on CONNECTION's active MREPL and call CALLBACK with values."
+  (slynet-client--require-connection connection)
+  (slynet-client--require
+   (stringp string) "STRING must be a string, got %S" string)
+  (slynet-client--require-callback callback "CALLBACK")
   (let ((channel-id (slynet-client-connection-channel-id connection)))
     (unless channel-id
       (error "SLYNET MREPL channel not initialized"))

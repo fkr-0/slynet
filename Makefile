@@ -25,7 +25,7 @@ test-janet:
 
 test-emacs:
 	@echo "Running SLYNET Emacs ERT tests through Eldev..."
-	$(ELDEV) test --expect 76
+	$(ELDEV) test --expect 81
 
 test-fuzz:
 	@echo "Running extended deterministic transport fuzzing..."

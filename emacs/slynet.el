@@ -3,7 +3,7 @@
 ;; Copyright (C) 2026
 
 ;; Author: SLYNET contributors
-;; Version: 1.0.5
+;; Version: 1.0.6
 ;; Package-Requires: ((emacs "27.1"))
 ;; Keywords: languages, lisp, janet, tools, processes
 

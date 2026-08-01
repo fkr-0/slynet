@@ -385,6 +385,58 @@
                   (slynet-client-connection-pending-requests connection))
                  0)))))
 
+(ert-deftest slynet-client-connect-rejects-invalid-endpoint-before-opening ()
+  (let ((opened nil))
+    (cl-letf (((symbol-function 'slynet-client--open-network-stream)
+               (lambda (&rest _ignored) (setq opened t))))
+      (dolist (args '((:host "") (:host 42) (:port 0) (:port 65536)
+                      (:on-message not-a-function)))
+        (should-error (apply #'slynet-client-connect args)
+                      :type 'slynet-client-argument-error))
+      (should-not opened))))
+
+(ert-deftest slynet-client-send-rex-validates-before-allocating-request-id ()
+  (let ((connection (make-slynet-client-connection :next-id 9)))
+    (dolist (args '(((ping) not-a-function nil nil nil)
+                    ((ping) nil 42 nil nil)
+                    ((ping) nil nil 42 nil)
+                    ((ping) nil nil nil -1)))
+      (should-error
+       (apply #'slynet-client-send-rex-async connection args)
+       :type 'slynet-client-argument-error))
+    (should (= 9 (slynet-client-connection-next-id connection)))
+    (should (= 0 (hash-table-count
+                  (slynet-client-connection-pending-requests connection))))))
+
+(ert-deftest slynet-client-cancel-request-requires-positive-integer-id ()
+  (let ((connection (make-slynet-client-connection)))
+    (dolist (request-id '(nil 0 -1 "7"))
+      (should-error
+       (slynet-client-cancel-request connection request-id)
+       :type 'slynet-client-argument-error))))
+
+(ert-deftest slynet-client-send-channel-validates-without-sending ()
+  (let ((connection (make-slynet-client-connection :process :live))
+        (sent nil))
+    (cl-letf (((symbol-function 'slynet-client-send)
+               (lambda (&rest _ignored) (setq sent t))))
+      (dolist (args '((0 (:process "x")) ("1" (:process "x"))
+                      (1 nil) (1 not-a-list)))
+        (should-error
+         (apply #'slynet-client-send-channel connection args)
+         :type 'slynet-client-argument-error))
+      (should-not sent))))
+
+(ert-deftest slynet-client-eval-validates-before-mutating-mrepl-state ()
+  (let ((connection (make-slynet-client-connection :channel-id 12)))
+    (should-error
+     (slynet-client-eval-mrepl-string connection 42 #'ignore)
+     :type 'slynet-client-argument-error)
+    (should-error
+     (slynet-client-eval-mrepl-string connection "(+ 1 2)" 'not-a-function)
+     :type 'slynet-client-argument-error)
+    (should-not (slynet-client-connection-mrepl-eval-callback connection))))
+
 (ert-deftest slynet-client-create-mrepl-does-not-install-abort-as-channel-state ()
   (let ((connection (make-slynet-client-connection))
         (seen nil))

@@ -7,6 +7,20 @@ Versioning.
 
 ## [Unreleased]
 
+## [1.0.6] - 2026-08-01
+
+### Added
+
+- Added defensive argument validation tests for connection endpoints, request
+  callbacks and deadlines, request IDs, channel payloads, and MREPL evaluation.
+
+### Changed
+
+- Public client entrypoints now reject invalid arguments before opening a
+  socket, allocating request IDs, registering callbacks, or mutating MREPL
+  state. Contract violations use `slynet-client-argument-error` with the
+  offending argument in the diagnostic.
+
 ## [1.0.5] - 2026-08-01
 
 ### Added
