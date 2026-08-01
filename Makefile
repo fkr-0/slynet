@@ -25,13 +25,14 @@ test-janet:
 
 test-emacs:
 	@echo "Running SLYNET Emacs ERT tests through Eldev..."
-	$(ELDEV) test --expect 74
+	$(ELDEV) test --expect 76
 
 test-fuzz:
 	@echo "Running extended deterministic transport fuzzing..."
 	SLYNET_FUZZ_CASES=10000 $(ELDEV) test \
 		slynet-client-frame-parser-property-roundtrip-fragmentation \
-		slynet-client-frame-parser-rejects-fuzzed-prefixes
+		slynet-client-frame-parser-rejects-fuzzed-prefixes \
+		slynet-client-rejects-invalid-utf8-and-recovers
 
 test-e2e:
 	@echo "Running repeated Emacs/Janet lifecycle verification..."

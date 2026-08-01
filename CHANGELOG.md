@@ -7,6 +7,24 @@ Versioning.
 
 ## [Unreleased]
 
+## [1.0.4] - 2026-08-01
+
+### Added
+
+- Added regression coverage for invalid UTF-8 recovery and actionable protocol
+  error context.
+
+### Changed
+
+- Protocol violations now report the expected message shape, received value,
+  request detail where available, connection state, pending request count,
+  buffered byte count, channel ID, and thread ID.
+
+### Fixed
+
+- Rejected non-canonical UTF-8 before Lisp parsing, including overlong,
+  truncated, surrogate, and out-of-range encodings.
+
 ## [1.0.3] - 2026-08-01
 
 ### Added

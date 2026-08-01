@@ -3,7 +3,7 @@
 ;; Copyright (C) 2026
 
 ;; Author: SLYNET contributors
-;; Version: 1.0.3
+;; Version: 1.0.4
 ;; Package-Requires: ((emacs "27.1"))
 ;; Keywords: languages, lisp, janet, tools, processes
 
@@ -112,6 +112,80 @@ Each function receives CONNECTION, CHANNEL-ID, and PAYLOAD.")
 ON-MESSAGE is called with each decoded protocol message."
   (make-slynet-client-connection :on-message on-message))
 
+(defun slynet-client--utf8-continuation-byte-p (byte)
+  "Return non-nil when BYTE is a UTF-8 continuation byte."
+  (and (>= byte #x80) (<= byte #xbf)))
+
+(defun slynet-client--valid-utf8-p (string)
+  "Return non-nil when STRING is a canonical UTF-8 byte sequence."
+  (let* ((bytes (encode-coding-string string 'binary t))
+         (length (length bytes))
+         (index 0)
+         valid)
+    (setq valid t)
+    (while (and valid (< index length))
+      (let ((first (aref bytes index)))
+        (cond
+         ((<= first #x7f)
+          (setq index (1+ index)))
+         ((and (>= first #xc2) (<= first #xdf)
+               (< (1+ index) length)
+               (slynet-client--utf8-continuation-byte-p
+                (aref bytes (1+ index))))
+          (setq index (+ index 2)))
+         ((and (= first #xe0)
+               (< (+ index 2) length)
+               (>= (aref bytes (1+ index)) #xa0)
+               (<= (aref bytes (1+ index)) #xbf)
+               (slynet-client--utf8-continuation-byte-p
+                (aref bytes (+ index 2))))
+          (setq index (+ index 3)))
+         ((and (= first #xed)
+               (< (+ index 2) length)
+               (>= (aref bytes (1+ index)) #x80)
+               (<= (aref bytes (1+ index)) #x9f)
+               (slynet-client--utf8-continuation-byte-p
+                (aref bytes (+ index 2))))
+          (setq index (+ index 3)))
+         ((and (or (and (>= first #xe1) (<= first #xec))
+                   (and (>= first #xee) (<= first #xef)))
+               (< (+ index 2) length)
+               (slynet-client--utf8-continuation-byte-p
+                (aref bytes (1+ index)))
+               (slynet-client--utf8-continuation-byte-p
+                (aref bytes (+ index 2))))
+          (setq index (+ index 3)))
+         ((and (= first #xf0)
+               (< (+ index 3) length)
+               (>= (aref bytes (1+ index)) #x90)
+               (<= (aref bytes (1+ index)) #xbf)
+               (slynet-client--utf8-continuation-byte-p
+                (aref bytes (+ index 2)))
+               (slynet-client--utf8-continuation-byte-p
+                (aref bytes (+ index 3))))
+          (setq index (+ index 4)))
+         ((and (>= first #xf1) (<= first #xf3)
+               (< (+ index 3) length)
+               (slynet-client--utf8-continuation-byte-p
+                (aref bytes (1+ index)))
+               (slynet-client--utf8-continuation-byte-p
+                (aref bytes (+ index 2)))
+               (slynet-client--utf8-continuation-byte-p
+                (aref bytes (+ index 3))))
+          (setq index (+ index 4)))
+         ((and (= first #xf4)
+               (< (+ index 3) length)
+               (>= (aref bytes (1+ index)) #x80)
+               (<= (aref bytes (1+ index)) #x8f)
+               (slynet-client--utf8-continuation-byte-p
+                (aref bytes (+ index 2)))
+               (slynet-client--utf8-continuation-byte-p
+                (aref bytes (+ index 3))))
+          (setq index (+ index 4)))
+         (t
+          (setq valid nil)))))
+    valid))
+
 (defun slynet-client--try-read-one (connection)
   "Return (t . MESSAGE) from CONNECTION, or nil when its frame is incomplete."
   (let ((buffer (slynet-client-connection-buffer connection)))
@@ -132,17 +206,20 @@ ON-MESSAGE is called with each decoded protocol message."
           (when (>= (length buffer) message-end)
             (let ((payload (substring buffer 6 message-end)))
               (condition-case err
-                  (let* ((decoded-payload
-                          (decode-coding-string payload 'utf-8 t))
-                         (read-result (read-from-string decoded-payload))
-                         (decoded (car read-result))
-                         (read-end (cdr read-result)))
-                    (unless (string-match-p "\\`[[:space:]]*\\'"
-                                            (substring decoded-payload read-end))
-                      (error "Trailing data after protocol expression"))
-                    (setf (slynet-client-connection-buffer connection)
-                          (substring buffer message-end))
-                    (cons t decoded))
+                  (progn
+                    (unless (slynet-client--valid-utf8-p payload)
+                      (error "Payload is not canonical UTF-8"))
+                    (let* ((decoded-payload
+                            (decode-coding-string payload 'utf-8 t))
+                           (read-result (read-from-string decoded-payload))
+                           (decoded (car read-result))
+                           (read-end (cdr read-result)))
+                      (unless (string-match-p "\\`[[:space:]]*\\'"
+                                              (substring decoded-payload read-end))
+                        (error "Trailing data after protocol expression"))
+                      (setf (slynet-client-connection-buffer connection)
+                            (substring buffer message-end))
+                      (cons t decoded)))
                 (error
                  (setf (slynet-client-connection-buffer connection) "")
                  (signal 'slynet-client-protocol-error
@@ -311,10 +388,31 @@ Pending callbacks receive an abort payload using REASON or `:connection-lost'."
   "Return non-nil when ACTUAL names the same protocol op as KEYWORD or SYMBOL."
   (or (eq actual keyword) (eq actual symbol)))
 
-(defun slynet-client--protocol-error (format-string &rest args)
-  "Signal a SLYNET protocol error formatted from FORMAT-STRING and ARGS."
-  (signal 'slynet-client-protocol-error
-          (list (apply #'format format-string args))))
+(defun slynet-client--protocol-context (connection)
+  "Return compact diagnostic state for CONNECTION."
+  (format "state=%s pending=%d buffer-bytes=%d channel=%S thread=%S"
+          (if (and (slynet-client-connection-process connection)
+                   (slynet-client--process-live-p
+                    (slynet-client-connection-process connection)))
+              "connected"
+            "disconnected")
+          (hash-table-count
+           (slynet-client-connection-pending-requests connection))
+          (length (slynet-client-connection-buffer connection))
+          (slynet-client-connection-channel-id connection)
+          (slynet-client-connection-thread connection)))
+
+(defun slynet-client--protocol-error (connection expected received &optional detail)
+  "Signal a protocol error for RECEIVED, describing EXPECTED and CONNECTION.
+DETAIL, when non-nil, adds operation-specific context."
+  (signal
+   'slynet-client-protocol-error
+   (list
+    (concat "SLYNET protocol violation\n"
+            "expected: " expected "\n"
+            (format "received: %S\n" received)
+            (when detail (concat "detail: " detail "\n"))
+            "peer: " (slynet-client--protocol-context connection)))))
 
 (defun slynet-client--handle-channel-message (connection channel-id payload)
   "Handle CHANNEL-ID's PAYLOAD for CONNECTION."
@@ -329,14 +427,15 @@ Pending callbacks receive an abort payload using REASON or `:connection-lost'."
           (let ((text (cadr payload)))
             (unless (stringp text)
               (slynet-client--protocol-error
-               "Malformed channel write-string payload: %S" payload))
+               connection "(:write-string STRING)" payload))
             (slynet-client--append-output connection text)))
          ((slynet-client--op= op :prompt 'prompt)
           (let ((package-name (cadr payload))
                 (condition (nthcdr 5 payload)))
             (unless (stringp package-name)
               (slynet-client--protocol-error
-               "Malformed channel prompt payload: %S" payload))
+               connection "(:prompt PACKAGE ...) with PACKAGE as a string"
+               payload))
             (setf (slynet-client-connection-package connection) package-name)
             (setf (slynet-client-connection-prompt-string connection)
                   (if condition
@@ -371,7 +470,7 @@ Pending callbacks receive an abort payload using REASON or `:connection-lost'."
         (unless (and (= (length message) 3)
                      (integerp request-id))
           (slynet-client--protocol-error
-           "Malformed return message: %S" message))
+           connection "(:return STATUS INTEGER-REQUEST-ID)" message))
         (pcase status
           (`(:ok ,value)
            (slynet-client--complete-request connection request-id value))
@@ -383,20 +482,21 @@ Pending callbacks receive an abort payload using REASON or `:connection-lost'."
            (slynet-client--complete-request connection request-id (list :abort reason)))
           (_
            (slynet-client--protocol-error
-            "Malformed return status: %S" status)))))
+            connection "(:ok VALUE) or (:abort REASON)" status
+            (format "request-id=%S" request-id))))))
      ((slynet-client--op= op :channel-send 'channel-send)
       (unless (and (= (length message) 3)
                    (integerp (cadr message))
                    (consp (caddr message)))
         (slynet-client--protocol-error
-         "Malformed channel-send message: %S" message))
+         connection "(:channel-send INTEGER-CHANNEL-ID PAYLOAD)" message))
       (slynet-client--handle-channel-message connection (cadr message) (caddr message)))
      ((slynet-client--op= op :channel-close 'channel-close)
       (let ((channel-id (cadr message)))
         (unless (and (= (length message) 2)
                      (integerp channel-id))
           (slynet-client--protocol-error
-           "Malformed channel-close message: %S" message))
+           connection "(:channel-close INTEGER-CHANNEL-ID)" message))
         (when (equal channel-id (slynet-client-connection-channel-id connection))
           (slynet-client--close-mrepl-state connection :channel-closed))))
      (t nil))))

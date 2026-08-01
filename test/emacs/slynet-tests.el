@@ -60,6 +60,18 @@
     (should (equal seen (list message)))
     (should (equal (slynet-client-connection-buffer connection) ""))))
 
+(ert-deftest slynet-client-rejects-invalid-utf8-and-recovers ()
+  (let* ((seen nil)
+         (connection (slynet-client-make-test-connection
+                      (lambda (message) (push message seen))))
+         (invalid (unibyte-string #xff)))
+    (should-error
+     (slynet-client-filter connection (concat "000001" invalid))
+     :type 'slynet-client-protocol-error)
+    (should (equal (slynet-client-connection-buffer connection) ""))
+    (slynet-client-filter connection
+                          (slynet-client-encode-message '(:ok recovered)))
+    (should (equal seen '((:ok recovered))))))
 
 (ert-deftest slynet-client-delivers-nil-message-and-continues-parsing ()
   (let* ((seen nil)
@@ -186,6 +198,26 @@
       (should-error (slynet-client-handle-message connection message)
                     :type 'slynet-client-protocol-error))))
 
+(ert-deftest slynet-client-protocol-errors-carry-actionable-state ()
+  (let ((connection
+         (make-slynet-client-connection
+          :buffer "abc"
+          :channel-id 12
+          :thread "mrepl"
+          :pending-requests (make-hash-table :test 'eql))))
+    (puthash 7 #'ignore
+             (slynet-client-connection-pending-requests connection))
+    (condition-case err
+        (progn
+          (slynet-client-handle-message connection '(:return (:mystery 1) 7))
+          (ert-fail "Malformed return unexpectedly accepted"))
+      (slynet-client-protocol-error
+       (let ((text (error-message-string err)))
+         (should (string-match-p "expected:" text))
+         (should (string-match-p "request-id=7" text))
+         (should (string-match-p "pending=1" text))
+         (should (string-match-p "buffer-bytes=3" text))
+         (should (string-match-p "channel=12" text)))))))
 
 (ert-deftest slynet-client-rejects-malformed-channel-message-shapes ()
   (let ((connection (make-slynet-client-connection)))
