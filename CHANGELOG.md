@@ -7,6 +7,39 @@ Versioning.
 
 ## [Unreleased]
 
+## [1.0.7] - 2026-08-15
+
+### Added
+
+- Added fail-closed release-integrity checks for version coherence, stale
+  release placeholders, the documented direct CLI, protocol warning policy,
+  and generated protocol-inventory freshness.
+- Added an extracted-artifact smoke that starts the packaged Janet server and
+  drives MREPL evaluation through the packaged Emacs client.
+- Added machine-readable `dist/release-evidence.yml` generation with artifact
+  sizes and SHA-256 hashes.
+- Added a publication-only verification gate that requires a real canonical
+  repository remote instead of accepting placeholder clone instructions.
+
+### Changed
+
+- Synchronized Janet runtime, Janet bundle, Emacs package, and project release
+  metadata on version 1.0.7.
+- Made live Emacs/Janet E2E tests start the same `janet slynet/cli.janet --tcp`
+  entrypoint documented to users.
+- Refreshed setup, security, release, and roadmap documentation around the
+  trusted-local protocol boundary and post-1.0 development priorities.
+- Constrained CI Emacs setup to a reviewed action revision and Eldev bootstrap
+  to the 1.11.2 release, and made the final CI job run the complete release
+  gate rather than packaging source alone.
+
+### Fixed
+
+- Fixed direct execution of `slynet/cli.janet`, which previously exited without
+  invoking the server or rendering CLI help/version output.
+- Removed stale 0.0.0 bundle metadata and insecure `0.0.0.0` quickstart
+  guidance from release-facing documentation.
+
 ## [1.0.6] - 2026-08-01
 
 ### Added

@@ -1,76 +1,122 @@
----
-# AI Metadata Tags
-ai_keywords: [SLYNET, setup, development, environment, Janet, installation]
-ai_contexts: [development]
-ai_relations: [docs/ai-index/overview.md, docs/dev-guides/porting-guide-from-slynk.md]
----
+# SLYNET development setup
 
-# SLYNET Development Environment Setup
+This guide describes the current contributor workflow for SLYNET 1.0.x. The
+root `README.md` remains the user-facing quick start and
+`docs/COMPATIBILITY.md` defines the supported runtime window.
 
-<!-- AI-IMPORTANCE:level=high -->
-This guide describes how to set up a development environment for working on SLYNET.
-
-<!-- AI-CONTEXT-START:type=development -->
 ## Prerequisites
 
-1.  **Janet:**
-    *   You need a working Janet installation. Refer to the [official Janet documentation](https://janet-lang.org/docs/index.html) for installation instructions specific to your operating system.
-    *   Ensure the `janet` executable is in your system's PATH.
-    *   Verify your installation by running `janet -v` in your terminal.
+Use:
 
-2.  **Git:**
-    *   SLYNET's source code is managed with Git. Ensure Git is installed on your system.
+- Janet 1.40.x or 1.41.x;
+- Emacs 27.1 or newer;
+- Git;
+- Eldev 1.11 or newer for Emacs package development and release checks.
 
-3.  **(Optional) SLY and a Common Lisp Implementation:**
-    *   If you plan to refer to the original SLYNK behavior or test against a SLY front-end, you will need:
-        *   Emacs.
-        *   SLY (installed via Emacs package manager, e.g., MELPA).
-        *   A Common Lisp implementation (e.g., SBCL, CCL).
-    *   This is useful for understanding the target functionality but not strictly required for all SLYNET backend development tasks.
+Verify the toolchain:
 
-## Getting the SLYNET Source Code
-
-1.  **Clone the Repository:**
-    ```bash
-    git clone <repository_url> slynet
-    cd slynet
-    ```
-    (Replace `<repository_url>` with the actual URL of the SLYNET Git repository.)
-
-2.  **Project Structure:**
-    *   The SLYNET Janet code is primarily in [`slynet-api.janet`](slynet-api.janet:1) (initially).
-    *   The API specification is in [`impl_spec.yml`](impl_spec.yml:1).
-    *   The original SLYNK Common Lisp source code (for reference) is in the `sly_source/` directory.
-
-## Building and Running SLYNET (Initial Placeholder)
-
-*This section will be updated as SLYNET's build and execution mechanisms are defined.*
-
-Currently, SLYNET is in its early stages. To "run" the existing code, you might load [`slynet-api.janet`](slynet-api.janet:1) into a Janet REPL:
-
-```bash
-janet
-(import slynet-api)
-# You can now interact with the defined functions and classes in slynet-api
+```sh
+janet --version
+emacs --version
+eldev --version
 ```
 
-A `Makefile` or `jpm` configuration might be added later for more structured builds and testing.
+This checkout currently has no canonical public `origin`. Work from the local
+repository you were given. Public clone instructions are intentionally withheld
+until a real publication remote exists; `make publication-verify` enforces that
+boundary.
 
-## Development Workflow
+## Environment
 
-1.  **Understand the Task:** Refer to `docs/tasks/current-task-plan.md` and relevant module documentation.
-2.  **Consult SLYNK Source:** If porting a feature, study the corresponding SLYNK code in `sly_source/`.
-3.  **Implement in Janet:** Write Janet code, following conventions in `docs/ai-index/documentation-guide.md` and SLYNET-specific coding standards (to be defined).
-4.  **Test:** (Testing framework and procedures to be defined).
-5.  **Document:** Update or create documentation as per `docs/ai-index/documentation-guide.md`.
-6.  **Commit and Push:** Use Git for version control.
+From the repository root:
 
-## Editor Configuration for Janet
+```sh
+export JANET_PATH="${JANET_PATH}:$PWD"
+```
 
-*   **Emacs:** `janet-mode` is available via MELPA.
-*   **VS Code:** Extensions for Janet language support are available.
-*   **Other Editors:** Check for Janet support plugins for your preferred editor.
+The Makefile and `bridge.yml` set this automatically for the canonical Janet
+test and release commands where needed.
 
-<!-- AI-CONTEXT-END -->
+## Run SLYNET
 
-This setup guide will be expanded as the project matures and more specific build, test, and run procedures are established.
+The supported direct server entrypoint is:
+
+```sh
+janet slynet/cli.janet --help
+janet slynet/cli.janet --version
+janet slynet/cli.janet --tcp --host 127.0.0.1 --port 4005
+```
+
+Keep the listener on `127.0.0.1`. SLYNET evaluates code from connected clients;
+see `SECURITY.md` before designing any remote workflow.
+
+A separate CLI client is available for protocol smoke work:
+
+```sh
+janet slynet-client.janet --help
+```
+
+## Repository structure
+
+```text
+slynet/                     Janet backend/server implementation
+emacs/                      Emacs client package
+test/                       Janet and Emacs verification
+sly_source/                 tracked Common Lisp SLY/SLYNK reference corpus
+docs/specs/                 current semantic/compatibility contracts
+docs/generated/             generated protocol inventory
+tools/                      inventory and release verification tooling
+project.janet               canonical package version
+bundle/info.jdn             Janet package metadata
+Makefile                    stable build/test/release command surface
+```
+
+The older porting documents under `docs/architecture/` are useful historical
+context, but executable tests, `docs/specs/`, `docs/COMPATIBILITY.md`, and
+`ROADMAP.md` take precedence when they disagree.
+
+## Normal development loop
+
+Use focused tests while editing, then the aggregate gates:
+
+```sh
+make lint
+make test
+make test-emacs
+make test-e2e
+```
+
+The Janet suite can also be targeted directly:
+
+```sh
+JANET_PATH="$PWD" janet test/run_tests.janet :suite source-index :report compact
+JANET_PATH="$PWD" janet test/run_tests.janet :suite debugger :report compact
+JANET_PATH="$PWD" janet test/run_tests.janet :suite integration :report compact
+```
+
+Every new or changed RPC should retain an interface declaration, explicit
+support/equivalence metadata where applicable, and executable coverage.
+
+## Release verification
+
+Before a local release candidate is considered valid, run:
+
+```sh
+make release-verify
+```
+
+That gate checks version coherence, stale placeholders, direct CLI startup,
+protocol policy, generated-inventory freshness, Janet/Emacs tests, transport
+fuzzing, compilation, repeated live E2E, packaging, and an extracted-artifact
+start/connect/eval smoke. It writes `dist/release-evidence.yml` with artifact
+hashes.
+
+For public publication, additionally run:
+
+```sh
+make publication-verify
+```
+
+The publication check intentionally fails until a real `origin` exists and the
+README contains that exact canonical repository URL. Neither verification
+command creates a tag, pushes, uploads, publishes, or deploys.

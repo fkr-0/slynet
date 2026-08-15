@@ -33,6 +33,21 @@ commands:
     category: test
     run: [make, test-e2e]
 
+  release-integrity:
+    description: Verify release metadata, placeholders, and direct CLI startup
+    category: test
+    run: [make, release-integrity]
+
+  protocol-inventory-check:
+    description: Fail when generated protocol inventory differs from source truth
+    category: test
+    run: [make, protocol-inventory-check]
+
+  publication-verify:
+    description: Verify publication-only repository URL and remote requirements
+    category: test
+    run: [make, publication-verify]
+
   package:
     description: Build Janet and Emacs release artifacts
     category: build

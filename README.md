@@ -1,77 +1,70 @@
 # SLYNET
 
 SLYNET is a Janet development environment for Emacs. It pairs a Janet-native
-server with a small Emacs client and uses a SLY/SLYNK-style wire protocol to
-provide an interactive REPL, evaluation, completion, source navigation,
-inspection, diagnostics, and a practical debugger facade.
+server with a small Emacs client and a SLY/SLYNK-style wire protocol to provide
+an interactive REPL, evaluation, completion, source navigation, inspection,
+diagnostics, and a practical debugger facade.
 
-SLYNET 1.0.1 is a stable release of the documented Janet workflow, not a claim
-of complete Common Lisp SLY compatibility. Features that cannot preserve SLYNK
-semantics on Janet are explicitly classified as emulated, experimental, or
-unsupported.
+SLYNET 1.0.7 is a stable release of the documented Janet workflow. It is not a
+claim of complete Common Lisp SLY compatibility: operations that cannot preserve
+SLYNK semantics on Janet are classified explicitly as native, emulated,
+workaround, pending-design, or unsupported.
 
-## support matrix and contract for 1.0.0
+## Support matrix and contract
+
+The support matrix below is the stable 1.0.x compatibility contract.
 
 | Component | Supported | Notes |
 |---|---|---|
-| Emacs | 27.1 through 30.x | CI should exercise 27.1, 28.2, 29.4, and 30.x. |
-| Janet | 1.40.x | 1.40.1 is the release-validation baseline. |
-| SLY | Protocol-compatible concepts only | SLY itself is not required by the Emacs package. SLYNET ships its own client. |
-| OS | GNU/Linux and macOS | Requires local TCP sockets and normal subprocess support. Windows is untested. |
+| Emacs | 27.1 through 30.x | CI covers 27.1, 28.2, 29.4, and 30.1. |
+| Janet | 1.40.x through 1.41.x | CI covers 1.40.1 and 1.41.1. |
+| SLY | Protocol-compatible concepts only | SLY itself is not required; SLYNET ships its own Emacs client. |
+| OS | GNU/Linux and macOS | Local TCP sockets and subprocess support are required. Windows remains unverified. |
 
-### Stable features
+### Stable workflow
 
 - six-hex-byte length-prefixed protocol transport;
-- local server startup, teardown, reconnect, and project-scoped connections;
-- MREPL creation, input history, output, successful evaluation, and errors;
-- simple and flex completion, namespace-aware completion, and autodoc;
+- direct local server startup, teardown, reconnect, and project-scoped
+  connections;
+- MREPL creation, history, output, successful evaluation, and error handling;
+- simple/flex completion, namespace-aware completion, autodoc, and Janet docs;
 - source-index-backed definitions and xref results;
 - inspector navigation and stable object metadata;
-- compile/load diagnostics with source locations;
-- debugger condition, frame, restart, and execution-unit facades;
+- compile/load/runtime diagnostics with source locations;
+- debugger condition, frame, restart-facade, and execution-unit views;
 - protocol inventory and support-class reporting.
 
-### Experimental features
+### Experimental or deliberately constrained areas
 
-- debugger stepping/restart behavior beyond the documented Janet facade;
+- debugger stepping and resumability beyond SLYNET-owned Janet facades;
 - profiler, stickers, tracing, and Common Lisp package-management compatibility;
-- remote, TRAMP, Windows, and multi-user network operation;
-- interfaces marked `pending-design`, `workaround`, or `unsupported` in the
-  generated protocol inventory.
+- remote/TRAMP, Windows, hostile-network, and multi-user operation;
+- interfaces classified as pending-design, workaround, or unsupported in
+  `docs/generated/protocol-inventory.yml`.
 
-### Known limitations
-
-- SLYNET is not a drop-in replacement for every SLY contrib module.
-- Janet has no Common Lisp package, condition/restart, thread, or MOP model;
-  related functionality is intentionally adapted rather than falsely emulated.
-- The default server command is relative to the SLYNET checkout. Set
-  `slynet-server-directory` when launching it from another project.
-- The server listens on localhost by default. Authentication and hostile-network
-  exposure are outside the 1.0.0 support contract.
+Janet has no Common Lisp package, condition/restart, thread, or CLOS/MOP model.
+SLYNET adapts those workflows where useful and does not manufacture semantic
+parity where the Janet runtime does not provide it.
 
 ## Prerequisites
 
-- Janet 1.40.x, available as `janet`;
-- Emacs 27.1 or newer;
-- Git for source installation;
-- Eldev 1.11 or newer only for package development and release verification.
-
-Verify the runtime:
+For normal use:
 
 ```sh
 janet --version
 emacs --version
 ```
 
-## Emacs quick start: install from source
+Use Janet 1.40.x or 1.41.x and Emacs 27.1 or newer. Git is needed for source
+checkout workflows. Eldev 1.11 or newer is needed only for package development
+and release verification.
 
-Clone the repository to a stable path:
+## Emacs quick start: source installation before public publication
 
-```sh
-git clone REPOSITORY-URL ~/src/slynet
-```
-
-Add the Emacs package and configure the bundled server location:
+This checkout currently has no canonical public `origin` configured, so the
+repository deliberately does not publish an invented clone URL. From an
+existing checkout, add its Emacs directory to `load-path` and point SLYNET at
+that checkout:
 
 ```elisp
 (add-to-list 'load-path (expand-file-name "~/src/slynet/emacs"))
@@ -83,35 +76,39 @@ Add the Emacs package and configure the bundled server location:
 (slynet-mode 1)
 ```
 
-After publication to a package archive, installation will use the normal
-`M-x package-install RET slynet` flow. Until an archive submission is accepted,
-source installation is the supported path.
+Before a public release is advertised, the maintainer must configure the real
+repository remote and update this installation section. `make
+publication-verify` fails closed until that publication-only requirement is
+satisfied.
 
-## First session
+## Verify and start the server directly
 
-1. Open Emacs and evaluate the configuration above.
-2. Run `M-x slynet-start-server`.
-3. Run `M-x slynet-connect`, accepting `127.0.0.1` and port `4005`.
-4. Run `M-x slynet-create-mrepl`.
-5. In the REPL buffer, evaluate:
+The documented server command is itself covered by the release gate:
 
-   ```janet
-   (+ 20 22)
-   ```
+```sh
+janet slynet/cli.janet --help
+janet slynet/cli.janet --version
+janet slynet/cli.janet --tcp --host 127.0.0.1 --port 4005
+```
 
-6. Confirm that the result is `42`.
-7. Evaluate an error to exercise diagnostics/debugger state:
+Keep the server on loopback. The protocol permits code evaluation with the
+server process user's permissions and is not an authentication or sandbox
+boundary. See `SECURITY.md` before considering remote access.
 
-   ```janet
-   (error "expected example failure")
-   ```
+## First Emacs session
 
-8. Use `C-c C-s b` for debugger information and `C-c C-s q` to disconnect and
-   stop the Emacs-owned local server.
+1. Run `M-x slynet-start-server`.
+2. Run `M-x slynet-connect`, accepting `127.0.0.1` and port `4005`.
+3. Run `M-x slynet-create-mrepl`.
+4. Evaluate `(+ 20 22)` in the REPL and confirm the result is `42`.
+5. Evaluate `(error "expected example failure")` to exercise diagnostics and
+   debugger state.
+6. Use `C-c C-s b` for debugger information and `C-c C-s q` to disconnect and
+   stop an Emacs-owned local server.
 
 ## Commands and keybindings
 
-SLYNET uses the prefix `C-c C-s` while `slynet-mode` is enabled.
+SLYNET uses the `C-c C-s` prefix while `slynet-mode` is enabled.
 
 | Key | Command | Purpose |
 |---|---|---|
@@ -120,7 +117,7 @@ SLYNET uses the prefix `C-c C-s` while `slynet-mode` is enabled.
 | `C-c C-s r` | `slynet-reconnect` | Reconnect to the remembered endpoint. |
 | `C-c C-s q` | `slynet-quit` | Disconnect and stop an Emacs-owned server. |
 | `C-c C-s s` | `slynet-status` | Show compact connection status. |
-| `C-c C-s h` | `slynet-health` | Open the detailed health buffer. |
+| `C-c C-s h` | `slynet-health` | Open detailed health information. |
 | `C-c C-s e` | `slynet-eval-string` | Evaluate a Janet string. |
 | `C-c C-s m` | `slynet-create-mrepl` | Create or open the MREPL. |
 | `C-c C-s i` | `slynet-inspect-value` | Inspect a Janet value. |
@@ -128,58 +125,56 @@ SLYNET uses the prefix `C-c C-s` while `slynet-mode` is enabled.
 | `C-c C-s b` | `slynet-debugger-info` | Show debugger state. |
 | `C-c C-s D` | `slynet-doc-symbol` | Browse Janet documentation. |
 
-## Troubleshooting decision tree
+## Troubleshooting
 
 ```text
 Server does not start
-├─ “executable janet is unavailable”
-│  └─ Fix PATH and verify: janet --version
+├─ janet is unavailable
+│  └─ verify: janet --version
 ├─ Janet cannot load a shared library
-│  └─ Repair the Janet installation or runtime library path
-├─ “No such file slynet/cli.janet”
-│  └─ Set slynet-server-directory to the repository root
+│  └─ repair the Janet installation/runtime library path
+├─ slynet/cli.janet cannot be found
+│  └─ set slynet-server-directory to the SLYNET checkout
 └─ process starts but connection fails
    ├─ inspect *slynet-server*
-   ├─ verify port 4005 is free
-   └─ run: janet slynet/cli.janet --tcp
+   ├─ verify the chosen localhost port is free
+   └─ run the direct CLI command manually
 
 Connection drops or reconnect fails
 ├─ run M-x slynet-health
 ├─ stop stale processes with M-x slynet-quit
 └─ start and connect again
 
-Evaluation succeeds but a SLY feature is missing
+A SLY feature is unavailable
 ├─ inspect docs/generated/protocol-inventory.yml
-└─ check whether the operation is native, emulated, workaround, or unsupported
+└─ check native/emulated/workaround/pending-design/unsupported metadata
 ```
 
-## Development
+## Development and release verification
 
-The Makefile is the stable command interface. Eldev is used only where it adds
+The Makefile is the stable command interface. Eldev is used where it adds
 package-aware Emacs compilation, testing, and packaging.
 
 ```sh
-make lint              # Janet parse checks + Emacs package lint
-make compile           # compile Emacs Lisp in a clean Eldev environment
-make test              # Janet test suite
-make test-emacs        # Emacs ERT suite
-make test-e2e          # repeated lifecycle/E2E verification
-make package           # build Janet and Emacs package artifacts
-make clean             # remove generated artifacts
-make release-verify    # complete local 1.0.1 release gate
+make lint                     # Janet load checks + Emacs package lint
+make compile                  # byte-compile the Emacs package
+make test                     # Janet suite
+make test-emacs               # Emacs ERT suite
+make test-fuzz                # deterministic transport fuzzing
+make test-e2e                 # direct CLI + Emacs/Janet lifecycle E2E
+make protocol-inventory-check # generated inventory freshness
+make release-integrity        # version/docs/direct-start integrity
+make package                  # Janet and Emacs release artifacts
+make release-artifact-smoke   # extracted artifacts start/connect/eval
+make release-verify           # complete local release gate + evidence
+make publication-verify       # additionally require real publication remote
 ```
 
-See `CONTRIBUTING.md` for the contribution workflow and
-`docs/COMPATIBILITY.md` for compatibility and deprecation policy.
+`make release-verify` does not tag, push, upload, publish, or deploy anything.
+It produces `dist/release-evidence.yml` and SHA-256 hashes for the release
+artifacts. The artifact smoke starts the Janet server from the extracted Janet
+archive and connects/evaluates through the extracted Emacs package, avoiding a
+source-tree-only false green.
 
-## Publication
-
-The recommended first publication is a public GitHub repository followed by a
-MELPA recipe submission after the repository URL is final. NonGNU ELPA is
-possible later, but its copyright-assignment and packaging process is heavier
-than this project needs for the initial release. Announce the release in Janet's
-official community spaces and Emacs package channels after a public archive and
-installable URL exist.
-
-No release tag, remote push, archive upload, or forge release is created by the
-release-verification commands.
+See `CONTRIBUTING.md`, `docs/COMPATIBILITY.md`, and `ROADMAP.md` for the current
+engineering contract and post-1.0 roadmap.

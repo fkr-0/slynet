@@ -1,5 +1,5 @@
 @{:dependencies @[]
-  :description "sly trans "
+  :description "Janet development environment for Emacs with a SLY/SLYNK-style protocol"
   :jpm-dependencies @[]
   :name "slynet"
-  :version "0.0.0"}
+  :version "1.0.7"}

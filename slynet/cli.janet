@@ -14,12 +14,13 @@
 (import ./completion)
 (import ./xref)
 (import ./contrib)
+(import ./version :as release-version)
 
 ############################
 # Version and Module Registry
 ############################
-(def version "0.2.0")
-(def compatible-versions ["0.1.0" "0.2.0"])
+(def version release-version/version)
+(def compatible-versions release-version/compatible-versions)
 (def required-modules @["backend" "rpc" "slynk" "gray" "completion" "xref"])
 (def optional-modules @["contrib"])
 (def modules @{})
@@ -301,9 +302,9 @@
       "--tcp" (set mode :tcp)
       "--host" (do (set host (args (+ i 1))) (set i (+ i 1)))
       "--port" (do (set port (scan-number (args (+ i 1)))) (set i (+ i 1)))
-      "--version" (do (print "SLYNK Janet version: " version "\n") (os/exit 0))
+      "--version" (do (print "SLYNET version: " version "\n") (os/exit 0))
       "--help" (do
-                 (print "Usage: janet cli.janet [--tcp|--stdio] [--host HOST] [--port PORT]\n")
+                 (print "Usage: janet slynet/cli.janet [--tcp|--stdio] [--host HOST] [--port PORT]\n")
                  (os/exit 0))
       _ (log "WARN" "unknown arg: " (args i) "\n"))
     (set i (+ i 1)))
@@ -322,8 +323,15 @@
     :tcp (log "INFO" "SLYNK tcp " (cfg :host) ":" (cfg :port) " ready\n"))
   (while true (os/sleep 1.0)))
 
-(when (= (dyn :script) "true")
-  (apply -main (dyn :args)))
+(defn script-invoked-directly? []
+  (let [args (dyn :args)]
+    (and (indexed? args)
+         (> (length args) 0)
+         (string/has-suffix? "slynet/cli.janet" (args 0)))))
+
+(when (or (= (dyn :script) "true")
+          (script-invoked-directly?))
+  (apply -main (array/slice (dyn :args) 1)))
 
 ############################
 # Exported API (for library use)

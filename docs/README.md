@@ -1,114 +1,55 @@
-# SLYNET: Superior Lisp Interaction Environment for Janet
+# SLYNET documentation
 
-SLYNET is a comprehensive Janet port of the SLYNK backend protocol used by the Superior Lisp Interaction Mode for Emacs (SLY). It enables powerful IDE features for Janet development within Emacs.
+The root `README.md` is the authoritative user quick start. This directory
+contains architecture, compatibility, protocol, and development material for
+the Janet-native SLYNET backend and its Emacs client.
 
-## Overview
+## Start here
 
-SLYNET provides a complete implementation of the SLYNK protocol in idiomatic Janet, including all core functionality and contrib modules from the original Common Lisp implementation.
+- `../README.md` — supported versions, first session, commands, and release
+  verification.
+- `COMPATIBILITY.md` — compatibility and deprecation policy.
+- `../ROADMAP.md` — authoritative post-1.0 engineering roadmap.
+- `generated/protocol-inventory.yml` — generated operation-level SLY/SLYNK to
+  SLYNET support inventory.
+- `specs/` — executable-design contracts for Janet-specific adaptations.
+- `architecture/` — architecture and protocol background; older documents may
+  retain historical porting context and should not override current specs.
+- `dev-guides/setup.md` — contributor setup and verification workflow.
 
-### Core Features
+## Safe local server usage
 
-- **RPC System**: Extensible RPC registration and dispatch
-- **Module System**: Modular backend with clear separation of concerns
-- **REPL Integration**: Full REPL support with input/output redirection
-- **Introspection**: Rich symbol information and documentation
-- **Extensible Architecture**: Plugin-based contrib system
+Run SLYNET from the repository root and keep its listener on loopback:
 
-## Installation
-
-1. Clone this repository:
-   ```
-   git clone https://github.com/yourusername/slynet.git
-   ```
-
-2. Add the path to your Janet module path:
-   ```
-   export JANET_PATH=$JANET_PATH:/path/to/slynet
-   ```
-
-## Usage
-
-### Starting a SLYNET server
-
-```janet
-(import slynet-api)
-
-# Start with default settings on port 4005
-(slynet-api/start)
-
-# Start with custom settings
-(slynet-api/start 
-  :port 5000
-  :host "0.0.0.0"
-  :debug true
-  :contrib-modules [:arglists :indentation :fancy-inspector])
+```sh
+export JANET_PATH="${JANET_PATH}:$PWD"
+janet slynet/cli.janet --help
+janet slynet/cli.janet --tcp --host 127.0.0.1 --port 4005
 ```
 
-### Connecting from Emacs
+The protocol carries code-evaluation requests and is not an authentication
+boundary. Do not expose the development listener directly to an untrusted
+network. See `../SECURITY.md` for the trust model and remote-access guidance.
 
-1. Install SLY in Emacs
-2. Set up connection:
-   ```elisp
-   (setq inferior-lisp-program "janet /path/to/slynet/start-slynet.janet")
-   ```
-3. Run `M-x sly` to connect
+## Development gates
 
-## Architecture
-
-SLYNET is organized around several key components:
-
-1. **Core Protocol**: Message encoding/decoding, wire format handling
-2. **Backend Interface**: Abstract interface for Janet functionality
-3. **RPC System**: Registration and dispatch of remote procedures
-4. **Contrib System**: Pluggable extension modules
-
-## Contrib Modules
-
-SLYNET implements all the contrib modules from the original SLYNK:
-
-- **slynet-arglists**: Enhanced arglist functionality
-- **slynet-fancy-inspector**: Rich data structure inspector
-- **slynet-indentation**: Janet indentation rules
-- **slynet-mrepl**: Multiple REPL support
-- **slynet-package-fu**: Module/package manipulation
-- **slynet-profiler**: Basic profiling interface
-- **slynet-retro**: Backward compatibility layer
-- **slynet-stickers**: Code annotation and instrumentation
-- **slynet-trace-dialog**: Function call tracing
-- **slynet-apropos**: Symbol search functionality
-
-## Development
-
-### Running Tests
-
-```
-make test           # Run all tests
-make core-tests     # Run only core tests
-make contrib-tests  # Run only contrib module tests
+```sh
+make test
+make test-emacs
+make test-e2e
+make protocol-inventory-check
+make release-integrity
+make release-verify
 ```
 
-### Code Organization
+`make release-verify` additionally packages SLYNET, extracts both Janet and
+Emacs artifacts, starts the extracted Janet CLI, connects with the extracted
+Emacs client, evaluates a form, and writes machine-readable release evidence.
 
-```
-slynet/
-├── slynet-api.janet        # Main API entry point
-├── slynet-cli.janet        # Command-line interface
-├── slynet/
-│   └── slynk_janet/        # Core implementation
-│       ├── backend.janet   # Backend interface
-│       ├── completion.janet # Symbol completion
-│       ├── contrib.janet   # Contrib module manager
-│       ├── contrib/        # Contrib modules
-│       ├── gray.janet      # Stream handling
-│       ├── init.janet      # Initialization
-│       ├── rpc.janet       # RPC protocol
-│       ├── slynk.janet     # Core functionality
-│       ├── start.janet     # Server startup
-│       ├── utils.janet     # Utility functions
-│       └── xref.janet      # Cross-references
-└── test/                   # Test suite
-```
+## Compatibility rule
 
-## License
-
-This project is placed in the Public Domain. All warranties are disclaimed.
+SLYNET optimizes for useful Janet editor workflows, not fictional Common Lisp
+runtime equivalence. Protocol entries explicitly record whether a behavior is
+native, emulated, a workaround, pending design, or unsupported. When a Janet
+runtime capability is absent, new code must preserve that distinction rather
+than returning a plausible-looking fake success value.

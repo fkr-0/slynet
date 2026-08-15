@@ -1,421 +1,235 @@
-# SLYNET Roadmap to Full Feature Parity
+# SLYNET post-1.0 roadmap
+
+This is the authoritative project-level roadmap. Detailed protocol semantics
+remain in `docs/specs/`, while generated operation state belongs in
+`docs/generated/protocol-inventory.yml`. Older milestone/task documents are
+historical planning inputs and must not override this roadmap or executable
+release gates.
+
+## Roadmap policy
+
+- Prefer useful Janet-native editor workflows over literal Common Lisp runtime
+  parity.
+- Preserve explicit native/emulated/workaround/pending-design/unsupported
+  metadata whenever Janet cannot provide SLYNK semantics directly.
+- Make release claims from executable evidence, not from source-tree presence.
+- Keep publication (remote/tag/push/archive) separate from local release
+  verification.
+
+## R0 — Release integrity
+
+```yaml
+priority: P0
+target: 1.0.7
+status: local_complete_publication_gated
+```
+
+Work:
+
+- reconcile `improve-slynet-repl-tests` without rolling back newer 1.0.x
+  hardening;
+- make documented direct CLI invocation executable;
+- synchronize package, Janet runtime, bundle, and Emacs version surfaces;
+- repair `bundle/info.jdn`;
+- require a real repository URL/remote before publication;
+- remove insecure `0.0.0.0` quickstarts;
+- refresh README, security, setup, and release announcement;
+- make the release gate test installed/extracted artifacts.
+
+Acceptance:
+
+- `janet slynet/cli.janet --help` works;
+- `janet slynet/cli.janet --version` equals the project version;
+- direct TCP startup becomes connectable;
+- the extracted Janet package can start a server;
+- the extracted Emacs package connects to that server and evaluates a form;
+- no stale package version survives `make release-verify`;
+- the final release commit has an intentionally clean tracked tree.
+
+Publication note: the current checkout has no canonical `origin`. Local release
+integrity does not invent one; `make publication-verify` fails closed until a
+real remote is configured and documented.
+
+## R1 — Fail-closed release gate
+
+```yaml
+priority: P0
+status: complete
+```
+
+Work:
+
+- execute `protocol_warning_policy --check` as a real script gate;
+- verify generated inventory freshness without mutating the tracked file;
+- verify project/runtime/bundle/Emacs versions match;
+- reject known release placeholders and stale release-facing text;
+- execute the documented direct server command;
+- perform extracted artifact install/start/connect/MREPL/eval smoke testing;
+- pin or constrain CI dependencies where practical;
+- produce checksums and a machine-readable release-evidence manifest.
+
+The gate must fail rather than silently downgrade any of these checks. The full
+1.0.7 gate passed on 2026-08-15 with 128 Janet tests / 878 assertions, 81 Emacs
+ERT tests, deterministic transport fuzzing, repeated direct-CLI E2E, extracted
+artifact start/connect/eval, and release-evidence generation.
+
+## R2 — Public Janet API
+
+```yaml
+priority: P1
+status: planned
+```
+
+Work:
+
+- replace the commented `slynet-api.janet` scaffold;
+- introduce one canonical embedding API;
+- consolidate duplicated CLI/init initialization;
+- define supported `start`, `stop`, `with-server`, `connect`, `eval`,
+  `complete`, `inspect`, `xref`, and `diagnostics` entrypoints;
+- keep registry plumbing internal.
+
+Exit condition: users embedding SLYNET do not need protocol registry knowledge or
+private module state.
+
+## R3 — Daily Emacs workflow
+
+```yaml
+priority: P1
+status: planned
+```
+
+Work:
 
-## Goal
-
-Bring SLYNET from a working Janet-native SLY/SLIME-style backend to a feature-complete, dependable, editor-facing development environment with parity on the most important SLY workflows.
-
-This roadmap assumes the current project state is:
-
-- core RPC registry and dispatch working
-- connection/handshake working
-- completion/eval/edit cycle working
-- basic xref, inspector, debugger, compiler, and threading surfaces present
-- bridge-based test command present
-- integration suite green at the current checkpoint
-
-The remaining work is no longer “make anything work at all”, but “close quality, depth, and protocol parity gaps”.
-
----
-
-## Parity definition
-
-For this project, “full feature parity” does **not** mean byte-for-byte SLIME/SLY internals.
-It means:
-
-1. the Emacs frontend can rely on the same major interaction surfaces,
-2. the protocol behavior is stable and predictable,
-3. Janet-specific behavior is represented in a first-class way,
-4. common editor workflows work without fallback hacks or shallow placeholders.
-
----
-
-## Current baseline
-
-### Already substantially present
-
-- connection handshake / connection-info / ping
-- package switching
-- eval / pprint-eval / interactive-eval-region
-- value-for-editing / commit-edited-value
-- simple and flex completions
-- basic arglist / describe-function
-- basic xref surface
-- basic inspector surface
-- minimum debugger loop
-- compile-string-for-emacs
-- compile-file-for-emacs / load-file / slynk-require surfaces
-- basic thread utilities
-- bridge.yml command integration
-- integration-heavy Janet test suite
-
-### Still below parity quality
-
-- debugger depth and restart/frame semantics
-- xref precision and result ranking
-- inspector richness and object navigation
-- thread model realism
-- compiler and file-loading workflow depth
-- stream / channel / flow-control behavior
-- contrib parity and editor smoke coverage
-- packaging / CI / release ergonomics
-
----
-
-## Milestone plan
-
-## M0 — Stabilized usable baseline
-
-### Goal
-Ship a first version that is dependable for normal interactive use.
-
-### Scope
-
-- keep current green suite stable
-- remove shallow fallback behavior where it can mislead the editor
-- document supported RPCs and unsupported ones explicitly
-- add one reproducible editor-session smoke path
-- ensure startup / connect / eval / inspect / xref / compile / quit all work in sequence
-
-### Exit criteria
-
-- test suite green
-- one documented smoke path from editor startup to interactive session
-- no intentionally fake success responses on critical RPCs
-- unsupported RPCs fail clearly and consistently
-
----
-
-## M1 — Debugger parity core
-
-### Goal
-Make debugging genuinely useful instead of minimum-loop only.
-
-### Work
-
-#### Condition and restart model
-
-- represent Janet errors with stable debugger payloads
-- preserve condition type, message, and triggering context
-- support real restart inventory
-- ensure restart names/descriptions are stable for editor consumption
-
-#### Frame model
-
-- deepen `backtrace`
-- improve `debugger-frame-details`
-- improve `frame-source-location`
-- improve `frame-locals-and-catch-tags`
-- expose meaningful Janet frame data even when direct CL-style frame parity is impossible
-
-#### Debugger commands
-
-- reliable continue/abort behavior
-- restart invocation by ordinal and by semantic name
-- frame inspection from editor
-- condition inspection entrypoint that maps cleanly into inspector
-
-### Exit criteria
-
-- debugger works for eval failures and compile/load failures
-- backtrace includes useful frame identity and source hints
-- restart operations behave consistently under tests
-- dedicated debugger integration tests cover multiple failure classes
-
----
-
-## M2 — Introspection parity core
-
-### Goal
-Make editor-assisted discovery reliable: xref, inspector, arglists, and descriptions should feel trustworthy.
-
-### Work
-
-#### Xref
-
-- replace synthetic fallback ranking with true definition ranking where possible
-- improve exact-definition detection
-- rank hits by exact definition > exact symbol mention > loose match
-- enrich hit payloads with stable kind, snippet, and source location semantics
-- add support for Janet-specific definition forms/macros/modules
-
-#### Inspector
-
-- richer rendering for arrays, tuples, tables, buffers, functions, fibers, and Janet-specific values
-- stable part navigation
-- support nested drill-down without lossy rendering
-- add actions for reinspection and parent/child traversal
-- improve condition/object inspection integration
-
-#### Callable introspection
-
-- improve arglist extraction quality
-- improve `describe-function` details
-- expose macro/function distinctions more reliably
-- provide Janet-aware metadata when doc/introspection is partial
-
-### Exit criteria
-
-- xref first hit is usually the exact definition for common symbols
-- inspector navigation is useful on composite Janet objects
-- arglist/describe-function outputs are reliable enough for real editing help
-- tests cover exact/near xref ranking and nested inspector traversal
-
----
-
-## M3 — Threading and concurrency parity core
-
-### Goal
-Provide realistic editor-facing concurrency support instead of placeholder thread utilities.
-
-### Work
-
-- define the SLYNET thread model in Janet terms
-- stabilize `list-threads`
-- improve `thread-info`
-- support thread selection, inspection, and debug targeting
-- clarify what is a real OS thread, Janet fiber, connection worker, or logical task
-- connect debugger state to thread identity consistently
-- ensure concurrency-related RPCs do not lie about capabilities
-
-### Exit criteria
-
-- thread listing/selection/debugging semantics are documented and tested
-- thread metadata is stable and useful
-- thread-directed debugging works on real runnable targets
-- unsupported concurrency semantics are clearly surfaced instead of guessed
-
----
-
-## M4 — Compiler, file, and load workflow parity
-
-### Goal
-Make file-based development as strong as string-eval workflows.
-
-### Work
-
-- deepen `compile-string-for-emacs`
-- improve `compile-file-for-emacs`
-- improve `load-file`
-- support compiler notes / warnings / source locations
-- preserve location information across load/compile
-- handle Janet module loading cleanly
-- improve `slynk-require` for contrib/module activation
-
-### Exit criteria
-
-- compile/load results include useful notes and source references
-- editor can navigate from compiler output back to source
-- compile/load failures enter debugger or error flows predictably
-- tests cover success, warnings, and hard failures
-
----
-
-## M5 — Channel, REPL, and stream behavior parity
-
-### Goal
-Make interactive sessions feel like a true SLY development backend.
-
-### Work
-
-- strengthen MREPL/channel behavior
-- improve stream handling and flow control
-- verify large output behavior
-- verify prompt/value/write semantics
-- add realistic incremental interaction tests
-- ensure async channel behavior does not deadlock or corrupt replies
-
-### Exit criteria
-
-- REPL interactions are stable under long or incremental output
-- stream/flow-control probes reflect real behavior
-- no protocol corruption under heavy interactive traffic
-
----
-
-## M6 — Frontend and contrib parity
-
-### Goal
-Adapt frontend expectations cleanly for Janet without keeping the editor in a half-supported state.
-
-### Work
-
-- audit frontend assumptions against current backend RPCs
-- mark unsupported contribs explicitly
-- implement or adapt the highest-value contrib surfaces first
-- define Janet-specific UX where CL-specific behavior does not map directly
-- document compatibility boundaries per contrib/module
-
-### High-priority contrib/editor surfaces
-
-- inspector-related contribs
-- apropos / symbol search
-- macroexpand helpers
-- REPL helpers
-- compilation navigation helpers
-- xref/editor navigation helpers
-
-### Exit criteria
-
-- supported frontend features are documented and tested
-- unsupported contribs fail clearly, not mysteriously
-- one real editor configuration path is documented and reproducible
-
----
-
-## M7 — Packaging, release, and maintenance parity
-
-### Goal
-Turn SLYNET into a project others can install, test, and contribute to reliably.
-
-### Work
-
-- high-level API / public embedding surface
-- root-level architecture and protocol docs
-- CI for test suite and smoke checks
-- release checklist and versioning policy
-- changelog discipline
-- contribution guide
-- compatibility matrix for Janet versions and editor expectations
-
-### Exit criteria
-
-- reproducible CI
-- release notes and tagged release process
-- setup instructions for developers and users
-- roadmap updated after each milestone
-
----
-
-## Cross-cutting engineering tracks
-
-## A. Protocol correctness
-
-- preserve request/reply correlation
-- unify error payload shape
-- separate placeholder behavior from supported behavior
-- document every RPC surface that exists today
-
-## B. Test architecture
-
-- keep the current integration-heavy suite green
-- add targeted suites per subsystem:
-  - debugger
-  - xref
-  - inspector
-  - threading
-  - compiler/load
-  - channel/stream
-- add editor-session smoke coverage
-- add regression tests for every protocol bug fixed during parity work
-
-## C. Janet-first semantics
-
-- do not force CL semantics where Janet has a better native model
-- provide translation layers where the frontend expects CL-ish behavior
-- explicitly document every intentional Janet-specific divergence
-
-## D. Documentation
-
-- protocol support matrix
-- supported vs partial vs unsupported feature matrix
-- debugging/introspection/threading semantics docs
-- editor setup and smoke-run instructions
-
----
-
-## Priority order
-
-If work must be sequenced aggressively, use this order:
-
-1. debugger depth
-2. xref precision
-3. inspector richness
-4. compiler/load workflow depth
-5. thread realism
-6. REPL/channel/stream behavior
-7. contrib/frontend polish
-8. packaging/CI/release work
-
-Reasoning:
-
-- debugger/xref/inspector are the highest-leverage “feels real vs feels shallow” surfaces
-- compiler/load is necessary for file-based development
-- thread realism matters after the main single-session experience is dependable
-- packaging/CI is essential, but only after the semantics are worth freezing
-
----
-
-## Suggested issue breakdown
-
-### Debugger
-
-- [ ] normalize debugger state schema
-- [ ] improve restart representation
-- [ ] improve frame detail payloads
-- [ ] source-location accuracy pass
-- [ ] locals rendering pass
-- [ ] debugger regression suite
-
-### Xref
-
-- [ ] exact-definition ranking pass
-- [ ] support Janet-specific definition forms
-- [ ] remove synthetic fallback where real hit discovery is available
-- [ ] xref ranking regression suite
-
-### Inspector
-
-- [ ] richer renderers for Janet value kinds
-- [ ] nested navigation improvements
-- [ ] condition/object integration polish
-- [ ] inspector regression suite
-
-### Threading
-
-- [ ] formalize thread/fiber/task semantics
-- [ ] improve thread-info payload
-- [ ] real debug-nth-thread behavior
-- [ ] concurrency regression suite
-
-### Compiler / load
-
-- [ ] compiler notes/warnings model
-- [ ] source-linked compile results
-- [ ] load-file location behavior
-- [ ] failure-mode debugger integration
-
-### Streams / channels
-
-- [ ] large output handling
-- [ ] incremental reply safety
-- [ ] flow control realism
-- [ ] REPL/channel regression suite
-
-### Project / release
-
-- [ ] architecture doc
-- [ ] support matrix doc
-- [ ] CI pipeline
-- [ ] release checklist
-- [ ] changelog discipline
-
----
-
-## Definition of done for full parity
-
-SLYNET can be considered at “full feature parity” when:
-
-- an editor user can connect, inspect, debug, complete, compile, xref, and iterate without hitting shallow placeholders in normal workflows,
-- debugger/xref/inspector behavior is dependable enough to trust during real work,
-- thread and compiler/file workflows are not merely present but useful,
-- supported and unsupported areas are clearly documented,
-- CI keeps the protocol/test baseline from regressing.
-
-Until then, the project should prefer:
-
-- explicit partial support,
-- sharp failure modes,
-- regression tests,
-- and documented Janet-specific behavior
-
-over ambiguous “kind of works” parity claims.
+- reconcile useful MREPL/inspector/debugger E2E coverage from the historical
+  side branch onto current mainline semantics;
+- polish eval-region, eval-last-expression/form, buffer, and file workflows;
+- deepen project-aware server management;
+- add richer interactive inspector actions;
+- improve debugger navigation UX;
+- harden connection/session recovery UX.
+
+## R4 — Janet-native debugging
+
+```yaml
+priority: P1/P2
+status: planned
+```
+
+Focus:
+
+- stable eval source maps;
+- richer frame-local metadata;
+- resumable debugger control API;
+- real step/next/out only when Janet substrate actually permits it;
+- persistent source-aware breakpoints;
+- structured signal metadata.
+
+Invariant: never claim Common Lisp restart/thread/debugger semantics where Janet
+cannot provide them.
+
+## R5 — Introspection and code intelligence
+
+```yaml
+priority: P2
+status: planned
+```
+
+Focus:
+
+- uniform callable metadata;
+- macro/function/native signature provenance;
+- stronger namespace/module awareness;
+- incremental source indexing;
+- cross-file dependency graph;
+- richer xref categories and ranking;
+- better documentation lookup.
+
+## R6 — Instrumentation
+
+```yaml
+priority: P2
+status: planned
+```
+
+Focus:
+
+- low-overhead trace events;
+- profiling;
+- timing trees;
+- source-linked instrumentation;
+- optional sticker-like behavior where it has an honest Janet implementation.
+
+## R7 — Architecture cleanup
+
+```yaml
+priority: P2
+status: planned
+```
+
+Work:
+
+- complete the physical runtime/server separation;
+- remove dead translated Common Lisp scaffolding;
+- eliminate duplicate parsers, initializers, and version constants;
+- turn compatibility facades into explicit adapters;
+- shrink the large `slynet/slynk.janet` module into capability-oriented units.
+
+This phase should preserve public behavior while clarifying ownership and
+reducing cross-layer mutable state.
+
+## R8 — Ecosystem release
+
+```yaml
+priority: P2
+status: publication_gated
+```
+
+Work:
+
+- configure and publish the canonical repository;
+- establish the package installation story;
+- add the archive recipe;
+- provide a migration guide for SLY users;
+- automate the compatibility matrix;
+- retain reproducible release evidence for every release.
+
+No repository URL, tag, push, package-archive upload, or forge release should be
+claimed until the corresponding publication gate is satisfied.
+
+## High-value product enhancements
+
+1. **First-class project sessions.** One command discovers a Janet project,
+   starts or reuses its SLYNET server, connects, creates the REPL, and remembers
+   the session.
+2. **Janet-aware eval commands.** Last form, region, definition/form, buffer, and
+   file workflows should feel native in Janet buffers rather than exposing RPC
+   primitives.
+3. **Source-aware debugger breakpoints.** Persistent breakpoints mapped to Janet
+   source forms are the highest-leverage debugger improvement after the existing
+   REPL/xref/inspector foundation.
+4. **Incremental source index.** Turn the current index into a project
+   intelligence service shared by completion, xref, diagnostics, debugger
+   locations, and documentation.
+5. **Structured capability browser.** Surface protocol-support metadata in a
+   searchable Emacs UI instead of leaving it primarily in generated YAML.
+6. **Observability mode.** Provide a compact session inspector for RPC latency,
+   pending requests, channels, execution units, diagnostics, source-index state,
+   and server-process health.
+
+## Sequencing
+
+```text
+R0 release integrity
+  -> R1 fail-closed gate
+     -> local 1.0.x release candidate
+        -> R2 public Janet API
+        -> R3 daily Emacs workflow
+           -> R4/R5 debugging + intelligence
+              -> R6 instrumentation
+                 -> R7 structural cleanup
+                    -> R8 ecosystem publication
+```
+
+R4–R7 may overlap when changes are orthogonal, but R0/R1 are release blockers
+and R8 remains publication-gated until a real public destination exists.

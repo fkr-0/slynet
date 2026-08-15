@@ -13,10 +13,11 @@
 (import ./xref)
 # (import ./start)
 (import ./contrib)
+(import ./version :as release-version)
 
 # Version information
-(def version "0.2.0")
-(def compatible-versions ["0.1.0" "0.2.0"])
+(def version release-version/version)
+(def compatible-versions release-version/compatible-versions)
 (def required-modules @["backend" "rpc" "slynk" "gray" "completion" "xref" "start"])
 (def optional-modules @["contrib"])
 

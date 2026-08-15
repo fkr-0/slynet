@@ -15,15 +15,17 @@
       (delete-process probe))))
 
 (defun slynet-e2e--start-server (port)
-  "Start a Janet SLYNET TCP server on PORT and return its process."
+  "Start the documented Janet SLYNET CLI on PORT and return its process."
   (let* ((root (file-name-as-directory (expand-file-name default-directory)))
          (default-directory root)
          (process-environment
           (cons (concat "JANET_PATH=" root ":" (or (getenv "JANET_PATH") ""))
                 process-environment))
          (buffer (generate-new-buffer " *slynet-e2e-server*"))
-         (form (format "(import ./slynet/cli :as cli) (cli/-main \"--tcp\" \"--host\" \"127.0.0.1\" \"--port\" \"%s\")" port))
-         (process (start-process "slynet-e2e-server" buffer "janet" "-e" form)))
+         (process (start-process "slynet-e2e-server" buffer
+                                 "janet" "slynet/cli.janet"
+                                 "--tcp" "--host" "127.0.0.1"
+                                 "--port" (number-to-string port))))
     (set-process-query-on-exit-flag process nil)
     process))
 

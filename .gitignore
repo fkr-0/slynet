@@ -10,6 +10,8 @@ slynet/slynk-server.log
 
 # Editor/AI/tool caches
 .aider.tags.cache.v4/
+__pycache__/
+*.pyc
 \#
 tmp-*.janet
 check_impl*.janet
@@ -41,3 +43,6 @@ dist/
 
 # local worktrees
 .worktrees/
+
+# Local ws-bridge coordination/checkpoint state
+.ws-bridge/

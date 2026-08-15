@@ -1,4 +1,8 @@
-.PHONY: all lint compile test test-janet test-emacs test-fuzz test-e2e package clean release-verify
+.NOTPARALLEL: release-verify
+.PHONY: all lint compile test test-janet test-emacs test-fuzz test-e2e \
+	protocol-warning-check protocol-inventory-check release-integrity \
+	publication-verify release-artifact-smoke package clean \
+	release-verify
 
 JANET ?= janet
 ELDEV ?= eldev
@@ -49,6 +53,30 @@ test-e2e:
 		exit 1; \
 	}
 
+release-integrity:
+	@echo "Checking release metadata and documented direct CLI startup..."
+	python3 tools/release_integrity.py
+
+publication-verify:
+	@echo "Checking publication-only repository requirements..."
+	python3 tools/release_integrity.py --require-remote
+
+protocol-warning-check:
+	@echo "Checking protocol warning policy..."
+	JANET_PATH="$${JANET_PATH}:$(CURDIR)" $(JANET) tools/protocol_warning_policy.janet --check
+
+protocol-inventory-check:
+	@echo "Checking generated protocol inventory freshness..."
+	@tmp=$$(mktemp); \
+	trap 'rm -f "$$tmp"' EXIT; \
+	SLYNET_PROTOCOL_INVENTORY_OUTPUT="$$tmp" JANET_PATH="$${JANET_PATH}:$(CURDIR)" \
+		$(JANET) tools/protocol_inventory.janet; \
+	cmp -s docs/generated/protocol-inventory.yml "$$tmp" || { \
+		echo "ERROR: docs/generated/protocol-inventory.yml is stale; regenerate with janet tools/protocol_inventory.janet"; \
+		diff -u docs/generated/protocol-inventory.yml "$$tmp" | head -n 120 || true; \
+		exit 1; \
+	}
+
 package: clean
 	@echo "Building release artifacts for $(VERSION)..."
 	@mkdir -p $(DIST_DIR)/slynet-$(VERSION)
@@ -57,16 +85,24 @@ package: clean
 	@tar -C $(DIST_DIR) -czf $(DIST_DIR)/slynet-$(VERSION).tar.gz slynet-$(VERSION)
 	$(ELDEV) package --output-dir $(DIST_DIR)
 
+release-artifact-smoke: package
+	@echo "Testing extracted Janet and Emacs artifacts together..."
+	sh tools/release_artifact_smoke.sh
+
 clean:
 	@echo "Removing generated artifacts..."
 	rm -rf $(DIST_DIR) .eldev
 	find . -name '*.elc' -o -name '*.jimage' -o -name '*.o' | xargs -r rm -f
 
-release-verify: clean lint test-janet test-emacs test-fuzz compile test-e2e package
+release-verify: clean release-integrity protocol-warning-check protocol-inventory-check \
+	lint test-janet test-emacs test-fuzz compile test-e2e package \
+	release-artifact-smoke
 	@echo "Verifying release metadata..."
 	@test -n "$(VERSION)"
 	@grep -q '^;; Version: $(VERSION)$$' emacs/slynet.el
 	@grep -q '^;; Version: $(VERSION)$$' emacs/slynet-client.el
 	@grep -q '^## \[$(VERSION)\]' CHANGELOG.md
 	@git diff --check
+	@echo "Writing release evidence and artifact checksums..."
+	@SLYNET_RELEASE_GATE_PASSED=1 python3 tools/release_evidence.py
 	@echo "SLYNET $(VERSION) release verification passed. No tag or publish action performed."
