@@ -17,7 +17,7 @@
       (set found table)))
   found)
 
-(deftest p25-trace-and-timing-records-source-linked-dev-utility {:tags [:phase25 :trace-profiling]}
+(deftest p25-trace-and-timing-records-source-linked-dev-utility {:tags [:phase25 :trace-profiling] :covers ["slynet-trace-eval" "slynet-trace-report" "slynet-clear-trace-report"]}
   (tt/with-test-server [srv]
     (def trace (plist->table ((srv :emacs-rex!) '(slynet-trace-eval "(+ 1 2)" "/tmp/trace.janet" 7 3) :core nil 2501)))
     (assert= :ok (trace :status))
@@ -36,7 +36,7 @@
     (assert= :cleared (cleared :status))
     (assert= 1 (cleared :cleared-count))))
 
-(deftest p26-protocol-interface-browser-describes-janet-native-interfaces {:tags [:phase26 :protocol-browser]}
+(deftest p26-protocol-interface-browser-describes-janet-native-interfaces {:tags [:phase26 :protocol-browser] :covers ["slynet-protocol-interfaces" "slynet-describe-protocol-interface"]}
   (tt/with-test-server [srv]
     (def interfaces ((srv :emacs-rex!) '(slynet-protocol-interfaces "namespace") :core nil 2601))
     (def namespace (find-plist-by-key interfaces :name "namespace-completions"))
@@ -50,7 +50,7 @@
     (assert= :interface-description (described :record-kind))
     (assert= :native (described :support-class))))
 
-(deftest p27-project-snapshot-and-session-metadata-are-janet-native {:tags [:phase27 :project-snapshot]}
+(deftest p27-project-snapshot-and-session-metadata-are-janet-native {:tags [:phase27 :project-snapshot] :covers ["slynet-project-snapshot" "slynet-record-session-event" "slynet-session-metadata"]}
   (tt/with-test-server [srv]
     (def snapshot (plist->table ((srv :emacs-rex!) '(slynet-project-snapshot "/tmp/p27" "demo" @[:deps ["jpm_tree"] :entry "main.janet"]) :core nil 2701)))
     (assert= :ok (snapshot :status))

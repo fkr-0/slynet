@@ -1,235 +1,320 @@
-# SLYNET post-1.0 roadmap
+# SLYNET roadmap
 
-This is the authoritative project-level roadmap. Detailed protocol semantics
-remain in `docs/specs/`, while generated operation state belongs in
-`docs/generated/protocol-inventory.yml`. Older milestone/task documents are
-historical planning inputs and must not override this roadmap or executable
-release gates.
+This is the authoritative project-level roadmap after the public 1.0.7 release.
+Operation-level truth is generated into `docs/generated/protocol-inventory.yml`;
+current-main interpretation belongs in `docs/DEVELOPMENT_STATUS.md`. Historical
+checklists such as `TASKS.md` and `docs/missing_protocol.md` are not release
+authority.
 
-## Roadmap policy
+## Program target
 
-- Prefer useful Janet-native editor workflows over literal Common Lisp runtime
-  parity.
-- Preserve explicit native/emulated/workaround/pending-design/unsupported
-  metadata whenever Janet cannot provide SLYNK semantics directly.
-- Make release claims from executable evidence, not from source-tree presence.
-- Keep publication (remote/tag/push/archive) separate from local release
-  verification.
+```yaml
+current_release: 1.0.7
+next_release: 1.1.0
+repository: https://github.com/fkr-0/slynet
+release_strategy: capability_first
+security_boundary: trusted_localhost_by_default
+non_goal: literal_Common_Lisp_runtime_parity
+```
 
-## R0 — Release integrity
+The 1.1.0 theme is **truthful capability consolidation**: make coverage evidence
+machine-auditable, expose one stable Janet API, turn existing instrumentation
+scaffolding into deliberate products, and improve the Emacs daily workflow
+without overstating Janet debugger/runtime semantics.
+
+## P0 — Protocol truth and test correspondence
 
 ```yaml
 priority: P0
-target: 1.0.7
-status: local_complete_publication_gated
+status: in_progress
+release_blocker: true
 ```
 
-Work:
+### Work
 
-- reconcile `improve-slynet-repl-tests` without rolling back newer 1.0.x
-  hardening;
-- make documented direct CLI invocation executable;
-- synchronize package, Janet runtime, bundle, and Emacs version surfaces;
-- repair `bundle/info.jdn`;
-- require a real repository URL/remote before publication;
-- remove insecure `0.0.0.0` quickstarts;
-- refresh README, security, setup, and release announcement;
-- make the release gate test installed/extracted artifacts.
+- [x] Discover the complete tracked SLY/SLYNK reference corpus, including
+  profiler, trace-dialog, stickers, retro, and indentation contrib sources.
+- [x] Replace incidental string matching with explicit per-test `:covers`
+  metadata.
+- [x] Distinguish definition evidence from callable RPC registration evidence.
+- [x] Add `implemented_unwired` so translated helper code is not mistaken for a
+  usable endpoint.
+- [x] Advance generated inventory to schema v5 with `definition_files`,
+  `registration_files`, `test_files`, and evidence kind.
+- [ ] Add a fifth state/evidence flag for registered implementations that are
+  explicit unsupported/error stubs, so registration alone cannot imply product
+  functionality.
+- [ ] Annotate every release-critical RPC test with `:covers` and eliminate
+  ambiguous direct mappings.
+- [ ] Add CI thresholds by frontend surface rather than one global percentage.
+- [ ] Generate a coverage summary page from the inventory and fail CI when docs
+  claim more than the generator proves.
 
-Acceptance:
+### Current corrected baseline
 
-- `janet slynet/cli.janet --help` works;
-- `janet slynet/cli.janet --version` equals the project version;
-- direct TCP startup becomes connectable;
-- the extracted Janet package can start a server;
-- the extracted Emacs package connects to that server and evaluates a form;
-- no stale package version survives `make release-verify`;
-- the final release commit has an intentionally clean tracked tree.
+```yaml
+reference_operations: 284
+callable_directly_tested: 44
+callable_without_direct_mapping: 37
+defined_but_unwired: 18
+missing: 185
+support_classes:
+  native: 249
+  emulated: 33
+  unsupported: 2
+```
 
-Publication note: the current checkout has no canonical `origin`. Local release
-integrity does not invent one; `make publication-verify` fails closed until a
-real remote is configured and documented.
+### Acceptance
 
-## R1 — Fail-closed release gate
+- no operation is `implemented` without callable-registration evidence;
+- no operation is `implemented_*_tested` without explicit `:covers` evidence;
+- every user-facing release claim resolves to at least one implementation,
+  direct test, or explicitly documented workflow/E2E proof;
+- inventory generation is deterministic and freshness-gated in CI;
+- direct coverage for transport, REPL, completion, compile/load, inspector,
+  xref, and debugger release-critical operations reaches 100% of the declared
+  stable subset, not necessarily 100% of the historical SLYNK corpus.
+
+## P1 — Stable Janet embedding API
 
 ```yaml
 priority: P0
-status: complete
+status: in_progress
+release_blocker: true
+api_version: 1
 ```
 
-Work:
+### Work
 
-- execute `protocol_warning_policy --check` as a real script gate;
-- verify generated inventory freshness without mutating the tracked file;
-- verify project/runtime/bundle/Emacs versions match;
-- reject known release placeholders and stale release-facing text;
-- execute the documented direct server command;
-- perform extracted artifact install/start/connect/MREPL/eval smoke testing;
-- pin or constrain CI dependencies where practical;
-- produce checksums and a machine-readable release-evidence manifest.
+- [x] Replace the commented `slynet/slynet-api.janet` scaffold with a
+  compatibility shim.
+- [x] Add canonical `slynet/api.janet`.
+- [x] Expose version/capabilities, initialization, RPC metadata lookup,
+  in-process RPC invocation, and server start/stop.
+- [x] Refuse accidental non-loopback TCP binding unless the embedding caller
+  explicitly opts into a different trust boundary.
+- [x] Ensure supported core RPC implementations are registered before
+  `initialize` returns.
+- [ ] Add a lifecycle object/context helper that owns initialization, server,
+  and teardown without requiring callers to understand CLI internals.
+- [ ] Add client/session helpers only where semantics can remain transport-
+  independent; keep package/channel/session-state RPCs on real connections.
+- [ ] Define API-v1 compatibility policy and deprecation rules.
+- [ ] Add API examples and package-level documentation to release artifacts.
 
-The gate must fail rather than silently downgrade any of these checks. The full
-1.0.7 gate passed on 2026-08-15 with 128 Janet tests / 878 assertions, 81 Emacs
-ERT tests, deterministic transport fuzzing, repeated direct-CLI E2E, extracted
-artifact start/connect/eval, and release-evidence generation.
+### Acceptance
 
-## R2 — Public Janet API
+- an embedding program imports only `slynet/api` for supported public tasks;
+- `initialize` followed by `call-rpc 'ping` returns `:pong`;
+- server lifecycle has deterministic teardown;
+- no stable API requires direct access to infrastructure registries;
+- public API security defaults are loopback-only.
+
+## P2 — Daily-use Emacs workflow
 
 ```yaml
 priority: P1
 status: planned
+release_blocker: true
 ```
 
-Work:
+### Work
 
-- replace the commented `slynet-api.janet` scaffold;
-- introduce one canonical embedding API;
-- consolidate duplicated CLI/init initialization;
-- define supported `start`, `stop`, `with-server`, `connect`, `eval`,
-  `complete`, `inspect`, `xref`, and `diagnostics` entrypoints;
-- keep registry plumbing internal.
+- [ ] Add Janet-aware `eval-last-form`, `eval-region`, `eval-definition`, and
+  `eval-buffer` commands.
+- [ ] Add `load-current-file` and compile/load-buffer/file workflows with
+  structured diagnostics.
+- [ ] Add interrupt/cancel commands that target the current request or managed
+  execution unit and render the actual outcome.
+- [ ] Make project connect/start/reconnect one coherent command path with clear
+  ownership of Emacs-started server processes.
+- [ ] Add inspector history/back/forward/action commands and discoverable keys.
+- [ ] Improve debugger source navigation and capability-aware action buttons.
+- [ ] Improve reconnect/session-loss UX so buffers become visibly stale rather
+  than silently retaining dead connection state.
+- [ ] Add ERT and live E2E coverage for each interactive command.
 
-Exit condition: users embedding SLYNET do not need protocol registry knowledge or
-private module state.
+### Acceptance
 
-## R3 — Daily Emacs workflow
+A normal Janet editing session can start/connect, evaluate common units, load a
+file, navigate a definition, inspect a result, diagnose an error, recover from a
+server restart, and quit without manually typing protocol forms.
+
+## P3 — Debugger stepping and resumability
 
 ```yaml
 priority: P1
-status: planned
+status: design_and_substrate
+release_blocker: false
+semantic_rule: do_not_fake_runtime_continuations
 ```
 
-Work:
+### Architecture
 
-- reconcile useful MREPL/inspector/debugger E2E coverage from the historical
-  side branch onto current mainline semantics;
-- polish eval-region, eval-last-expression/form, buffer, and file workflows;
-- deepen project-aware server management;
-- add richer interactive inspector actions;
-- improve debugger navigation UX;
-- harden connection/session recovery UX.
+SLYNET already owns source maps, execution-unit state, cooperative interruption,
+synthetic restart scopes, and a pending `debugger-step-checkpoint`. These are a
+useful substrate but **not** a resumable Janet continuation. Full step/next/out
+must therefore be split into two capability tiers.
 
-## R4 — Janet-native debugging
+```text
+instrumented Janet code
+       |
+       v
+execution unit + source map
+       |
+       v
+cooperative checkpoint --------> paused session record
+       |                              |
+       |                              +-- continue
+       |                              +-- step-into (next checkpoint)
+       |                              +-- step-over (same/lower depth)
+       |                              +-- step-out  (shallower depth)
+       v
+completion/error
+
+native runtime continuation support, if Janet exposes it later
+       |
+       +--> upgrades capability class; never assumed by the facade
+```
+
+### Work
+
+- [ ] Define `DebuggerSession` records: stable session id, execution-unit id,
+  pause reason, source span, call depth, checkpoint sequence, action state,
+  deadline, and terminal state.
+- [ ] Define explicit capability classes: `inspection_only`,
+  `cooperative_checkpoint`, and future `runtime_resumable`.
+- [ ] Build cooperative pause/resume state machine around instrumented
+  checkpoints with disconnect/cancel/deadline cleanup.
+- [ ] Implement step-into/over/out semantics for instrumented code using
+  checkpoint sequence + call-depth invariants.
+- [ ] Keep uninstrumented/native-frame stepping reported as unsupported until a
+  real Janet substrate exists.
+- [ ] Add breakpoints as source-index entries that compile/evaluate into
+  checkpoints rather than pretending to patch arbitrary native frames.
+- [ ] Render capability-aware Emacs debugger controls.
+- [ ] Stress test races: action after completion, double resume, disconnect while
+  paused, cancellation while paused, stale session id, nested errors.
+
+### Acceptance
+
+- every accepted debugger action causes one deterministic session-state
+  transition;
+- no paused session leaks after connection loss or deadline;
+- step-over never stops deeper than its origin depth; step-out stops only at a
+  shallower depth or terminal completion;
+- unsupported native/runtime behavior is surfaced as such, never as success.
+
+## P4 — Profiler, tracing, timing, and stickers
 
 ```yaml
-priority: P1/P2
-status: planned
+priority: P1
+status: partial_existing_substrate
+release_blocker: false
 ```
 
-Focus:
+### Current truth
 
-- stable eval source maps;
-- richer frame-local metadata;
-- resumable debugger control API;
-- real step/next/out only when Janet substrate actually permits it;
-- persistent source-aware breakpoints;
-- structured signal metadata.
+- core `profile`, `profile-reset`, `profile-package`, and `profile-report` are
+  callable and directly tested wrapper-based profiling facilities;
+- core `slynet-trace-eval`, report, and clear operations produce source-linked
+  timing/trace records and are directly tested;
+- legacy trace-dialog contains real wrapper/helper code, but several operations
+  are currently **defined but unwired**;
+- sticker registry/recording scaffolding exists, while compile-time source
+  instrumentation such as `compile-for-stickers` is genuinely missing.
 
-Invariant: never claim Common Lisp restart/thread/debugger semantics where Janet
-cannot provide them.
+### Work
 
-## R5 — Introspection and code intelligence
+- [ ] Consolidate core and legacy profiler/trace implementations behind one
+  instrumentation registry and one record schema.
+- [ ] Wire only trace-dialog operations whose behavior is implemented and tested;
+  keep incomplete operations missing rather than registering stubs.
+- [ ] Add nested timing trees with stable parent/child event ids and bounded
+  retention.
+- [ ] Add function-call counters, inclusive/self time, source provenance, and
+  deterministic reset semantics.
+- [ ] Design sticker instrumentation as Janet source/AST rewriting with a source
+  map, not as a CL bytecode analogy.
+- [ ] Implement compile-for-stickers -> instrumented form -> recording -> inspect
+  flow with bounded recording storage.
+- [ ] Add Emacs profiler/trace/timing/sticker views after backend semantics are
+  stable.
+- [ ] Add overhead and bounded-memory tests; instrumentation must be opt-in.
+
+### Acceptance
+
+- tracing/profiling records identify source and instrumented callable exactly;
+- timing trees preserve nesting and bounded retention;
+- sticker recordings are produced by real injected checkpoints and are
+  inspectable end-to-end;
+- no legacy contrib endpoint is marked implemented merely because helper code
+  exists.
+
+## P5 — Documentation and public site
 
 ```yaml
-priority: P2
-status: planned
+priority: P1
+status: in_progress
+release_blocker: true
 ```
 
-Focus:
+### Work
 
-- uniform callable metadata;
-- macro/function/native signature provenance;
-- stronger namespace/module awareness;
-- incremental source indexing;
-- cross-file dependency graph;
-- richer xref categories and ranking;
-- better documentation lookup.
+- [x] Publish canonical repository `fkr-0/slynet`.
+- [x] Publish immutable GitHub release `v1.0.7` with qualified artifacts and
+  release evidence.
+- [x] Correct README installation/publication wording for the canonical repo.
+- [x] Freeze `docs/RELEASE_STATUS.md` as the historical 1.0.7 snapshot and add a
+  current-main development status document.
+- [x] Document the stable embedding API.
+- [x] Add GitHub Pages landing page generated from `docs/`.
+- [x] Add a pinned GitHub Actions Pages workflow and custom-domain declaration
+  for `slynet.fkr.dev`.
+- [ ] Enable Pages in repository settings and verify the deployed custom-domain
+  URL and HTTPS certificate.
+- [ ] Add docs-to-implementation checks for public command/API names.
+- [ ] Add migration notes for SLY users describing semantic differences rather
+  than only command substitutions.
 
-## R6 — Instrumentation
+### Acceptance
+
+- every public quickstart command is executable from a fresh clone;
+- every documented public Janet symbol exists and has a focused test;
+- Pages exposes release, install, support matrix, development status, embedding
+  API, security boundary, and roadmap;
+- release status and development status cannot be confused.
+
+## P6 — 1.1.0 qualification
 
 ```yaml
-priority: P2
-status: planned
+priority: P0
+status: blocked_on_P0_P1_P2_P5
 ```
 
-Focus:
+### Gate
 
-- low-overhead trace events;
-- profiling;
-- timing trees;
-- source-linked instrumentation;
-- optional sticker-like behavior where it has an honest Janet implementation.
-
-## R7 — Architecture cleanup
-
-```yaml
-priority: P2
-status: planned
-```
-
-Work:
-
-- complete the physical runtime/server separation;
-- remove dead translated Common Lisp scaffolding;
-- eliminate duplicate parsers, initializers, and version constants;
-- turn compatibility facades into explicit adapters;
-- shrink the large `slynet/slynk.janet` module into capability-oriented units.
-
-This phase should preserve public behavior while clarifying ownership and
-reducing cross-layer mutable state.
-
-## R8 — Ecosystem release
-
-```yaml
-priority: P2
-status: publication_gated
-```
-
-Work:
-
-- configure and publish the canonical repository;
-- establish the package installation story;
-- add the archive recipe;
-- provide a migration guide for SLY users;
-- automate the compatibility matrix;
-- retain reproducible release evidence for every release.
-
-No repository URL, tag, push, package-archive upload, or forge release should be
-claimed until the corresponding publication gate is satisfied.
-
-## High-value product enhancements
-
-1. **First-class project sessions.** One command discovers a Janet project,
-   starts or reuses its SLYNET server, connects, creates the REPL, and remembers
-   the session.
-2. **Janet-aware eval commands.** Last form, region, definition/form, buffer, and
-   file workflows should feel native in Janet buffers rather than exposing RPC
-   primitives.
-3. **Source-aware debugger breakpoints.** Persistent breakpoints mapped to Janet
-   source forms are the highest-leverage debugger improvement after the existing
-   REPL/xref/inspector foundation.
-4. **Incremental source index.** Turn the current index into a project
-   intelligence service shared by completion, xref, diagnostics, debugger
-   locations, and documentation.
-5. **Structured capability browser.** Surface protocol-support metadata in a
-   searchable Emacs UI instead of leaving it primarily in generated YAML.
-6. **Observability mode.** Provide a compact session inspector for RPC latency,
-   pending requests, channels, execution units, diagnostics, source-index state,
-   and server-process health.
+- [ ] bump all canonical version surfaces to 1.1.0 only after the stable API and
+  daily Emacs command set are accepted;
+- [ ] run the full Janet + Emacs + fuzz + lifecycle + extracted-artifact gate;
+- [ ] run compatibility matrix on Janet 1.40.x/1.41.x and Emacs 27.1-30.x;
+- [ ] verify generated protocol inventory and public docs freshness;
+- [ ] verify `make publication-verify` against canonical origin;
+- [ ] tag immutable `v1.1.0`, publish artifacts/evidence, and verify Pages links.
 
 ## Sequencing
 
 ```text
-R0 release integrity
-  -> R1 fail-closed gate
-     -> local 1.0.x release candidate
-        -> R2 public Janet API
-        -> R3 daily Emacs workflow
-           -> R4/R5 debugging + intelligence
-              -> R6 instrumentation
-                 -> R7 structural cleanup
-                    -> R8 ecosystem publication
+P0 truth/mapping ─────┐
+                      ├─> P1 stable Janet API ─┐
+                      │                         ├─> P6 1.1.0
+                      └─> P2 Emacs workflow ───┤
+                                                │
+P3 debugger sessions/checkpoints ───────────────┤  (may continue after 1.1.0)
+P4 instrumentation consolidation ───────────────┤
+P5 docs/Pages/publication ──────────────────────┘
 ```
 
-R4–R7 may overlap when changes are orthogonal, but R0/R1 are release blockers
-and R8 remains publication-gated until a real public destination exists.
+P0, P1, P2, and P5 define the 1.1.0 product boundary. P3/P4 may land in 1.1.0
+when their acceptance gates are met, but they must not delay truthful stable API
+and editor improvements by requiring runtime semantics Janet does not expose.

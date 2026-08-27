@@ -17,7 +17,7 @@
         (set found entry))))
   found)
 
-(deftest p21-registers-and-transitions-execution-units {:tags [:phase21 :execution-unit-registry]}
+(deftest p21-registers-and-transitions-execution-units {:tags [:phase21 :execution-unit-registry] :covers ["list-threads"]}
   (tt/with-test-server [srv]
     (def unit (plist->table ((srv :emacs-rex!) '(register-execution-unit "unit-p21" "Long eval" :eval "/tmp/unit.janet" 3 2) :core nil 2101)))
     (assert= "unit-p21" (unit :id))
@@ -39,7 +39,7 @@
     (assert= :completed (completed :status))
     (assert= "done" (completed :last-output))))
 
-(deftest p21-execution-unit-errors-are-visible {:tags [:phase21 :execution-unit-registry]}
+(deftest p21-execution-unit-errors-are-visible {:tags [:phase21 :execution-unit-registry] :covers ["execution-unit-status"]}
   (tt/with-test-server [srv]
     ((srv :emacs-rex!) '(register-execution-unit "unit-p21-error" "Broken eval" :eval "/tmp/unit-error.janet" 5 1) :core nil 2111)
     (def errored (plist->table ((srv :emacs-rex!) '(complete-execution-unit "unit-p21-error" :error "boom") :core nil 2112)))

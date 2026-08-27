@@ -12,6 +12,7 @@
 (register-test
   {:name "inspector responses expose stable object identity metadata"
    :tags [:phase4 :inspector]
+   :covers ["inspect-for-emacs" "inspector-nth-part" "inspector-pop"]
    :fn (fn []
          (tt/with-test-server [srv]
            (do
@@ -27,6 +28,7 @@
 (register-test
   {:name "xref responses expose source-index contract metadata"
    :tags [:phase4 :xref]
+   :covers ["find-definitions-for-emacs"]
    :fn (fn []
          (tt/with-test-server [srv]
            (do
@@ -86,6 +88,7 @@
 (register-test
   {:name "xref fixture definitions return exact source facts"
    :tags [:phase4 :xref :fixture]
+   :covers ["find-definitions-for-emacs"]
    :fn (fn []
          (tt/with-test-server [srv]
            (do
@@ -110,6 +113,7 @@
 (register-test
   {:name "xref fixture definitions ignore comments strings and symbol substrings"
    :tags [:phase4 :xref :fixture]
+   :covers ["find-definitions-for-emacs"]
    :fn (fn []
          (tt/with-test-server [srv]
            (do
@@ -125,6 +129,7 @@
 (register-test
   {:name "xref fixture macro and interface kinds are explicit"
    :tags [:phase4 :xref :fixture]
+   :covers ["find-definitions-for-emacs"]
    :fn (fn []
          (tt/with-test-server [srv]
            (do

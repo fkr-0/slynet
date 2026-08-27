@@ -48,6 +48,7 @@
 (register-test
   {:name "execution units expose Janet thread facade metadata"
    :tags [:phase3 :debugger :threads]
+   :covers ["list-threads"]
    :fn (fn []
          (tt/with-test-server [srv]
            (def threads ((srv :emacs-rex!) '(list-threads) :core nil 1001))
@@ -62,6 +63,7 @@
 (register-test
   {:name "eval errors create condition records with synthetic abort restart"
    :tags [:phase3 :debugger :conditions]
+   :covers ["debugger-info-for-emacs" "invoke-nth-restart"]
    :fn (fn []
          (tt/with-test-server [srv]
            (expect-error (fn [] ((srv :emacs-rex!) '(not-a-real-symbol) :core nil 1002)))
@@ -85,6 +87,7 @@
 (register-test
   {:name "debugger frame locations use source index when callable is known"
    :tags [:phase3 :phase4 :debugger :frames :source-index]
+   :covers ["debugger-info-for-emacs"]
    :fn (fn []
          (tt/with-test-server [srv]
            (expect-error (fn [] ((srv :emacs-rex!) '(not-a-real-symbol) :core nil 1005)))
@@ -110,6 +113,7 @@
 (register-test
   {:name "debugger frames prefer native Janet debug stack facts"
    :tags [:phase3 :debugger :frames :janet-debug-stack]
+   :covers ["debugger-info-for-emacs"]
    :fn (fn []
          (tt/with-test-server [srv]
            (expect-error (fn [] ((srv :emacs-rex!) '(not-a-real-symbol) :core nil 1009)))
@@ -134,6 +138,7 @@
 (register-test
   {:name "eval errors send debugger activation with truthful Janet metadata"
    :tags [:phase3 :debugger :emacs :janet-debug-stack]
+   :covers ["debugger-info-for-emacs"]
    :fn (fn []
          (tt/with-test-server [srv]
            (expect-error (fn [] ((srv :emacs-rex!) '(not-a-real-symbol) :core nil 1011)))
@@ -165,6 +170,7 @@
 (register-test
   {:name "unresolved debugger frame locations keep synthetic facade source kind"
    :tags [:phase3 :debugger :frames]
+   :covers ["debugger-info-for-emacs"]
    :fn (fn []
          (tt/with-test-server [srv]
            (expect-error (fn [] ((srv :emacs-rex!) '(not-a-real-symbol) :core nil 1007)))

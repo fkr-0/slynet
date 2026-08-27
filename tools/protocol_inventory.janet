@@ -9,8 +9,13 @@
   "sly_source/slynk/xref.lisp"
   "sly_source/contrib/slynk-arglists.lisp"
   "sly_source/contrib/slynk-fancy-inspector.lisp"
+  "sly_source/contrib/slynk-indentation.lisp"
   "sly_source/contrib/slynk-mrepl.lisp"
   "sly_source/contrib/slynk-package-fu.lisp"
+  "sly_source/contrib/slynk-profiler.lisp"
+  "sly_source/contrib/slynk-retro.lisp"
+  "sly_source/contrib/slynk-stickers.lisp"
+  "sly_source/contrib/slynk-trace-dialog.lisp"
 ])
 
 (def janet-files [
@@ -24,16 +29,13 @@
   "slynet/contrib/slynet-apropos.janet"
   "slynet/contrib/slynet-arglists.janet"
   "slynet/contrib/slynet-fancy-inspector.janet"
+  "slynet/contrib/slynet-indentation.janet"
   "slynet/contrib/slynet-mrepl.janet"
   "slynet/contrib/slynet-package-fu.janet"
-])
-
-(def test-files [
-  "test/project_core_tests.janet"
-  "test/server_integration_tests.janet"
-  "test/channel_dispatch_tests.janet"
-  "test/contrib_tests.janet"
-  "test/suite-slynet.janet"
+  "slynet/contrib/slynet-profiler.janet"
+  "slynet/contrib/slynet-retro.janet"
+  "slynet/contrib/slynet-stickers.janet"
+  "slynet/contrib/slynet-trace-dialog.janet"
 ])
 
 (def stale-doc-files [
@@ -64,27 +66,77 @@
       (array/push out path)))
   out)
 
+(defn- join-path [base name]
+  (if (or (= base "") (= base "/"))
+    (string base name)
+    (string base "/" name)))
+
+(defn- collect-janet-files [root]
+  (def out @[])
+  (defn walk [dir]
+    (each entry (os/dir dir)
+      (def path (join-path dir entry))
+      (def stat (try (os/stat path) ([_ _] nil)))
+      (when stat
+        (cond
+          (= (stat :mode) :directory) (walk path)
+          (and (= (stat :mode) :file) (string/has-suffix? ".janet" path))
+          (array/push out path)))))
+  (walk root)
+  (sorted out))
+
+(def test-files (collect-janet-files "test"))
+
+(defn- explicit-cover-blocks [path]
+  # Direct coverage is declared as a flat string array on a test spec, e.g.
+  #   :covers ["ping" "connection-info"]
+  # The inventory never infers direct coverage from incidental symbol mentions.
+  (def text (slurp-or-empty path))
+  (def blocks @[])
+  (var cursor 0)
+  (var searching true)
+  (while searching
+    (def marker (string/find ":covers" text cursor))
+    (if (nil? marker)
+      (set searching false)
+      (let [open (string/find "[" text marker)]
+        (if (nil? open)
+          (set searching false)
+          (let [close (string/find "]" text (+ open 1))]
+            (if (nil? close)
+              (set searching false)
+              (do
+                (array/push blocks (string/slice text (+ open 1) close))
+                (set cursor (+ close 1)))))))))
+  blocks)
+
+(defn- file-explicitly-covers? [path operation]
+  (def needle (string "\"" operation "\""))
+  (var covered false)
+  (each block (explicit-cover-blocks path)
+    (when (contains? block needle)
+      (set covered true)))
+  covered)
+
+(defn- explicit-test-evidence-files [operation]
+  (def out @[])
+  (each path test-files
+    (when (file-explicitly-covers? path operation)
+      (array/push out path)))
+  out)
+
 (defn- source-patterns [operation]
   @[(string "(defslyfun " operation)
     (string "(definterface " operation)])
 
-(defn- janet-patterns [operation]
+(defn- janet-definition-patterns [operation]
   @[(string "(defn " operation)
     (string "(def " operation " ")
-    (string "(var " operation " ")
-    (string "(inf/defimpl '" operation)
-    (string "(inf/defimpl "" operation """)
-    (string "(definterface '" operation)
-    (string "(definterface " operation " ")
-    (string ":" operation " ")
-    (string ":" operation "}")])
+    (string "(var " operation " ")])
 
-(defn- test-patterns [operation]
-  @[(string "'(" operation " ")
-    (string "'" operation)
-    (string """ operation """)
-    (string "name: " operation)
-    (string "  - name: " operation)])
+(defn- janet-registration-patterns [operation]
+  @[(string "(inf/defimpl '" operation)
+    (string "(inf/defimpl \"" operation "\"")])
 
 (defn- missing-doc-patterns [operation]
   @[(string "`" operation "`")
@@ -211,11 +263,12 @@
     "threads" "Janet execution units/fibers do not map one-to-one to CL implementation thread APIs."
     "none" ""))
 
-(defn- state-for [janet-evidence test-evidence]
+(defn- state-for [definition-evidence registration-evidence test-evidence]
   (cond
-    (and (> (length janet-evidence) 0)
+    (and (> (length registration-evidence) 0)
          (> (length test-evidence) 0)) "implemented"
-    (> (length janet-evidence) 0) "implemented_untested"
+    (> (length registration-evidence) 0) "implemented_untested"
+    (> (length definition-evidence) 0) "implemented_unwired"
     true "missing"))
 
 (defn- operation-in? [operation names]
@@ -315,16 +368,19 @@
     "pending_design" "pending_design"
     "emulated"))
 
-(defn- state-detail-for [janet-evidence test-evidence constraint support-class]
-  (def has-janet (> (length janet-evidence) 0))
+(defn- state-detail-for [definition-evidence registration-evidence test-evidence constraint support-class]
+  (def has-definition (> (length definition-evidence) 0))
+  (def has-registration (> (length registration-evidence) 0))
   (def has-tests (> (length test-evidence) 0))
   (cond
-    (and has-janet has-tests (= support-class "native")) "implemented_native_tested"
-    (and has-janet (= support-class "native")) "implemented_native_untested"
-    (and has-janet has-tests (= support-class "emulated")) "implemented_emulated_tested"
-    (and has-janet (= support-class "emulated")) "implemented_emulated_untested"
-    (not has-janet) (if (= constraint "none") "missing_unconstrained" "missing_constrained")
-    true "implemented_untested"))
+    (and has-registration has-tests (= support-class "native")) "implemented_native_tested"
+    (and has-registration (= support-class "native")) "implemented_native_untested"
+    (and has-registration has-tests (= support-class "emulated")) "implemented_emulated_tested"
+    (and has-registration (= support-class "emulated")) "implemented_emulated_untested"
+    (and has-definition (= support-class "native")) "implemented_native_unwired"
+    (and has-definition (= support-class "emulated")) "implemented_emulated_unwired"
+    (not has-definition) (if (= constraint "none") "missing_unconstrained" "missing_constrained")
+    true "implemented_unwired"))
 
 (defn- yaml-list [indent key values]
   (def prefix (string/repeat " " indent))
@@ -387,8 +443,10 @@
 (defn- operation-record [rec]
   (def operation (rec :name))
   (def source-evidence (rec :source_files))
-  (def janet-evidence (evidence-files janet-files (janet-patterns operation)))
-  (def test-evidence (evidence-files test-files (test-patterns operation)))
+  (def definition-evidence (evidence-files janet-files (janet-definition-patterns operation)))
+  (def registration-evidence (evidence-files janet-files (janet-registration-patterns operation)))
+  (def janet-evidence (sorted (array/concat @[] definition-evidence registration-evidence)))
+  (def test-evidence (explicit-test-evidence-files operation))
   (def stale-files (evidence-files stale-doc-files (missing-doc-patterns operation)))
   (def out (buffer/new 0))
   (buffer/push-string out (string "  - name: " operation "\n"))
@@ -397,15 +455,18 @@
   (buffer/push-string out (string "    frontend_surface: " frontend-surface "\n"))
   (def constraint (constraint-for operation))
   (def support-class (support-class-for constraint))
-  (def state-detail (state-detail-for janet-evidence test-evidence constraint support-class))
+  (def state-detail (state-detail-for definition-evidence registration-evidence test-evidence constraint support-class))
   (buffer/push-string out (string "    support_class: " support-class "\n"))
-  (buffer/push-string out (string "    state: " (state-for janet-evidence test-evidence) "\n"))
+  (buffer/push-string out (string "    state: " (state-for definition-evidence registration-evidence test-evidence) "\n"))
   (buffer/push-string out (string "    state_detail: " state-detail "\n"))
   (buffer/push-string out (string "    validation_stage: " (validation-stage-for operation frontend-surface constraint) "\n"))
   (buffer/push-string out (string "    owning_spec: " (owning-spec-for operation frontend-surface constraint) "\n"))
   (buffer/push-string out (yaml-list 4 "source_files" source-evidence))
   (buffer/push-string out (yaml-list 4 "janet_files" janet-evidence))
+  (buffer/push-string out (yaml-list 4 "definition_files" definition-evidence))
+  (buffer/push-string out (yaml-list 4 "registration_files" registration-evidence))
   (buffer/push-string out (yaml-list 4 "test_files" test-evidence))
+  (buffer/push-string out "    test_evidence_kind: explicit_covers_metadata\n")
   (buffer/push-string out (string "    constraint: " constraint "\n"))
   (when (not (= constraint "none"))
     (buffer/push-string out (string "    constraint_reason: " (constraint-reason-for constraint) "\n")))
@@ -424,7 +485,7 @@
   (def out (buffer/new 0))
   (buffer/push-string out "# Generated by tools/protocol_inventory.janet. Do not edit by hand.\n")
   (buffer/push-string out "project: slynet\n")
-  (buffer/push-string out "schema_version: 4\n")
+  (buffer/push-string out "schema_version: 5\n")
   (buffer/push-string out (string "operation_count: " (length (keys ops)) "\n"))
   (buffer/push-string out (coverage-audit-section ops))
   (buffer/push-string out "operations:\n")

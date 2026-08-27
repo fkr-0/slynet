@@ -118,11 +118,17 @@
          (def text (inventory-text))
          (def ping-record (record-for text "ping"))
          (def restart-record (record-for text "invoke-nth-restart"))
-         (assert-true (contains text "schema_version: 4") "schema advanced for P10 ownership fields")
+         (def trace-record (record-for text "dialog-trace"))
+         (def sticker-record (record-for text "compile-for-stickers"))
+         (assert-true (contains text "schema_version: 5") "schema records explicit test and callable-registration evidence")
          (assert-true (contains ping-record "support_class: native") "unconstrained tested implementation is native")
          (assert-true (contains ping-record "state_detail: implemented_native_tested") "tested native implementation has precise state")
-         (assert-true (contains restart-record "support_class: emulated") "restart operations are staged emulation targets")
-         (assert-true (contains restart-record "state_detail: implemented_emulated_untested") "implemented but unproduct-tested restart emulation is precise"))})
+         (assert-true (contains ping-record "registration_files:\n      - slynet/slynk.janet") "implemented state requires callable registration evidence")
+         (assert-true (contains ping-record "test_evidence_kind: explicit_covers_metadata") "direct test evidence is explicit rather than inferred")
+         (assert-true (contains restart-record "support_class: emulated") "restart operations remain explicit Janet emulations")
+         (assert-true (contains restart-record "state_detail: implemented_emulated_tested") "direct restart coverage is now recorded")
+         (assert-true (contains trace-record "state_detail: implemented_native_unwired") "defined trace-dialog code is not mistaken for a callable RPC")
+         (assert-true (contains sticker-record "state_detail: missing_unconstrained") "interface-only sticker declarations are not implementations"))})
 
 (register-test
   {:name "protocol inventory maps operations to frontend surfaces"

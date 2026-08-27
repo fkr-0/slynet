@@ -49,7 +49,8 @@
      :doc (get spec :doc "")
      :tags (if raw-tags
              (if (array? raw-tags) raw-tags (tuple raw-tags))
-             @[])})
+             @[])
+     :covers (or (get spec :covers) @[])})
   (put *tests* name norm)
   name)
 

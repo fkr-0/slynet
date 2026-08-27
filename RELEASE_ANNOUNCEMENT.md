@@ -44,7 +44,8 @@ See `docs/RELEASE_STATUS.md` for the exact coverage table and semantic caveats.
 
 ## Publication status
 
-The local release gate is separate from publication. This checkout still has no
-canonical public `origin`, so `make publication-verify` intentionally fails until
-the real repository URL is configured and documented. No release command pushes,
-uploads, deploys, or creates a forge release.
+The qualified v1.0.7 tag and its original release artifacts are published at
+<https://github.com/fkr-0/slynet/releases/tag/v1.0.7>. Publication happened
+after local qualification and did not move the tag or rebuild the artifacts.
+Project documentation is published from `main` through GitHub Pages at
+<https://slynet.fkr.dev>.

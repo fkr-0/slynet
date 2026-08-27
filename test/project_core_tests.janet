@@ -105,6 +105,7 @@
 (register-test
   {:name "ping roundtrip"
    :tags [:integration :server]
+   :covers ["ping"]
    :fn (fn []
          (tt/with-test-server [srv]
                               (assert= :pong ((srv :emacs-rex!) '(ping :pong) :core nil 11))))})
@@ -112,6 +113,7 @@
 (register-test
   {:name "connection-info exposes basics"
    :tags [:integration :server]
+   :covers ["connection-info"]
    :fn (fn []
          (tt/with-test-server [srv]
                               (def info ((srv :emacs-rex!) '(connection-info) :core nil 12))
@@ -130,6 +132,7 @@
 (register-test
   {:name "list-all-package-names includes core"
    :tags [:integration :server]
+   :covers ["list-all-package-names"]
    :fn (fn []
          (tt/with-test-server [srv]
                               (def pkgs ((srv :emacs-rex!) '(list-all-package-names) :core nil 13))
@@ -141,6 +144,7 @@
 (register-test
   {:name "simple completions surface connection-info"
    :tags [:integration :server]
+   :covers ["simple-completions"]
    :fn (fn []
          (tt/with-test-server [srv]
                               (def result ((srv :emacs-rex!) '(simple-completions "connection" "core") :core nil 14))
@@ -152,6 +156,7 @@
 (register-test
   {:name "flex completions surface connection-info"
    :tags [:integration :server]
+   :covers ["flex-completions"]
    :fn (fn []
          (tt/with-test-server [srv]
                               (def result ((srv :emacs-rex!) '(flex-completions "conninfo" "core") :core nil 15))
@@ -166,6 +171,7 @@
 (register-test
   {:name "set-package updates prompt"
    :tags [:integration :server]
+   :covers ["set-package"]
    :fn (fn []
          (tt/with-test-server [srv]
                               (def result ((srv :emacs-rex!) '(set-package "core") :core nil 16))
@@ -177,6 +183,7 @@
 (register-test
   {:name "interactive-eval-region returns values"
    :tags [:integration :server]
+   :covers ["interactive-eval-region"]
    :fn (fn []
          (tt/with-test-server [srv]
                               (def res ((srv :emacs-rex!) '(interactive-eval-region "(+ 1 2)\n(+ 2 3)") :core nil 17))
@@ -188,6 +195,7 @@
 (register-test
   {:name "backend interactive-eval reports aborts without shadowing string"
    :tags [:unit :backend :eval]
+   :covers ["interactive-eval"]
    :fn (fn []
          (def result (backend/interactive-eval "(definitely-missing-function 1)"))
          (assert= :abort (result 0))
@@ -197,6 +205,7 @@
 (register-test
   {:name "pprint-eval prints last value"
    :tags [:integration :server]
+   :covers ["pprint-eval"]
    :fn (fn []
          (tt/with-test-server [srv]
                               (def res ((srv :emacs-rex!) '(pprint-eval "(def tmp-eval 10)\n(+ tmp-eval 5)") :core nil 18))
@@ -205,6 +214,7 @@
 (register-test
   {:name "arglist rpc returns callable signature"
    :tags [:integration :server]
+   :covers ["arglist"]
    :fn (fn []
          (tt/with-test-server [srv]
                               (def res ((srv :emacs-rex!) '(arglist array/push) :core nil 23))
@@ -213,6 +223,7 @@
 (register-test
   {:name "operator-arglist rpc mirrors arglist"
    :tags [:integration :server]
+   :covers ["operator-arglist"]
    :fn (fn []
          (tt/with-test-server [srv]
                               (def res ((srv :emacs-rex!) '(operator-arglist array/push "core") :core nil 24))
@@ -221,6 +232,7 @@
 (register-test
   {:name "xref returns precise snippets for debugger symbol"
    :tags [:integration :server :xref]
+   :covers ["find-definitions-for-emacs"]
    :fn (fn []
          (tt/with-test-server [srv]
            (def res ((srv :emacs-rex!) '(find-definitions-for-emacs "debugger-info-for-emacs") :core nil 54))
@@ -238,6 +250,7 @@
 (register-test
   {:name "find-definitions-for-emacs finds repo symbol"
    :tags [:integration :server :xref]
+   :covers ["find-definitions-for-emacs"]
    :fn (fn []
          (tt/with-test-server [srv]
                               (def res ((srv :emacs-rex!) '(find-definitions-for-emacs "connection-info") :core nil 26))
@@ -251,6 +264,7 @@
 (register-test
   {:name "inspector push and pop roundtrip"
    :tags [:integration :server :inspector]
+   :covers ["inspect-for-emacs" "inspector-pop"]
    :fn (fn []
          (tt/with-test-server [srv]
                               (def a (plist->table ((srv :emacs-rex!) '(inspect-for-emacs 42) :core nil 27)))
@@ -264,6 +278,7 @@
 (register-test
   {:name "inspector nth part drills into arrays"
    :tags [:integration :server :inspector]
+   :covers ["inspect-for-emacs" "inspector-nth-part"]
    :fn (fn []
          (tt/with-test-server [srv]
                               ((srv :emacs-rex!) '(inspect-for-emacs @[10 20 30]) :core nil 33)
@@ -274,6 +289,7 @@
 (register-test
   {:name "inspect current condition exposes debugger payload"
    :tags [:integration :server :inspector :debugger]
+   :covers ["inspect-current-condition"]
    :fn (fn []
          (tt/with-test-server [srv]
                               (expect-error (fn [] ((srv :emacs-rex!) '(not-a-real-symbol) :core nil 55)))
@@ -285,6 +301,7 @@
 (register-test
   {:name "macroexpand and compile-string for emacs"
    :tags [:integration :server :compiler]
+   :covers ["interactive-eval-region" "macroexpand-1-for-emacs" "compile-string-for-emacs"]
    :fn (fn []
          (tt/with-test-server [srv]
                               ((srv :emacs-rex!) '(interactive-eval-region "(defmacro plus2 [x] (tuple '+ x 2))") :core nil 30)
@@ -297,6 +314,7 @@
 (register-test
   {:name "compile-string for emacs reports failures"
    :tags [:integration :server :compiler]
+   :covers ["compile-string-for-emacs"]
    :fn (fn []
          (tt/with-test-server [srv]
                               (def compiled (plist->table ((srv :emacs-rex!) '(compile-string-for-emacs "(this-will-fail") :core nil 35)))
@@ -306,6 +324,7 @@
 (register-test
   {:name "compile-file and load-file for emacs"
    :tags [:integration :server :compiler]
+   :covers ["compile-file-for-emacs" "load-file"]
    :fn (fn []
          (def path "/home/user/code/slynet/tmp-slynet-load.janet")
          (def f (file/open path :w))
@@ -321,6 +340,7 @@
 (register-test
   {:name "debugger minimum loop surfaces state"
    :tags [:integration :server :debugger]
+   :covers ["debugger-info-for-emacs" "backtrace" "frame-source-location" "frame-locals-and-catch-tags" "sly-db-continue"]
    :fn (fn []
          (tt/with-test-server [srv]
                               (expect-error (fn [] ((srv :emacs-rex!) '(not-a-real-symbol) :core nil 38)))
@@ -341,6 +361,7 @@
 (register-test
   {:name "thread ops and utility probes respond"
    :tags [:integration :server :threads]
+   :covers ["list-threads" "debug-nth-thread" "kill-nth-thread" "io-speed-test" "flow-control-test"]
    :fn (fn []
          (tt/with-test-server [srv]
                               (def threads ((srv :emacs-rex!) '(list-threads) :core nil 42))
@@ -365,6 +386,7 @@
 (register-test
   {:name "slynk require and debug toggle work"
    :tags [:integration :server]
+   :covers ["slynk-require" "toggle-debug-on-slynk-error"]
    :fn (fn []
          (tt/with-test-server [srv]
                               (def req (plist->table ((srv :emacs-rex!) '(slynk-require "apropos") :core nil 47)))
@@ -375,6 +397,7 @@
 (register-test
   {:name "editor session smoke path"
    :tags [:integration :server :smoke]
+   :covers ["ping" "connection-info" "compile-string-for-emacs" "find-definitions-for-emacs"]
    :fn (fn []
          (tt/with-test-server [srv]
                               (assert= :pong ((srv :emacs-rex!) '(ping :pong) :core nil 49))
@@ -391,6 +414,7 @@
 (register-test
   {:name "describe-function exposes metadata"
    :tags [:integration :server]
+   :covers ["describe-function"]
    :fn (fn []
          (tt/with-test-server [srv]
                               (def res ((srv :emacs-rex!) '(describe-function +) :core nil 25))
@@ -402,6 +426,7 @@
 (register-test
   {:name "value editing cycle"
    :tags [:integration :server]
+   :covers ["value-for-editing" "commit-edited-value"]
    :fn (fn []
          (tt/with-test-server [srv]
                               ((srv :emacs-rex!) '(def editable-target 21) :core nil 19)

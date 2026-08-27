@@ -40,7 +40,8 @@ The support matrix below is the stable 1.0.x compatibility contract.
 ### Experimental or deliberately constrained areas
 
 - debugger stepping and resumability beyond SLYNET-owned Janet facades;
-- profiler, stickers, tracing, and Common Lisp package-management compatibility;
+- full profiler/trace UI, timing trees, stickers, and Common Lisp
+  package-management compatibility;
 - remote/TRAMP, Windows, hostile-network, and multi-user operation;
 - interfaces classified as pending-design, workaround, or unsupported in
   `docs/generated/protocol-inventory.yml`.
@@ -62,12 +63,17 @@ Use Janet 1.40.x or 1.41.x and Emacs 27.1 or newer. Git is needed for source
 checkout workflows. Eldev 1.11 or newer is needed only for package development
 and release verification.
 
-## Emacs quick start: source installation before public publication
+## Emacs quick start
 
-This checkout currently has no canonical public `origin` configured, so the
-repository deliberately does not publish an invented clone URL. From an
-existing checkout, add its Emacs directory to `load-path` and point SLYNET at
-that checkout:
+Clone the canonical public repository and point Emacs at the checkout:
+
+```sh
+git clone https://github.com/fkr-0/slynet.git ~/src/slynet
+cd ~/src/slynet
+make test
+```
+
+Then add its Emacs directory to `load-path`:
 
 ```elisp
 (add-to-list 'load-path (expand-file-name "~/src/slynet/emacs"))
@@ -79,10 +85,9 @@ that checkout:
 (slynet-mode 1)
 ```
 
-Before a public release is advertised, the maintainer must configure the real
-repository remote and update this installation section. `make
-publication-verify` fails closed until that publication-only requirement is
-satisfied.
+Project documentation is published at <https://slynet.fkr.dev>, and immutable
+release artifacts are available from the
+[GitHub Releases page](https://github.com/fkr-0/slynet/releases).
 
 ## Verify and start the server directly
 

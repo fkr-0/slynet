@@ -99,6 +99,7 @@
      :tags (if raw-tags
              (if (array? raw-tags) raw-tags (tuple raw-tags))
              @[])
+     :covers (or (get spec :covers) @[])
      :def-loc (get spec :def-loc nil)})
   (put *tests* name norm)
   name)
@@ -230,6 +231,7 @@
        {:name ,nm
         :doc ,doc
         :tags ,(or (get meta :tags) @[])
+        :covers ,(or (get meta :covers) @[])
         :fn (fn []
               ,;body-forms)})))
 # ========= Selection helpers =========

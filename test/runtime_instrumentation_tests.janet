@@ -17,6 +17,7 @@
 (register-test
   {:name "source-aware eval returns source context and values"
    :tags [:phase16 :runtime-instrumentation]
+   :covers ["source-aware-eval"]
    :fn (fn []
          (tt/with-test-server [srv]
            (def result ((srv :emacs-rex!) '(source-aware-eval "(+ 1 2)" "/tmp/source.janet" 4 2) :core nil 1601))
@@ -33,6 +34,7 @@
 (register-test
   {:name "runtime instrumentation exposes restart scopes and cooperative interruption"
    :tags [:phase16 :runtime-instrumentation :restart-scopes]
+   :covers ["list-restart-scopes" "interrupt-execution-unit" "debugger-step-checkpoint"]
    :fn (fn []
          (tt/with-test-server [srv]
            (expect-error (fn [] ((srv :emacs-rex!) '(not-a-real-symbol) :core nil 1602)))
@@ -54,6 +56,7 @@
 (register-test
   {:name "extension candidates expose concrete workaround facades"
    :tags [:phase16 :janet-extension-candidates]
+   :covers ["register-function-metadata" "function-metadata" "source-aware-eval" "lookup-eval-source-map" "record-instrumentation-event" "list-instrumentation-events" "debugger-control-capabilities" "debugger-control-action"]
    :fn (fn []
          (tt/with-test-server [srv]
            (def metadata (plist->table ((srv :emacs-rex!)
@@ -101,6 +104,7 @@
 (register-test
   {:name "debug frame locals expose Janet slot workaround metadata"
    :tags [:phase16 :rich-debug-frame-locals :debugger]
+   :covers ["debugger-info-for-emacs"]
    :fn (fn []
          (tt/with-test-server [srv]
            (expect-error (fn [] ((srv :emacs-rex!) '(not-a-real-symbol) :core nil 1620)))

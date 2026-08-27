@@ -12,6 +12,7 @@
 (register-test
   {:name "compile-string success exposes empty Janet diagnostic envelope"
    :tags [:phase5 :compile :diagnostics]
+   :covers ["compile-string-for-emacs"]
    :fn (fn []
          (tt/with-test-server [srv]
            (do
@@ -29,6 +30,7 @@
 (register-test
   {:name "compile-string failure exposes structured Janet diagnostic"
    :tags [:phase5 :compile :diagnostics]
+   :covers ["compile-string-for-emacs"]
    :fn (fn []
          (tt/with-test-server [srv]
            (do
@@ -48,6 +50,7 @@
 (register-test
   {:name "load-file failure exposes path-aware structured diagnostic"
    :tags [:phase5 :load :diagnostics]
+   :covers ["load-file"]
    :fn (fn []
          (tt/with-test-server [srv]
            (do

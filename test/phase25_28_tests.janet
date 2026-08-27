@@ -17,7 +17,7 @@
       (set found table)))
   found)
 
-(deftest p25-backend-runtime-utility-capabilities {:tags [:phase25 :backend-runtime]}
+(deftest p25-backend-runtime-utility-capabilities {:tags [:phase25 :backend-runtime] :covers ["getpid" "create-socket" "save-image"]}
   (tt/with-test-server [srv]
     (def caps ((srv :emacs-rex!) '(backend-runtime-capabilities) :core nil 2501))
     (def getpid-cap (find-plist-by-key caps :operation :getpid))
@@ -39,7 +39,7 @@
     (assert= :save-image (op :operation))
     (assert= false (op :callable))))
 
-(deftest p26-profile-workaround-reporting {:tags [:phase26 :profile]}
+(deftest p26-profile-workaround-reporting {:tags [:phase26 :profile] :covers ["profile-reset" "profile" "profile-package" "profile-report"]}
   (tt/with-test-server [srv]
     ((srv :emacs-rex!) '(profile-reset) :core nil 2600)
     (def profiled (plist->table ((srv :emacs-rex!) '(profile "fixture-profile-target") :core nil 2601)))
@@ -59,7 +59,7 @@
     (assert-not-nil row)
     (assert= :slynet-wrapper (row :hook-kind))))
 
-(deftest p27-slynk-compile-and-macroexpand-compatibility {:tags [:phase27 :compile-load]}
+(deftest p27-slynk-compile-and-macroexpand-compatibility {:tags [:phase27 :compile-load] :covers ["slynk-compile-string" "slynk-compiler-macroexpand-1" "slynk-expand"]}
   (tt/with-test-server [srv]
     (def compiled (plist->table ((srv :emacs-rex!) '(slynk-compile-string "(+ 1 2)" "p27-buffer" 1 "p27.janet") :core nil 2701)))
     (assert= true (compiled :success))
@@ -78,7 +78,7 @@
     (assert= :slynk-expand (expand-all :operation))
     (assert= :emulated (expand-all :support-class))))
 
-(deftest p28-namespace-browser-and-cl-package-boundary {:tags [:phase28 :namespace]}
+(deftest p28-namespace-browser-and-cl-package-boundary {:tags [:phase28 :namespace] :covers ["package-local-nicknames" "find-locally-nicknamed-package"]}
   (tt/with-test-server [srv]
     (def browser (plist->table ((srv :emacs-rex!) '(namespace-browser "." "core") :core nil 2801)))
     (assert= :ok (browser :status))

@@ -1,3 +1,8 @@
+---
+layout: page
+title: Compatibility and deprecation policy
+---
+
 # Compatibility and deprecation policy
 
 ## 1.0 support window

@@ -1,3 +1,8 @@
+---
+layout: page
+title: SLYNET 1.0.7 release status
+---
+
 # SLYNET 1.0.7 release status
 
 Audited: 2026-08-27
@@ -5,17 +10,19 @@ Audited: 2026-08-27
 The exact qualified revision and artifact hashes are recorded by the release gate
 in `dist/release-evidence.yml`.
 
-This document is the human-readable release snapshot for SLYNET 1.0.7. The
-generated protocol truth remains `docs/generated/protocol-inventory.yml`; this
-page explains what that inventory means for an actual Emacs/Janet user.
+This document is the human-readable **frozen semantic snapshot** for SLYNET
+1.0.7. Its protocol counts describe the qualified v1.0.7 source tree and are
+not rewritten to match later `main`. For current post-release implementation
+state, see `DEVELOPMENT_STATUS.md`.
 
 ## Release posture
 
 ```yaml
 version: 1.0.7
-release_kind: local_semantic_release
-public_distribution: blocked
-public_distribution_reason: no canonical origin remote is configured
+release_kind: qualified_semantic_release
+public_distribution: published
+canonical_repository: https://github.com/fkr-0/slynet
+github_release: https://github.com/fkr-0/slynet/releases/tag/v1.0.7
 supported_janet: 1.40.x-1.41.x
 supported_emacs: 27.1-30.x
 supported_os:
@@ -58,7 +65,7 @@ and live E2E suites exercise composed user workflows across multiple RPCs.
 - **Project-aware Emacs lifecycle** — start/connect/status/health/reconnect/quit
   commands and project-scoped local server management.
 
-## Protocol inventory: exact current coverage
+## Protocol inventory: frozen v1.0.7 coverage
 
 The generated inventory contains **249** source protocol operations.
 
@@ -118,15 +125,17 @@ differences, including `return-from-frame`, `restart-frame`, debugger step/next/
 out primitives, `spawn`, `initialize-multiprocessing`, `thread-status`, and
 `kill-thread`.
 
-### Product gaps after 1.0.7
+### Product gaps identified at the v1.0.7 boundary
 
-- **No stable public Janet embedding API yet.** `slynet/api.janet` remains a
-  roadmap item; registry plumbing is still primarily internal architecture.
+- **No stable public Janet embedding API was included in v1.0.7.** A post-1.0.7
+  API-v1 implementation is under qualification for 1.1.0; see
+  `EMBEDDING_API.md` and `DEVELOPMENT_STATUS.md`.
 - **Debugger stepping is not a production claim.** True step/next/out and
   resumability depend on Janet runtime capabilities that are not yet exposed as
   a stable SLYNET contract.
-- **Instrumentation is incomplete.** Profiler, tracing, timing-tree, and
-  sticker-like workflows remain roadmap work.
+- **Instrumentation is incomplete.** v1.0.7 contains wrapper-based profiling
+  and source-linked trace/timing records, but full trace/profiler UI,
+  hierarchical timing trees, and sticker-like workflows remain roadmap work.
 - **Daily editor polish can go further.** Eval-last-form/definition/buffer/file,
   richer inspector interactions, and recovery UX are not yet at SLY's maturity.
 - **Remote operation is not a supported security model.** No authentication or
@@ -134,9 +143,9 @@ out primitives, `spawn`, `initialize-multiprocessing`, `thread-status`, and
   hostile-network, and multi-user operation are not release claims.
 - **Windows is unverified.** The current supported OS claim is GNU/Linux and
   macOS.
-- **Public installation/distribution is not complete.** There is no canonical
-  `origin`, package archive recipe, public clone URL, or published release.
-  `make publication-verify` intentionally fails until that is resolved.
+- **Public installation/distribution was completed after qualification.** The
+  immutable v1.0.7 tag and qualified artifacts are published at the canonical
+  GitHub repository; publication did not move or rebuild the release tag.
 - **Migration guidance for Common Lisp SLY users is still missing.** It remains
   a roadmap deliverable for ecosystem publication.
 

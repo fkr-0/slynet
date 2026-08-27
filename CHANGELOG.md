@@ -7,6 +7,24 @@ Versioning.
 
 ## [Unreleased]
 
+### Added
+
+- Added a canonical `slynet/api.janet` embedding API v1 with loopback-safe
+  server lifecycle, capability reporting, RPC metadata lookup, and in-process
+  invocation for context-free RPCs.
+- Added explicit per-test protocol `:covers` metadata and protocol inventory
+  schema v5, which distinguishes callable registrations, unwired definitions,
+  and direct test evidence across the complete tracked SLY/SLYNK corpus.
+- Added a GitHub Pages documentation site and pinned deployment workflow for
+  `https://slynet.fkr.dev`.
+
+### Changed
+
+- Expanded protocol inventory discovery to include profiler, trace-dialog,
+  stickers, retro, and indentation contrib reference sources.
+- Updated public installation and release documentation for the canonical
+  `fkr-0/slynet` repository and published v1.0.7 release.
+
 ## [1.0.7] - 2026-08-27
 
 ### Added

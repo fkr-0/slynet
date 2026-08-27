@@ -1,52 +1,17 @@
-# # ------------------------------------------------------------------
-# #  SLYNET – core macro helpers
-# #
-# #  • quasi-quote  :  ~
-# #  • unquote      :  ,
-# #  • splice       :  ;          ; ← list-splice, only valid in [ ... ]
-# # ------------------------------------------------------------------
+# Compatibility import for the pre-1.1 SLYNET API module name.
+#
+# New embedding code should use:
+#   (import slynet/api :as slynet)
 
-# ### Registry --------------------------------------------------------
+(import ./api :as api)
 
-# (def interfaces-registry @{})   # for reflection / tooling
-
-# ### slynet-defclass -------------------------------------------------
-# # (slynet-defclass 'Backend)  ⇒  Backend = :Backend
-
-# (defmacro slynet-defclass [sym]
-#   ~(def ,sym ,(keyword sym)))    # convert symbol → keyword constant
-
-# ### slynet-definterface --------------------------------------------
-# # Registers the interface and builds either a user-supplied default
-# # body or a stub that raises an error when called.
-
-# (defmacro slynet-definterface
-#   [name args doc &opt default-body]
-#   (let [stub-body
-#         (if default-body
-#             default-body
-#             ## build a single-form body: (error "...interface stub...")
-#             [[error
-#               (string "Interface stub '" (string name)
-#                       "' called with no implementation.")]])]
-#     ~(do
-#         (put interfaces-registry ',name
-#              {:args ',args :doc ,doc :type :interface})
-#         [defn ,name ,args ;stub-body])))
-
-# ### slynet-defimplementation ---------------------------------------
-
-# (defmacro slynet-defimplementation [name args & body]
-#   (when (empty? body)
-#     (error (string/format "Implementation body for  %j  is empty." name)))
-#   ~(do
-#       (put interfaces-registry ',name
-#            {:args ',args :type :implementation})
-#       [defn ,name ,args ;body]))
-
-# ### Optional re-exports --------------------------------------------
-
-# # (export slynet-defclass
-# #         slynet-definterface
-# #         slynet-defimplementation
-# #         interfaces-registry)
+(def api-version api/api-version)
+(def version api/version)
+(def capabilities api/capabilities)
+(def initialize api/initialize)
+(def rpc-interface api/rpc-interface)
+(def rpc-implementation api/rpc-implementation)
+(def call-rpc api/call-rpc)
+(def start-server api/start-server)
+(def stop-server api/stop-server)
+(def export-api api/export-api)
