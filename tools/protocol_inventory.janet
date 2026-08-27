@@ -38,6 +38,20 @@
   "slynet/contrib/slynet-trace-dialog.janet"
 ])
 
+# The 1.1 stable subset is intentionally smaller than the historical SLYNK
+# corpus.  These operations are the release-critical RPC contract that must be
+# callable and have explicit operation-level test ownership before release.
+(def stable-subset-by-surface
+  @{
+    "transport" @["ping" "connection-info" "flow-control-test" "io-speed-test"]
+    "repl" @["create-mrepl" "interactive-eval-region" "pprint-eval"]
+    "completion" @["simple-completions" "flex-completions" "operator-arglist" "arglist" "describe-function" "autodoc"]
+    "compile_load" @["compile-file-for-emacs" "compile-string-for-emacs" "load-file" "macroexpand-all"]
+    "inspector" @["inspector-nth-part" "inspector-pop" "inspector-reinspect" "inspector-history" "inspector-call-nth-action"]
+    "xref" @["find-definitions-for-emacs" "frame-source-location"]
+    "debugger" @["debugger-info-for-emacs" "backtrace" "frame-locals-and-catch-tags" "list-threads" "debug-nth-thread" "kill-nth-thread" "invoke-nth-restart"]
+  })
+
 (def stale-doc-files [
   "docs/missing_protocol.md"
   "docs/missing_protocol_definterface.md"
@@ -65,6 +79,33 @@
     (when (file-matches-patterns? path patterns)
       (array/push out path)))
   out)
+
+(defn- last-find-before [text needle limit]
+  (var cursor 0)
+  (var last nil)
+  (var searching true)
+  (while searching
+    (def pos (string/find needle text cursor))
+    (if (or (nil? pos) (>= pos limit))
+      (set searching false)
+      (do
+        (set last pos)
+        (set cursor (+ pos 1)))))
+  last)
+
+(defn- max-position [positions]
+  (var best nil)
+  (each pos positions
+    (when (and pos (or (nil? best) (> pos best)))
+      (set best pos)))
+  best)
+
+(defn- min-position [positions fallback]
+  (var best fallback)
+  (each pos positions
+    (when (and pos (< pos best))
+      (set best pos)))
+  best)
 
 (defn- join-path [base name]
   (if (or (= base "") (= base "/"))
@@ -130,13 +171,73 @@
     (string "(definterface " operation)])
 
 (defn- janet-definition-patterns [operation]
-  @[(string "(defn " operation)
+  @[(string "(defn " operation " ")
     (string "(def " operation " ")
     (string "(var " operation " ")])
 
 (defn- janet-registration-patterns [operation]
-  @[(string "(inf/defimpl '" operation)
-    (string "(inf/defimpl \"" operation "\"")])
+  @[(string "(inf/defimpl '" operation " ")
+    (string "(inf/defimpl \"" operation "\" ")])
+
+(defn- final-registration-position [text operation]
+  (max-position
+    (map |(last-find-before text $ (length text))
+         (janet-registration-patterns operation))))
+
+(defn- definition-body-before-registration [text operation registration-pos]
+  (def definition-pos
+    (max-position
+      (map |(last-find-before text $ registration-pos)
+           (janet-definition-patterns operation))))
+  (when definition-pos
+    (def body-end
+      (min-position
+        @[(string/find "\n(defn " text (+ definition-pos 1))
+          (string/find "\n(def " text (+ definition-pos 1))
+          (string/find "\n(var " text (+ definition-pos 1))
+          (string/find "\n(defmacro " text (+ definition-pos 1))]
+        registration-pos))
+    (string/slice text definition-pos body-end)))
+
+(defn- registration-file-semantics [path operation]
+  (def text (slurp-or-empty path))
+  (def registration-pos (final-registration-position text operation))
+  (if (nil? registration-pos)
+    nil
+    (let [body (definition-body-before-registration text operation registration-pos)]
+      (cond
+        (and body (contains? body "(error \"Not implemented\")")) "error_stub"
+        (and body
+             (contains? body ":status :unsupported")
+             (not (contains? body ":status :ok"))) "unsupported_stub"
+        true "functional"))))
+
+(defn- registration-semantics [operation registration-evidence]
+  # A functional registration wins over an obsolete/overridden stub.  This
+  # handles files such as backend.janet that preserve historical definitions
+  # before a later real implementation.
+  (var saw-error false)
+  (var saw-unsupported false)
+  (var saw-functional false)
+  (each path registration-evidence
+    (case (registration-file-semantics path operation)
+      "functional" (set saw-functional true)
+      "error_stub" (set saw-error true)
+      "unsupported_stub" (set saw-unsupported true)
+      nil))
+  (cond
+    saw-functional "functional"
+    saw-unsupported "unsupported_stub"
+    saw-error "error_stub"
+    true "functional"))
+
+(defn- stub-evidence-files [operation registration-evidence]
+  (def out @[])
+  (each path registration-evidence
+    (def semantics (registration-file-semantics path operation))
+    (when (or (= semantics "error_stub") (= semantics "unsupported_stub"))
+      (array/push out path)))
+  out)
 
 (defn- missing-doc-patterns [operation]
   @[(string "`" operation "`")
@@ -263,8 +364,10 @@
     "threads" "Janet execution units/fibers do not map one-to-one to CL implementation thread APIs."
     "none" ""))
 
-(defn- state-for [definition-evidence registration-evidence test-evidence]
+(defn- state-for [definition-evidence registration-evidence test-evidence registration-semantics]
   (cond
+    (and (> (length registration-evidence) 0)
+         (not (= registration-semantics "functional"))) "registered_stub"
     (and (> (length registration-evidence) 0)
          (> (length test-evidence) 0)) "implemented"
     (> (length registration-evidence) 0) "implemented_untested"
@@ -277,6 +380,10 @@
     (when (= operation name)
       (set found true)))
   found)
+
+(defn- stable-subset? [operation frontend-surface]
+  (def names (get stable-subset-by-surface frontend-surface @[]))
+  (operation-in? operation names))
 
 (defn- operation-has-prefix? [operation prefixes]
   (var found false)
@@ -349,30 +456,44 @@
     (= frontend-surface "namespace") "P14_project_connection_management"
     true "P0_inventory_truth"))
 
-(defn- support-rationale-for [support-class constraint state-detail]
-  (case support-class
-    "native" "Supported directly by Janet behavior with protocol adaptation."
-    "emulated" (string "Supported through SLYNET emulation because " (constraint-reason-for constraint))
-    "unsupported" (string "Not currently supported because " (constraint-reason-for constraint))
-    "pending_design" (string "Pending staged design; current state is " state-detail ".")
-    (string "Support class " support-class " requires explicit review.")))
+(def operation-support-class-overrides
+  @{"compiler-macroexpand-1" "emulated"
+    "compiler-macroexpand" "emulated"})
 
-(defn- support-class-for [constraint]
-  (case constraint
-    "none" "native"
-    "clos_mop" "unsupported"
-    "cl_packages" "emulated"
-    "conditions_restarts" "emulated"
-    "compiler_notes" "emulated"
-    "threads" "emulated"
-    "pending_design" "pending_design"
-    "emulated"))
+(def operation-support-rationale-overrides
+  @{"compiler-macroexpand-1"
+    "Uses Janet macro expansion as an explicit compatibility emulation; Common Lisp compiler-macro and lexical environment semantics are not available."
+    "compiler-macroexpand"
+    "Uses Janet macro expansion as an explicit compatibility emulation; Common Lisp compiler-macro and lexical environment semantics are not available."})
 
-(defn- state-detail-for [definition-evidence registration-evidence test-evidence constraint support-class]
+(defn- support-rationale-for [operation support-class constraint state-detail]
+  (or (get operation-support-rationale-overrides operation)
+      (case support-class
+        "native" "Supported directly by Janet behavior with protocol adaptation."
+        "emulated" (string "Supported through SLYNET emulation because " (constraint-reason-for constraint))
+        "unsupported" (string "Not currently supported because " (constraint-reason-for constraint))
+        "pending_design" (string "Pending staged design; current state is " state-detail ".")
+        (string "Support class " support-class " requires explicit review."))))
+
+(defn- support-class-for [operation constraint]
+  (or (get operation-support-class-overrides operation)
+      (case constraint
+        "none" "native"
+        "clos_mop" "unsupported"
+        "cl_packages" "emulated"
+        "conditions_restarts" "emulated"
+        "compiler_notes" "emulated"
+        "threads" "emulated"
+        "pending_design" "pending_design"
+        "emulated")))
+
+(defn- state-detail-for [definition-evidence registration-evidence test-evidence constraint support-class registration-semantics]
   (def has-definition (> (length definition-evidence) 0))
   (def has-registration (> (length registration-evidence) 0))
   (def has-tests (> (length test-evidence) 0))
   (cond
+    (and has-registration (= registration-semantics "error_stub")) "registered_error_stub"
+    (and has-registration (= registration-semantics "unsupported_stub")) "registered_unsupported_stub"
     (and has-registration has-tests (= support-class "native")) "implemented_native_tested"
     (and has-registration (= support-class "native")) "implemented_native_untested"
     (and has-registration has-tests (= support-class "emulated")) "implemented_emulated_tested"
@@ -439,12 +560,100 @@
   (buffer/push-string out (yaml-list 2 "undocumented_constraints" missing))
   (string out))
 
+(defn- stable-surface-facts [ops surface names]
+  (var functional 0)
+  (var tested 0)
+  (def missing @[])
+  (def untested @[])
+  (def stubbed @[])
+  (each name names
+    (def rec (get ops name))
+    (if (nil? rec)
+      (array/push missing name)
+      (let [definition-evidence (evidence-files janet-files (janet-definition-patterns name))
+            registration-evidence (evidence-files janet-files (janet-registration-patterns name))
+            test-evidence (explicit-test-evidence-files name)
+            semantics (registration-semantics name registration-evidence)]
+        (cond
+          (or (= semantics "error_stub") (= semantics "unsupported_stub"))
+          (array/push stubbed name)
+          (> (length registration-evidence) 0)
+          (do
+            (++ functional)
+            (if (> (length test-evidence) 0)
+              (++ tested)
+              (array/push untested name)))
+          true (array/push missing name)))))
+  (def total (length names))
+  (def percent (if (= total 0) 100 (math/floor (* 100 (/ tested total)))))
+  @{:surface surface
+    :total total
+    :functional functional
+    :tested tested
+    :coverage-percent percent
+    :missing missing
+    :untested untested
+    :stubbed stubbed
+    :gate (if (and (= tested total) (= functional total)) "pass" "fail")})
+
+(defn- stable-subset-facts [ops]
+  (def facts @[])
+  (each surface (sorted (keys stable-subset-by-surface))
+    (array/push facts
+                (stable-surface-facts ops surface (stable-subset-by-surface surface))))
+  facts)
+
+(defn- stable-subset-audit-section [ops]
+  (def facts (stable-subset-facts ops))
+  (var all-pass true)
+  (def out (buffer/new 0))
+  (buffer/push-string out "stable_subset_coverage:\n")
+  (buffer/push-string out "  threshold_policy: direct_tested_percent_by_surface\n")
+  (buffer/push-string out "  required_percent: 100\n")
+  (buffer/push-string out "  surfaces:\n")
+  (each fact facts
+    (when (= "fail" (fact :gate)) (set all-pass false))
+    (buffer/push-string out (string "    " (fact :surface) ":\n"))
+    (buffer/push-string out (string "      total: " (fact :total) "\n"))
+    (buffer/push-string out (string "      functional_registered: " (fact :functional) "\n"))
+    (buffer/push-string out (string "      directly_tested: " (fact :tested) "\n"))
+    (buffer/push-string out (string "      coverage_percent: " (fact :coverage-percent) "\n"))
+    (buffer/push-string out (string "      gate: " (fact :gate) "\n"))
+    (buffer/push-string out (yaml-list 6 "missing" (fact :missing)))
+    (buffer/push-string out (yaml-list 6 "untested" (fact :untested)))
+    (buffer/push-string out (yaml-list 6 "stubbed" (fact :stubbed))))
+  (buffer/push-string out (string "  gate: " (if all-pass "pass" "fail") "\n"))
+  (string out))
+
+(defn- write-coverage-summary [ops output-path]
+  (def facts (stable-subset-facts ops))
+  (def out (buffer/new 0))
+  (buffer/push-string out "---\nlayout: page\ntitle: Protocol coverage\n---\n\n")
+  (buffer/push-string out "# Protocol coverage\n\n")
+  (buffer/push-string out "Generated from `tools/protocol_inventory.janet`. Do not edit by hand.\n\n")
+  (buffer/push-string out "The release gate requires **100% explicit direct test mapping** for the declared stable subset on every frontend surface below. Historical SLYNK operations outside this subset remain visible in the full inventory without becoming a 1.1 compatibility claim.\n\n")
+  (buffer/push-string out "| Surface | Stable ops | Functional | Directly tested | Coverage | Gate |\n")
+  (buffer/push-string out "|---|---:|---:|---:|---:|---|\n")
+  (each fact facts
+    (buffer/push-string out
+      (string "| " (fact :surface) " | " (fact :total) " | " (fact :functional)
+              " | " (fact :tested) " | " (fact :coverage-percent) "% | " (fact :gate) " |\n")))
+  (buffer/push-string out "\n## Stable subset\n\n")
+  (each surface (sorted (keys stable-subset-by-surface))
+    (buffer/push-string out (string "### " surface "\n\n"))
+    (each name (stable-subset-by-surface surface)
+      (buffer/push-string out (string "- `" name "`\n")))
+    (buffer/push-string out "\n"))
+  (spit output-path (string out)))
+
 
 (defn- operation-record [rec]
   (def operation (rec :name))
   (def source-evidence (rec :source_files))
   (def definition-evidence (evidence-files janet-files (janet-definition-patterns operation)))
   (def registration-evidence (evidence-files janet-files (janet-registration-patterns operation)))
+  (def registration-status (registration-semantics operation registration-evidence))
+  (def stub-files (stub-evidence-files operation registration-evidence))
   (def janet-evidence (sorted (array/concat @[] definition-evidence registration-evidence)))
   (def test-evidence (explicit-test-evidence-files operation))
   (def stale-files (evidence-files stale-doc-files (missing-doc-patterns operation)))
@@ -453,25 +662,28 @@
   (buffer/push-string out (string "    kind: " (string/join (rec :kinds) ",") "\n"))
   (def frontend-surface (frontend-surface-for operation))
   (buffer/push-string out (string "    frontend_surface: " frontend-surface "\n"))
+  (buffer/push-string out (string "    stable_subset: " (if (stable-subset? operation frontend-surface) "true" "false") "\n"))
   (def constraint (constraint-for operation))
-  (def support-class (support-class-for constraint))
-  (def state-detail (state-detail-for definition-evidence registration-evidence test-evidence constraint support-class))
+  (def support-class (support-class-for operation constraint))
+  (def state-detail (state-detail-for definition-evidence registration-evidence test-evidence constraint support-class registration-status))
   (buffer/push-string out (string "    support_class: " support-class "\n"))
-  (buffer/push-string out (string "    state: " (state-for definition-evidence registration-evidence test-evidence) "\n"))
+  (buffer/push-string out (string "    state: " (state-for definition-evidence registration-evidence test-evidence registration-status) "\n"))
   (buffer/push-string out (string "    state_detail: " state-detail "\n"))
+  (buffer/push-string out (string "    registration_semantics: " registration-status "\n"))
   (buffer/push-string out (string "    validation_stage: " (validation-stage-for operation frontend-surface constraint) "\n"))
   (buffer/push-string out (string "    owning_spec: " (owning-spec-for operation frontend-surface constraint) "\n"))
   (buffer/push-string out (yaml-list 4 "source_files" source-evidence))
   (buffer/push-string out (yaml-list 4 "janet_files" janet-evidence))
   (buffer/push-string out (yaml-list 4 "definition_files" definition-evidence))
   (buffer/push-string out (yaml-list 4 "registration_files" registration-evidence))
+  (buffer/push-string out (yaml-list 4 "stub_files" stub-files))
   (buffer/push-string out (yaml-list 4 "test_files" test-evidence))
   (buffer/push-string out "    test_evidence_kind: explicit_covers_metadata\n")
   (buffer/push-string out (string "    constraint: " constraint "\n"))
   (when (not (= constraint "none"))
     (buffer/push-string out (string "    constraint_reason: " (constraint-reason-for constraint) "\n")))
   (when (not (= support-class "native"))
-    (buffer/push-string out (string "    support_rationale: " (support-rationale-for support-class constraint state-detail) "\n")))
+    (buffer/push-string out (string "    support_rationale: " (support-rationale-for operation support-class constraint state-detail) "\n")))
   (buffer/push-string out (string "    missing_protocol_state: " (stale-doc-state operation) "\n"))
   (buffer/push-string out (yaml-list 4 "missing_protocol_files" stale-files))
   (string out))
@@ -479,19 +691,23 @@
 (defn generate-inventory []
   (def output-path (or (os/getenv "SLYNET_PROTOCOL_INVENTORY_OUTPUT")
                        "docs/generated/protocol-inventory.yml"))
+  (def coverage-output-path (or (os/getenv "SLYNET_PROTOCOL_COVERAGE_OUTPUT")
+                                "docs/generated/protocol-coverage.md"))
   (when (= output-path "docs/generated/protocol-inventory.yml")
     (os/execute ["sh" "-c" "mkdir -p docs/generated"] :p))
   (def ops (discovered-operations))
   (def out (buffer/new 0))
   (buffer/push-string out "# Generated by tools/protocol_inventory.janet. Do not edit by hand.\n")
   (buffer/push-string out "project: slynet\n")
-  (buffer/push-string out "schema_version: 5\n")
+  (buffer/push-string out "schema_version: 6\n")
   (buffer/push-string out (string "operation_count: " (length (keys ops)) "\n"))
   (buffer/push-string out (coverage-audit-section ops))
+  (buffer/push-string out (stable-subset-audit-section ops))
   (buffer/push-string out "operations:\n")
   (each name (sorted-names ops)
     (buffer/push-string out (operation-record (ops name))))
   (spit output-path (string out))
+  (write-coverage-summary ops coverage-output-path)
   true)
 
 (generate-inventory)

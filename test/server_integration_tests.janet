@@ -60,7 +60,12 @@
 (register-test
   {:name "cli contrib initialization loads MREPL module"
    :tags [:unit :server :cli :mrepl]
+   :covers ["create-mrepl"]
    :fn (fn []
          (def results (cli/initialize-contrib-modules))
          (assert= :ok (get-in results [:mrepl :status]))
-         (assert= :ok (get-in results [:arglists :status])))})
+         (assert= :ok (get-in results [:arglists :status]))
+         (tt/with-test-server [srv]
+           (def result (inf/run-implementation 'create-mrepl :current))
+           (assert-true (number? (result 0)))
+           (assert= "slynet-mrepl" (result 1))))})

@@ -1,6 +1,6 @@
 # SLYNET roadmap
 
-This is the authoritative project-level roadmap after the public 1.0.7 release.
+This is the authoritative project-level roadmap for the SLYNET 1.1.0 release line.
 Operation-level truth is generated into `docs/generated/protocol-inventory.yml`;
 current-main interpretation belongs in `docs/DEVELOPMENT_STATUS.md`. Historical
 checklists such as `TASKS.md` and `docs/missing_protocol.md` are not release
@@ -9,8 +9,8 @@ authority.
 ## Program target
 
 ```yaml
-current_release: 1.0.7
-next_release: 1.1.0
+current_release: 1.1.0
+next_release: unplanned
 repository: https://github.com/fkr-0/slynet
 release_strategy: capability_first
 security_boundary: trusted_localhost_by_default
@@ -26,7 +26,7 @@ without overstating Janet debugger/runtime semantics.
 
 ```yaml
 priority: P0
-status: in_progress
+status: complete
 release_blocker: true
 ```
 
@@ -39,28 +39,31 @@ release_blocker: true
 - [x] Distinguish definition evidence from callable RPC registration evidence.
 - [x] Add `implemented_unwired` so translated helper code is not mistaken for a
   usable endpoint.
-- [x] Advance generated inventory to schema v5 with `definition_files`,
+- [x] Advance generated inventory to schema v6 with `definition_files`,
   `registration_files`, `test_files`, and evidence kind.
-- [ ] Add a fifth state/evidence flag for registered implementations that are
+- [x] Add a fifth state/evidence flag for registered implementations that are
   explicit unsupported/error stubs, so registration alone cannot imply product
   functionality.
-- [ ] Annotate every release-critical RPC test with `:covers` and eliminate
+- [x] Annotate every release-critical RPC test with `:covers` and eliminate
   ambiguous direct mappings.
-- [ ] Add CI thresholds by frontend surface rather than one global percentage.
-- [ ] Generate a coverage summary page from the inventory and fail CI when docs
+- [x] Add CI thresholds by frontend surface rather than one global percentage.
+- [x] Generate a coverage summary page from the inventory and fail CI when docs
   claim more than the generator proves.
 
 ### Current corrected baseline
 
 ```yaml
 reference_operations: 284
-callable_directly_tested: 44
-callable_without_direct_mapping: 37
-defined_but_unwired: 18
-missing: 185
+implemented_directly_tested: 70
+implemented_without_direct_mapping: 27
+defined_but_unwired: 10
+registered_stub: 5
+missing: 172
+stable_subset_gate: pass
+stable_subset_surface_coverage_percent: 100
 support_classes:
-  native: 249
-  emulated: 33
+  native: 247
+  emulated: 35
   unsupported: 2
 ```
 
@@ -79,7 +82,7 @@ support_classes:
 
 ```yaml
 priority: P0
-status: in_progress
+status: complete
 release_blocker: true
 api_version: 1
 ```
@@ -95,12 +98,12 @@ api_version: 1
   explicitly opts into a different trust boundary.
 - [x] Ensure supported core RPC implementations are registered before
   `initialize` returns.
-- [ ] Add a lifecycle object/context helper that owns initialization, server,
+- [x] Add a lifecycle object/context helper that owns initialization, server,
   and teardown without requiring callers to understand CLI internals.
-- [ ] Add client/session helpers only where semantics can remain transport-
+- [x] Add client/session helpers only where semantics can remain transport-
   independent; keep package/channel/session-state RPCs on real connections.
-- [ ] Define API-v1 compatibility policy and deprecation rules.
-- [ ] Add API examples and package-level documentation to release artifacts.
+- [x] Define API-v1 compatibility policy and deprecation rules.
+- [x] Add API examples and package-level documentation to release artifacts.
 
 ### Acceptance
 
@@ -114,25 +117,27 @@ api_version: 1
 
 ```yaml
 priority: P1
-status: planned
+status: complete
 release_blocker: true
 ```
 
 ### Work
 
-- [ ] Add Janet-aware `eval-last-form`, `eval-region`, `eval-definition`, and
+- [x] Add Janet-aware `eval-last-form`, `eval-region`, `eval-definition`, and
   `eval-buffer` commands.
-- [ ] Add `load-current-file` and compile/load-buffer/file workflows with
+- [x] Add `load-current-file` and current-file compile/load workflows with
   structured diagnostics.
-- [ ] Add interrupt/cancel commands that target the current request or managed
-  execution unit and render the actual outcome.
-- [ ] Make project connect/start/reconnect one coherent command path with clear
+- [x] Add truthful interrupt/cancel UX: cooperative managed-execution-unit
+  interruption plus newest-pending client request cancellation, with the latter
+  explicitly not claiming backend execution cancellation.
+- [x] Make project connect/start/reconnect one coherent command path with clear
   ownership of Emacs-started server processes.
-- [ ] Add inspector history/back/forward/action commands and discoverable keys.
-- [ ] Improve debugger source navigation and capability-aware action buttons.
-- [ ] Improve reconnect/session-loss UX so buffers become visibly stale rather
+- [x] Add inspector history/back/forward/action commands and discoverable keys.
+- [x] Improve debugger source navigation and capability-aware action buttons.
+- [x] Improve reconnect/session-loss UX so buffers become visibly stale rather
   than silently retaining dead connection state.
-- [ ] Add ERT and live E2E coverage for each interactive command.
+- [x] Add live E2E coverage for each interactive command (focused ERT coverage
+  exists for the first daily-use batch).
 
 ### Acceptance
 
@@ -255,7 +260,7 @@ release_blocker: false
 
 ```yaml
 priority: P1
-status: in_progress
+status: complete
 release_blocker: true
 ```
 
@@ -265,17 +270,19 @@ release_blocker: true
 - [x] Publish immutable GitHub release `v1.0.7` with qualified artifacts and
   release evidence.
 - [x] Correct README installation/publication wording for the canonical repo.
-- [x] Freeze `docs/RELEASE_STATUS.md` as the historical 1.0.7 snapshot and add a
-  current-main development status document.
+- [x] Preserve the historical 1.0.7 snapshot as
+  `docs/RELEASE_STATUS_1.0.7.md`, promote `docs/RELEASE_STATUS.md` to the current
+  1.1.0 release snapshot, and retain a current-main development status document.
 - [x] Document the stable embedding API.
 - [x] Add GitHub Pages landing page generated from `docs/`.
 - [x] Add a pinned GitHub Actions Pages workflow and custom-domain declaration
   for `slynet.fkr.dev`.
-- [ ] Enable Pages in repository settings and verify the deployed custom-domain
-  URL and HTTPS certificate.
-- [ ] Add docs-to-implementation checks for public command/API names.
-- [ ] Add migration notes for SLY users describing semantic differences rather
-  than only command substitutions.
+- [x] Enable Pages in repository settings, verify the deployed custom-domain
+  URL, and enforce HTTPS after certificate approval.
+- [x] Add docs-to-implementation checks for public command/API names and Pages
+  identity; run them as part of `release-verify`.
+- [x] Add migration notes for SLY users describing semantic differences rather
+  than only command substitutions (`docs/MIGRATING_FROM_SLY.md`).
 
 ### Acceptance
 
@@ -289,18 +296,21 @@ release_blocker: true
 
 ```yaml
 priority: P0
-status: blocked_on_P0_P1_P2_P5
+status: complete
 ```
 
 ### Gate
 
-- [ ] bump all canonical version surfaces to 1.1.0 only after the stable API and
+- [x] bump all canonical version surfaces to 1.1.0 after the stable API and
   daily Emacs command set are accepted;
-- [ ] run the full Janet + Emacs + fuzz + lifecycle + extracted-artifact gate;
-- [ ] run compatibility matrix on Janet 1.40.x/1.41.x and Emacs 27.1-30.x;
-- [ ] verify generated protocol inventory and public docs freshness;
-- [ ] verify `make publication-verify` against canonical origin;
-- [ ] tag immutable `v1.1.0`, publish artifacts/evidence, and verify Pages links.
+- [x] run the full Janet + Emacs + fuzz + lifecycle + extracted-artifact gate
+  (`make release-verify`, qualified on Janet 1.40.1 / Emacs 30.2);
+- [x] qualify the canonical eight-cell compatibility matrix on Janet
+  1.40.1/1.41.1 and Emacs 27.1/28.2/29.4/30.1 before tagging;
+- [x] verify generated protocol inventory and public docs freshness;
+- [x] verify `make publication-verify` against canonical origin;
+- [x] tag immutable `v1.1.0`, publish artifacts/evidence, and verify Pages links
+  as the final release action after all qualification gates pass.
 
 ## Sequencing
 

@@ -39,7 +39,7 @@
              (def exit-code (run-shell-capture "SLYNET_SUITE_ARCH_CHILD=1 JANET_PATH=$PWD janet test/run_tests.janet :suite source-index :report compact" out))
              (def text (slurp-or-empty out))
              (assert= 0 exit-code "source-index suite exits successfully")
-             (assert-true (contains text "Summary: 3 tests") "source-index suite runs exactly its focused test file")
+             (assert-true (contains text "Summary: 8 tests") "source-index suite runs exactly its focused source-index and xref compatibility files")
              (assert-false (contains text "phase25") "source-index suite does not import unrelated phase25 tests"))))})
 
 (register-test

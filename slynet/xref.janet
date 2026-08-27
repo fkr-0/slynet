@@ -3,6 +3,7 @@
 # Provides static analysis facilities for Janet code
 
 (import ./backend)
+(import ./source_index :as source-index)
 
 # Database storage
 (var *db* nil)
@@ -24,21 +25,41 @@
     :specializes "specializes" # Method specializes generic function
     :specialized-by "is specialized by" # Generic function is specialized by method
 })
+
+(defn- file-modified-time [file]
+  "Return FILE's Janet modification timestamp, or nil when it cannot be statted."
+  (when-let [stat (try (os/stat file) ([_ _] nil))]
+    (stat :modified)))
+
 (defn file-modified? [file]
   "Return true if FILE has been modified since last update."
   (def file-entry (get *db* file))
   (if file-entry
-    # Compare timestamps
     (let [old-time (file-entry :timestamp)
-          new-time (os/stat file :mtime)]
-      (> new-time old-time))
+          new-time (file-modified-time file)]
+      (or (nil? old-time)
+          (nil? new-time)
+          (> new-time old-time)))
     # No record, so yes, it's "modified"
     true))
+
+(defn- form-location [file form]
+  "Return an exact parser source location for FORM when Janet provides one."
+  (def source-map
+    (when (tuple? form)
+      (try (tuple/sourcemap form) ([_ _] nil))))
+  @{:file file
+    :line (if (and (tuple? source-map) (> (length source-map) 0))
+            (source-map 0)
+            1)
+    :column (if (and (tuple? source-map) (> (length source-map) 1))
+              (source-map 1)
+              1)
+    :location-precision (if source-map :parser-sourcemap :file-only)})
+
 (defn record-definition [type name file form]
   "Record a definition in the database."
-  (def location {:file file
-                 :line (or (form :line) 1)
-                 :column (or (form :column) 1)})
+  (def location (form-location file form))
 
   # Ensure we have a place to store this type of definition
   (unless (get *db* type)
@@ -49,11 +70,11 @@
     (unless (get type-db name)
       (put type-db name @[]))
     (array/push (get type-db name) location)))
-(defn record-reference [type name file form]
+(defn record-reference [type name file form &opt context-name]
   "Record a reference in the database."
-  (def location {:file file
-                 :line (or (form :line) 1)
-                 :column (or (form :column) 1)})
+  (def location (form-location file form))
+  (when context-name
+    (put location :context-name context-name))
 
   # Create reference entry
   (def ref-type (case type
@@ -71,35 +92,73 @@
     (unless (get type-db name)
       (put type-db name @[]))
     (array/push (get type-db name) location)))
-(defn analyze-form [form file &opt parent-form]
+(defn analyze-form [form file &opt parent-form context-name]
   "Analyze a parsed form and update the cross-reference database."
-  # Basic stub implementation
   (match (type form)
     :array (each subform form
-             (analyze-form subform file form))
-    :tuple (match form
-             # Handle function definitions
-             ['def name & _] (record-definition :var name file form)
-             ['defn name args & _] (record-definition :fn name file form)
-             ['defmacro name args & _] (record-definition :macro name file form)
-             # Handle function calls
-             [fn-name & args] (when (and parent-form (symbol? fn-name))
-                                (record-reference :calls fn-name file form))
-             # Handle other forms recursively
-             (each subform form
-               (analyze-form subform file form)))
+             (analyze-form subform file form context-name))
+    :tuple
+    (match form
+      ['quote & _] nil
+      ['quasiquote & _] nil
+
+      ['def name & body]
+      (do
+        (when (symbol? name) (record-definition :var name file form))
+        (each subform body (analyze-form subform file form name)))
+
+      ['var name & body]
+      (do
+        (when (symbol? name) (record-definition :var name file form))
+        (each subform body (analyze-form subform file form name)))
+
+      ['defn name args & body]
+      (do
+        (when (symbol? name) (record-definition :fn name file form))
+        (each subform body (analyze-form subform file form name)))
+
+      ['defmacro name args & body]
+      (do
+        (when (symbol? name) (record-definition :macro name file form))
+        (each subform body (analyze-form subform file form name)))
+
+      ['set name & body]
+      (do
+        (when (symbol? name) (record-reference :sets name file form context-name))
+        (each subform body (analyze-form subform file form context-name)))
+
+      [fn-name & args]
+      (do
+        (when (and parent-form (symbol? fn-name))
+          (record-reference :calls fn-name file form context-name))
+        (each subform args (analyze-form subform file form context-name)))
+
+      _ nil)
     # Other types can be ignored for basic xref analysis
     nil))
+
+(defn- parse-source-forms [content]
+  "Parse all top-level Janet forms in CONTENT, rejecting invalid/incomplete input."
+  (def p (parser/new))
+  (parser/consume p content)
+  (case (parser/status p)
+    :error (error (or (parser/error p) "Janet parser error"))
+    :pending (error "incomplete Janet source form")
+    nil)
+  (def forms @[])
+  (var wrapped (parser/produce p true))
+  (while wrapped
+    (array/push forms (wrapped 0))
+    (set wrapped (parser/produce p true)))
+  forms)
+
 (defn process-file [file]
   "Process a file and update the cross-reference database."
   (try
-    # Read file content
     (do
       (def content (slurp file))
-      # Parse file
-      (def parsed (parse content))
-      # Analyze parsed form
-      (analyze-form parsed file)
+      (each form (parse-source-forms content)
+        (analyze-form form file))
       true)
     ([err fib]
       (eprintf "Error processing file %s: %s\n" file err)
@@ -108,6 +167,28 @@
   "Clear the cross-reference database."
   (set *db* nil)
   (set *db-updated* nil))
+
+(def xref-fact-kinds @[:calls :references :sets :var :fn :macro])
+
+(defn- remove-file-facts! [file]
+  "Remove all static xref facts and timestamp state contributed by FILE."
+  (when (table? *db*)
+    (each kind xref-fact-kinds
+      (when-let [kind-db (get *db* kind)]
+        (when (table? kind-db)
+          (def names @[])
+          (eachp [name _] kind-db (array/push names name))
+          (each name names
+            (def locations (get kind-db name @[]))
+            (def kept @[])
+            (each location locations
+              (when (not (= file (location :file)))
+                (array/push kept location)))
+            (if (= 0 (length kept))
+              (put kind-db name nil)
+              (put kind-db name kept))))))
+    (put *db* file nil))
+  true)
 
 (defn save-database []
   "Save the cross-reference database to a file."
@@ -125,6 +206,9 @@
     (var file-updated false)
     # Check if file needs updating (if it's been modified since last update)
     (when (file-modified? file)
+      # Replace facts atomically at the file granularity instead of appending
+      # duplicate/stale call sites across source edits.
+      (remove-file-facts! file)
       # Parse file and update database
       (when (process-file file)
         (set updated true)
@@ -132,7 +216,7 @@
 
     # If processed, update timestamp
     (when file-updated
-      (put *db* file {:timestamp (os/stat file :mtime)})))
+      (put *db* file {:timestamp (file-modified-time file)})))
 
   # Update database status
   (set *db-updated* updated)
@@ -165,21 +249,22 @@
 
 (defn who-calls [symbol]
   "Find all callers of SYMBOL."
-  (let [calls-db (get *db* :calls)
-        locations (get calls-db symbol)]
-    (or locations @[])))
+  (let [calls-db (get (or *db* @{}) :calls @{})
+        locations (get calls-db symbol @[])]
+    locations))
 
 (defn who-references [symbol]
   "Find all references to SYMBOL."
-  (let [refs-db (get *db* :references)
-        locations (get refs-db symbol)]
-    (or locations @[])))
+  (let [refs-db (get (or *db* @{}) :references @{})
+        locations (get refs-db symbol @[])]
+    locations))
 
 (defn who-binds [symbol]
   "Find all bindings of SYMBOL."
-  (let [var-db (get *db* :var)
-        fn-db (get *db* :fn)
-        macro-db (get *db* :macro)
+  (let [db (or *db* @{})
+        var-db (get db :var @{})
+        fn-db (get db :fn @{})
+        macro-db (get db :macro @{})
         var-locs (get var-db symbol @[])
         fn-locs (get fn-db symbol @[])
         macro-locs (get macro-db symbol @[])]
@@ -187,18 +272,40 @@
 
 (defn who-sets [symbol]
   "Find all setters of SYMBOL."
-  (let [sets-db (get *db* :sets)
-        locations (get sets-db symbol)]
-    (or locations @[])))
+  (let [sets-db (get (or *db* @{}) :sets @{})
+        locations (get sets-db symbol @[])]
+    locations))
 
-(defn list-callers [files]
-  "Update the database for FILES and return it."
+(defn index-files [files]
+  "Update the static xref database for FILES and return the database."
   (update-xrefs files)
   *db*)
+
+(defn refresh-project [root]
+  "Refresh static xref facts for Janet files below ROOT."
+  (def files (source-index/collect-files root))
+  (unless *db* (set *db* @{}))
+  (def present @{})
+  (each file files (put present file true))
+  (def stale @[])
+  (def root-prefix (string root "/"))
+  (eachp [key _] *db*
+    (when (and (string? key)
+               (string/has-prefix? root-prefix key)
+               (nil? (get present key)))
+      (array/push stale key)))
+  (each file stale (remove-file-facts! file))
+  (index-files files))
+
+(defn list-callers [function-name]
+  "Return static call sites for FUNCTION-NAME, matching who-calls semantics."
+  (who-calls function-name))
 
 # Export public API
 (def export-api
   @{:list-callers list-callers
+    :index-files index-files
+    :refresh-project refresh-project
     :who-calls who-calls
     :who-references who-references
     :who-binds who-binds

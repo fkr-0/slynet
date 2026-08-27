@@ -7,16 +7,47 @@ Versioning.
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-08-27
+
 ### Added
 
 - Added a canonical `slynet/api.janet` embedding API v1 with loopback-safe
   server lifecycle, capability reporting, RPC metadata lookup, and in-process
   invocation for context-free RPCs.
+- Added API-v1 lifecycle contexts that own initialization and at most one server,
+  with reusable stop and idempotent terminal close semantics.
 - Added explicit per-test protocol `:covers` metadata and protocol inventory
-  schema v5, which distinguishes callable registrations, unwired definitions,
-  and direct test evidence across the complete tracked SLY/SLYNK corpus.
+  schema v6, which distinguishes functional registrations, registered
+  error/unsupported stubs, unwired definitions, direct test evidence, and a
+  100%-mapped release-critical stable subset by frontend surface.
 - Added a GitHub Pages documentation site and pinned deployment workflow for
   `https://slynet.fkr.dev`.
+- Added daily-use Emacs commands for evaluating the last form, region,
+  definition, and buffer; compiling/loading the current file; and cooperatively
+  interrupting a managed SLYNET execution unit.
+- Added newest-pending client request cancellation with an explicit distinction
+  between client bookkeeping cancellation and backend execution interruption.
+- Added a fail-closed public-docs contract gate that verifies documented Emacs
+  commands/keybindings, Janet embedding API symbols, and Pages domain identity.
+- Added transport-independent API-v1 `context-status`, a complete legacy
+  `slynet/slynet-api` compatibility shim, explicit API-v1 deprecation policy,
+  and an executable `examples/embed-server.janet` shipped and smoke-tested in
+  release artifacts.
+- Added live editor E2E coverage for region/form/definition/buffer evaluation,
+  compile/load, cooperative interruption, client cancellation, inspector
+  history/actions, stale-session marking, server restart, and reconnect.
+- Added live timeout/late-reply recovery and error -> debugger -> restart ->
+  xref -> compile-diagnostic -> continued-eval E2E scenarios.
+- Added 21 directly tested editor-adjacent compatibility RPCs backed by existing
+  native or explicitly emulated Janet semantics across compile/load, inspector,
+  xref/source navigation, REPL inspection, debugger restart/package lookup, and
+  compiler-macroexpand compatibility.
+- Added parser-sourcemap-backed static xref RPCs for `who-calls`, `who-binds`,
+  `who-sets`, and `list-callers`, including enclosing caller identity and exact
+  source coordinates. `who-references` remains deliberately unwired until
+  variable-read analysis is precise enough to avoid false claims.
+- Added `docs/MIGRATING_FROM_SLY.md` with explicit Janet-vs-Common-Lisp semantic
+  migration boundaries.
 
 ### Changed
 
@@ -24,6 +55,28 @@ Versioning.
   stickers, retro, and indentation contrib reference sources.
 - Updated public installation and release documentation for the canonical
   `fkr-0/slynet` repository and published v1.0.7 release.
+- Fixed the documented `C-c C-s m` MREPL command so it is actually interactive
+  and opens the REPL when backend MREPL creation completes.
+- Normalized live Janet symbol-key records in Emacs UI property access so
+  inspector/debugger/diagnostic payloads render the same way as local keyword
+  fixtures.
+- Preserved UI-buffer connection provenance across derived-mode re-rendering so
+  unexpected connection loss marks historical buffers visibly stale.
+- Made the Emacs wire printer bounded and reader-safe for rich Janet debugger
+  payloads, including tuples, opaque values, and cyclic container structures.
+- Propagated file paths through `compile-file-for-emacs` so structured compile
+  diagnostics retain source provenance for editor navigation.
+- Repaired the legacy static xref analyzer for Janet 1.40: it now uses the real
+  `os/stat :modified` field, parses all top-level forms, recurses through function
+  bodies, reads `tuple/sourcemap` coordinates, skips quoted data as runtime-call
+  evidence, tracks caller context, replaces prior facts on modified files, prunes
+  deleted-file facts, and restores the reference `list-callers` query
+  signature/semantics.
+- Corrected the newer source-index cache signature to use Janet 1.40's
+  `os/stat :modified` field and added a same-size rewrite invalidation regression.
+- Made schema-6 support classification agree with runtime metadata for
+  `compiler-macroexpand[-1]`: both are explicit Janet emulations rather than
+  native Common Lisp compiler-macro equivalents.
 
 ## [1.0.7] - 2026-08-27
 

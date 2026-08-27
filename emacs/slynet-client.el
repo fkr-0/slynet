@@ -3,7 +3,7 @@
 ;; Copyright (C) 2026
 
 ;; Author: SLYNET contributors
-;; Version: 1.0.7
+;; Version: 1.1.0
 ;; Package-Requires: ((emacs "27.1"))
 ;; Keywords: languages, lisp, janet, tools, processes
 
@@ -28,6 +28,12 @@
 (defvar slynet-client-callback-error-functions nil
   "Abnormal hook run when a request callback signals an error.
 Each function receives CONNECTION, REQUEST-ID, PAYLOAD, and ERROR-DATA.")
+
+(defvar slynet-client-state-change-functions nil
+  "Hook run when a SLYNET connection changes lifecycle state.
+Each function receives CONNECTION, STATE, and REASON.  STATE is one of
+`:connected' or `:disconnected'; REASON is nil for a normal connect and a
+keyword describing teardown otherwise.")
 
 (defconst slynet-client-max-frame-bytes #xffffff
   "Largest payload representable by the six-hex-digit SLYNET frame prefix.")
@@ -291,6 +297,7 @@ are passed to `open-network-stream'."
          (when (eq sentinel-process
                    (slynet-client-connection-process connection))
            (slynet-client--reset-connection-state connection :connection-lost)))))
+    (slynet-client--notify-state-change connection :connected nil)
     connection))
 
 (defun slynet-client-send (connection message)
@@ -326,6 +333,15 @@ PAYLOAD is the value delivered to the failing callback."
       (error
        (slynet-client--report-callback-error
         connection request-id payload err)))))
+
+(defun slynet-client--notify-state-change (connection state reason)
+  "Notify lifecycle hooks that CONNECTION entered STATE for REASON."
+  (dolist (function slynet-client-state-change-functions)
+    (condition-case err
+        (funcall function connection state reason)
+      (error
+       (slynet-client--report-callback-error
+        connection nil (list :state-change state reason) err)))))
 
 (defun slynet-client--run-channel-message-hooks (connection channel-id payload)
   "Run channel hooks independently for CONNECTION, CHANNEL-ID, and PAYLOAD."
@@ -409,7 +425,9 @@ Pending callbacks receive an abort payload using REASON or `:connection-lost'."
       (slynet-client-cancel-request
        connection request-id (or reason :connection-lost))))
   (slynet-client--close-mrepl-state
-   connection (or reason :connection-lost)))
+   connection (or reason :connection-lost))
+  (slynet-client--notify-state-change
+   connection :disconnected (or reason :connection-lost)))
 
 (defun slynet-client--payload-op (payload)
   "Return the operation symbol or keyword at the head of PAYLOAD."

@@ -525,6 +525,11 @@
   @[:support-class :pending-design
     :native-resumable-debugger false
     :operations @[:step :next :out :continue]
+    :actions @[@[:operation :step :label "Step" :callable false :support-class :pending-design]
+               @[:operation :next :label "Next" :callable false :support-class :pending-design]
+               @[:operation :out :label "Out" :callable false :support-class :pending-design]
+               @[:operation :continue :label "Continue" :callable true :rpc :sly-db-continue
+                  :support-class :emulated :semantics :leave-debugger-facade]]
     :workaround :cooperative-checkpoints
     :uses-janet-debug-primitives true
     :cl-debugger-control-equivalent false])
@@ -939,6 +944,7 @@
 
 
 (var *inspector-stack* @[])
+(var *inspector-forward-stack* @[])
 (var *inspector-counter* 0)
 (var *inspector-object-counter* 0)
 
@@ -1102,6 +1108,63 @@
                                     (string "(defn " sym-name " [& args])"))))
         (array/concat exact-hits other-hits)))))
 
+(defn find-definition-for-thing [thing]
+  "Return the first source-index definition hit for THING, or nil."
+  (def hits (find-definitions-for-emacs thing))
+  (if (> (length hits) 0) (hits 0) nil))
+
+(defn find-source-location-for-emacs [thing]
+  "Return one Emacs-facing source location for THING, or nil."
+  (when-let [hit (find-definition-for-thing thing)]
+    @[:file (plist-value hit :file)
+      :line (plist-value hit :line)
+      :column (plist-value hit :column)
+      :snippet (plist-value hit :snippet)
+      :name (plist-value hit :name)
+      :kind (plist-value hit :kind)
+      :xref-kind (plist-value hit :xref-kind)
+      :source-index (plist-value hit :source-index)]))
+
+(defn- xref-query-symbol [thing]
+  (if (symbol? thing) thing (symbol (string thing))))
+
+(defn- static-xref-hit [name kind location]
+  (def context-name (location :context-name))
+  @[:name (string (or context-name name))
+    :query-name (string name)
+    :context-name (when context-name (string context-name))
+    :xref-kind kind
+    :source-index :slynet-static-xref
+    :file (location :file)
+    :line (location :line)
+    :column (location :column)
+    :location-precision (location :location-precision)
+    :support-class :native])
+
+(defn- static-xref-query [name kind query]
+  (def sym (xref-query-symbol name))
+  (xref/refresh-project (os/cwd))
+  (def hits @[])
+  (each location (query sym)
+    (array/push hits (static-xref-hit sym kind location)))
+  hits)
+
+(defn who-calls [function-name]
+  "Return parser-sourcemap-backed static Janet callers/call sites for FUNCTION-NAME."
+  (static-xref-query function-name :call xref/who-calls))
+
+(defn who-binds [variable-name]
+  "Return parser-sourcemap-backed Janet binding sites for VARIABLE-NAME."
+  (static-xref-query variable-name :binding xref/who-binds))
+
+(defn who-sets [variable-name]
+  "Return parser-sourcemap-backed explicit Janet set sites for VARIABLE-NAME."
+  (static-xref-query variable-name :set xref/who-sets))
+
+(defn list-callers [function-name]
+  "Return lower-level static Janet caller identities and call sites for FUNCTION-NAME."
+  (static-xref-query function-name :call xref/list-callers))
+
 (defn- inspector-title [obj]
   (let [printed (print-for-emacs/prin1-to-string-for-emacs obj *package*)]
     (if (> (length printed) 60)
@@ -1173,12 +1236,28 @@
 
 (defn inspect-for-emacs [thing]
   (let [entry (make-inspector-entry thing)]
+    (array/clear *inspector-forward-stack*)
     (array/push *inspector-stack* entry)
     (render-inspector entry)))
 
+(defn init-inspector [thing]
+  "Compatibility entrypoint backed by SLYNET's native inspector session."
+  (inspect-for-emacs thing))
+
+(defn inspect-in-emacs [thing]
+  "Inspect THING through the same native inspector payload as inspect-for-emacs."
+  (inspect-for-emacs thing))
+
 (defn inspector-pop []
   (when (> (length *inspector-stack*) 1)
-    (array/pop *inspector-stack*))
+    (array/push *inspector-forward-stack* (array/pop *inspector-stack*)))
+  (if (> (length *inspector-stack*) 0)
+    (render-inspector (get *inspector-stack* (- (length *inspector-stack*) 1)))
+    @[:id 0 :object-id nil :parent-object-id nil :part-key nil :title "" :type nil :content @[] :can-pop false]))
+
+(defn inspector-next []
+  (when (> (length *inspector-forward-stack*) 0)
+    (array/push *inspector-stack* (array/pop *inspector-forward-stack*)))
   (if (> (length *inspector-stack*) 0)
     (render-inspector (get *inspector-stack* (- (length *inspector-stack*) 1)))
     @[:id 0 :object-id nil :parent-object-id nil :part-key nil :title "" :type nil :content @[] :can-pop false]))
@@ -1206,8 +1285,17 @@
   (let [child-entry (make-inspector-entry child
                                           (if (inspector-entry? parent-entry) (parent-entry :object-id) nil)
                                           (string idx))]
+    (array/clear *inspector-forward-stack*)
     (array/push *inspector-stack* child-entry)
     (render-inspector child-entry)))
+
+(defn inspect-nth-part [n]
+  "Compatibility alias for inspector-nth-part."
+  (inspector-nth-part n))
+
+(defn inspector-nth-part-or-lose [n]
+  "Return inspector part N and signal when it is unavailable."
+  (inspector-nth-part n))
 
 (defn- current-inspector-entry []
   (when (> (length *inspector-stack*) 0)
@@ -1296,6 +1384,79 @@
       :callable false
       :unsupported-reason "Editing arbitrary Janet values is not yet a safe SLYNET inspector action."]])
 
+(defn inspector-call-nth-action [n]
+  (def actions (inspector-actions))
+  (def idx (if (number? n) n 0))
+  (when (or (< idx 0) (>= idx (length actions)))
+    (error "inspector action index out of range"))
+  (def action (actions idx))
+  (def action-id (get action 1))
+  (case action-id
+    :copy-value
+    (let [entry (current-inspector-entry)]
+      (unless entry (error "inspector is empty"))
+      @[:status :ok
+        :action-id :copy-value
+        :support-class :native
+        :value (print-for-emacs/prin1-to-string-for-emacs
+                 (inspector-entry-object entry) *package*)])
+    :edit-value
+    @[:status :unsupported
+      :action-id :edit-value
+      :support-class :unsupported
+      :callable false
+      :unsupported-reason "Editing arbitrary Janet values is not yet a safe SLYNET inspector action."]
+    @[:status :unsupported
+      :action-id action-id
+      :support-class :unsupported
+      :callable false
+      :unsupported-reason "Unknown inspector action."]))
+
+(defn describe-inspectee []
+  "Describe the currently inspected Janet value without mutating history."
+  (let [entry (current-inspector-entry)]
+    (unless entry (error "inspector is empty"))
+    (def obj (inspector-entry-object entry))
+    @[:status :ok
+      :object-id (entry :object-id)
+      :type (type obj)
+      :description (print-for-emacs/prin1-to-string-for-emacs obj *package*)
+      :support-class :native]))
+
+(defn pprint-inspector-part [n]
+  "Pretty-print inspector part N without changing the current inspectee."
+  (let [entry (current-inspector-entry)]
+    (unless entry (error "inspector is empty"))
+    (def obj (inspector-entry-object entry))
+    (def idx (if (number? n) n 0))
+    (when (or (< idx 0) (>= idx (inspector-parts-count obj)))
+      (error "inspector part out of range"))
+    (print-for-emacs/prin1-to-string-for-emacs
+      (inspector-part-value obj idx) *package*)))
+
+(defn inspector-eval [code]
+  "Evaluate CODE using Janet semantics and inspect its final value."
+  (default code "")
+  (def forms (gray/read-forms-from-string code))
+  (when (and (> (length code) 0) (= 0 (length forms)))
+    (error "no forms parsed"))
+  (var value nil)
+  (each form forms (set value (eval form)))
+  (inspect-for-emacs value))
+
+(defn eval-for-inspector [form]
+  "Evaluate FORM (or source string) and inspect the resulting Janet value."
+  (if (string? form)
+    (inspector-eval form)
+    (inspect-for-emacs (eval form))))
+
+(defn quit-inspector []
+  "Clear inspector navigation state and return explicit lifecycle metadata."
+  (def cleared (+ (length *inspector-stack*) (length *inspector-forward-stack*)))
+  (array/clear *inspector-stack*)
+  (array/clear *inspector-forward-stack*)
+  @[:status :closed :cleared cleared :support-class :native])
+
 
 
 (defn- parse-form-or-string [thing]
@@ -1312,6 +1473,9 @@
   (let [form (parse-form-or-string thing)]
     (var current (try (macex form) ([_ _] form)))
     (print-for-emacs/prin1-to-string-for-emacs current *package*)))
+
+(defn macroexpand-all [thing]
+  (macroexpand-all-for-emacs thing))
 
 (defn- make-janet-diagnostic [severity phase message &opt path line column snippet source-kind]
   (default line 1)
@@ -1473,6 +1637,30 @@
           :forms 0]
         (diagnostic-result-fields diagnostics)))))
 
+(defn compile-multiple-strings-for-emacs [strings &opt policy]
+  "Compile/evaluate each source string and return one bounded diagnostic envelope."
+  (unless (indexed? strings)
+    (error "compile-multiple-strings-for-emacs expects an indexed collection"))
+  (def results @[])
+  (def diagnostics @[])
+  (var success true)
+  (var index 0)
+  (each source strings
+    (def result (compile-string-for-emacs (string source) (string "<string-" index ">") 1 1))
+    (array/push results result)
+    (unless (plist-value result :success) (set success false))
+    (each diagnostic (or (plist-value result :diagnostics) @[])
+      (array/push diagnostics diagnostic))
+    (++ index))
+  @[:success success
+    :status (if success :ok :error)
+    :results results
+    :diagnostics diagnostics
+    :diagnostic-model :janet-diagnostics
+    :policy policy
+    :support-class :emulated
+    :cl-compiler-note-equivalent false])
+
 
 (defn runtime-eval-diagnostics [code &opt path line column]
   (default code "")
@@ -1496,7 +1684,6 @@
         :diagnostics diagnostics
         :diagnostic-model :janet-diagnostics
         :cl-compiler-note-equivalent false])))
-
 
 (defn runtime-error-diagnostics [code path line column]
   (def result (runtime-eval-diagnostics code path line column))
@@ -1778,6 +1965,7 @@
                          :level (*debugger-state* :level)})
     (render-inspector nil)))
 (defn debugger-info-for-emacs []
+  (put *debugger-state* :control-capabilities (debugger-control-capabilities))
   *debugger-state*)
 
 (defn backtrace [&opt start end]
@@ -1809,6 +1997,21 @@
       (put *debugger-state* :active false)
       @[:ok (get restart 1)])))
 
+(defn invoke-nth-restart-for-emacs [level n]
+  "Invoke restart N; LEVEL is retained only for SLY wire compatibility."
+  (def result (invoke-nth-restart n))
+  @[:status :ok
+    :level level
+    :restart-index n
+    :restart-name (get result 1)
+    :support-class :emulated
+    :cl-restart-equivalent false])
+
+(defn frame-package-name [n]
+  "Return Janet's current module/environment name for frame compatibility."
+  (debugger-frame-details n)
+  (or (*package* :name) "core"))
+
 (defn sly-db-abort []
   (invoke-nth-restart 0))
 
@@ -1837,7 +2040,7 @@
   (default path "")
   (try
     (let [code (read-file-text path)
-          result (compile-string-for-emacs code)]
+          result (compile-string-for-emacs code path 1 1)]
       @[:success (plist-value result :success)
         :path path
         :value (plist-value result :value)
@@ -1881,6 +2084,29 @@
         :diagnostics diagnostics
         :diagnostic-model :janet-diagnostics
         :cl-compiler-note-equivalent false])))
+
+(defn compile-file-if-needed [path &opt load-p]
+  "Validate PATH on every call; optionally load it after successful validation."
+  (default load-p false)
+  (def compiled (compile-file-for-emacs path))
+  (if (and (plist-value compiled :success) load-p)
+    (let [loaded (load-file path)]
+      @[:success (plist-value loaded :success)
+        :status (if (plist-value loaded :success) :ok :error)
+        :path path
+        :compiled compiled
+        :loaded loaded
+        :compile-strategy :validate-source-each-call
+        :support-class :emulated
+        :cl-compile-file-cache-equivalent false])
+    @[:success (plist-value compiled :success)
+      :status (if (plist-value compiled :success) :ok :error)
+      :path path
+      :compiled compiled
+      :loaded nil
+      :compile-strategy :validate-source-each-call
+      :support-class :emulated
+      :cl-compile-file-cache-equivalent false]))
 
 (defn slynk-require [module-name]
   (let [name (string module-name)]
@@ -2312,6 +2538,20 @@
 (defn slynk-compiler-macroexpand [thing]
   (expansion-record :slynk-compiler-macroexpand thing false))
 
+(defn compiler-macroexpand-1 [thing &opt env]
+  "Compatibility compiler-macroexpand-1 using Janet macro expansion semantics."
+  (append-plist
+    (expansion-record :compiler-macroexpand-1 thing true)
+    @[:environment-provided (not (nil? env))
+      :environment-supported false]))
+
+(defn compiler-macroexpand [thing &opt env]
+  "Compatibility compiler-macroexpand using Janet macro expansion semantics."
+  (append-plist
+    (expansion-record :compiler-macroexpand thing false)
+    @[:environment-provided (not (nil? env))
+      :environment-supported false]))
+
 (defn slynk-macroexpand-1 [thing]
   (expansion-record :slynk-macroexpand-1 thing true))
 
@@ -2381,19 +2621,40 @@
   (inf/defimpl 'frame-locals-and-catch-tags frame-locals-and-catch-tags)
   (inf/defimpl 'thread-info thread-info)
   (inf/defimpl 'find-definitions-for-emacs find-definitions-for-emacs)
+  (inf/defimpl 'find-definition-for-thing find-definition-for-thing)
+  (inf/defimpl 'find-source-location-for-emacs find-source-location-for-emacs)
+  (inf/defimpl 'who-calls who-calls)
+  (inf/defimpl 'who-binds who-binds)
+  (inf/defimpl 'who-sets who-sets)
+  (inf/defimpl 'list-callers list-callers)
   (inf/defimpl 'inspect-for-emacs inspect-for-emacs)
+  (inf/defimpl 'init-inspector init-inspector)
+  (inf/defimpl 'inspect-in-emacs inspect-in-emacs)
   (inf/defimpl 'inspector-nth-part inspector-nth-part)
+  (inf/defimpl 'inspect-nth-part inspect-nth-part)
+  (inf/defimpl 'inspector-nth-part-or-lose inspector-nth-part-or-lose)
   (inf/defimpl 'inspector-pop inspector-pop)
+  (inf/defimpl 'inspector-next inspector-next)
   (inf/defimpl 'inspector-reinspect inspector-reinspect)
   (inf/defimpl 'inspector-range inspector-range)
   (inf/defimpl 'inspector-history inspector-history)
   (inf/defimpl 'inspector-actions inspector-actions)
+  (inf/defimpl 'inspector-call-nth-action inspector-call-nth-action)
+  (inf/defimpl 'describe-inspectee describe-inspectee)
+  (inf/defimpl 'pprint-inspector-part pprint-inspector-part)
+  (inf/defimpl 'inspector-eval inspector-eval)
+  (inf/defimpl 'eval-for-inspector eval-for-inspector)
+  (inf/defimpl 'quit-inspector quit-inspector)
   (inf/defimpl 'compile-file-for-emacs compile-file-for-emacs)
+  (inf/defimpl 'compile-multiple-strings-for-emacs compile-multiple-strings-for-emacs)
+  (inf/defimpl 'compile-file-if-needed compile-file-if-needed)
   (inf/defimpl 'load-file load-file)
   (inf/defimpl 'slynk-require slynk-require)
   (inf/defimpl 'debugger-info-for-emacs debugger-info-for-emacs)
   (inf/defimpl 'backtrace backtrace)
   (inf/defimpl 'invoke-nth-restart invoke-nth-restart)
+  (inf/defimpl 'invoke-nth-restart-for-emacs invoke-nth-restart-for-emacs)
+  (inf/defimpl 'frame-package-name frame-package-name)
   (inf/defimpl 'sly-db-abort sly-db-abort)
   (inf/defimpl 'sly-db-continue sly-db-continue)
   (inf/defimpl 'list-threads list-threads)
@@ -2411,6 +2672,9 @@
   (inf/defimpl 'toggle-debug-on-slynk-error toggle-debug-on-slynk-error)
   (inf/defimpl 'macroexpand-1-for-emacs macroexpand-1-for-emacs)
   (inf/defimpl 'macroexpand-all-for-emacs macroexpand-all-for-emacs)
+  (inf/defimpl 'macroexpand-all macroexpand-all)
+  (inf/defimpl 'compiler-macroexpand-1 compiler-macroexpand-1)
+  (inf/defimpl 'compiler-macroexpand compiler-macroexpand)
   (inf/defimpl 'compile-string-for-emacs compile-string-for-emacs)
   (inf/defimpl 'runtime-error-diagnostics runtime-error-diagnostics)
   (inf/defimpl 'test-failure-diagnostic test-failure-diagnostic)

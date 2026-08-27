@@ -122,6 +122,18 @@ def assert_direct_cli(version: str) -> None:
     require(version in version_result.stdout, f"direct CLI --version did not report {version}")
 
 
+def assert_embedding_example() -> None:
+    example = ROOT / "examples/embed-server.janet"
+    require(example.is_file(), "executable embedding example is missing")
+    require(os.access(example, os.X_OK), "examples/embed-server.janet must be executable")
+    result = run_checked([str(example), "--check"])
+    require(result.returncode == 0, f"embedding example --check failed:\n{result.stdout}")
+    require(
+        "embedding check passed" in result.stdout,
+        "embedding example did not report successful API-v1 check",
+    )
+
+
 def free_port() -> int:
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
         sock.bind(("127.0.0.1", 0))
@@ -205,6 +217,7 @@ def main() -> None:
     assert_version_coherence(version)
     assert_no_release_placeholders(version)
     assert_direct_cli(version)
+    assert_embedding_example()
     assert_direct_tcp_startup()
     if args.require_remote:
         assert_publication_remote()

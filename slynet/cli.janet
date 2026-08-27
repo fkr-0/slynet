@@ -127,29 +127,35 @@
   (default options @{})
   (def delete (options :delete))
   (def reload (options :reload))
-  (when (get modules :slynk)
-    (cond
-      delete (each name (keys modules) (put modules name nil))
-      (not reload) (do
-                     (log "INFO" "SLYNK already loaded. Use :reload true to reload.\n")
-                     (return nil))))
-  (each module required-modules (load-module module))
-  (put modules :backend backend/export-api)
-  (put modules :rpc rpc/export-api)
-  (put modules :slynk slynk/export-api)
-  (put modules :gray gray/export-api)
-  (put modules :completion completion/export-api)
-  (put modules :xref xref/export-api)
-  (initialize-backend options)
-  (initialize-rpc options)
-  (when (and (not *loaded-user-init-file*) (os/stat *user-init-file*))
-    (load-user-init))
-  (each hook (get *slynk-hooks* :init) (hook))
-  (when (or (options :enable-contrib) true)
-    (def contrib-modules (options :contrib-modules))
-    (initialize-contrib-modules contrib-modules)
-    (put modules :contrib contrib/export-api))
-  true)
+  (def already-loaded? (and (get modules :slynk) (not delete) (not reload)))
+  (if already-loaded?
+    (do
+      (log "INFO" "SLYNK already loaded; initialization is idempotent.\n")
+      true)
+    (do
+      (when delete
+        (each name (keys modules) (put modules name nil)))
+      (each module required-modules (load-module module))
+      (put modules :backend backend/export-api)
+      (put modules :rpc rpc/export-api)
+      (put modules :slynk slynk/export-api)
+      (put modules :gray gray/export-api)
+      (put modules :completion completion/export-api)
+      (put modules :xref xref/export-api)
+      (initialize-backend options)
+      (initialize-rpc options)
+      (when (and (not *loaded-user-init-file*) (os/stat *user-init-file*))
+        (load-user-init))
+      (each hook (get *slynk-hooks* :init) (hook))
+      (def enable-contrib?
+        (if (has-key? options :enable-contrib)
+          (options :enable-contrib)
+          true))
+      (when enable-contrib?
+        (def contrib-modules (options :contrib-modules))
+        (initialize-contrib-modules contrib-modules)
+        (put modules :contrib contrib/export-api))
+      true)))
 
 ############################
 # Server Lifecycle (TCP/STDIO)
@@ -288,7 +294,10 @@
     (error (string "unknown mode: " mode))))
 
 (defn server/stop! [srv]
-  (when-let [f (srv :transport :close!)] (f)))
+  (when-let [transport (srv :transport)]
+    (when-let [f (transport :close!)]
+      (f)))
+  true)
 
 ############################
 # CLI

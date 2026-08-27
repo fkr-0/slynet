@@ -170,7 +170,7 @@
   (each path files
     (let [stat (try (os/stat path) ([_ _] nil))]
       (when stat
-        (array/push sig [path (stat :mtime) (stat :size)]))))
+        (array/push sig [path (stat :modified) (stat :size)]))))
   sig)
 
 (defn- signature-equal? [a b]

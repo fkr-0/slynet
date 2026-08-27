@@ -14,6 +14,8 @@
 (defn reset-test-state! []
   (set slynk/*slynk-debug-p* true)
   (set slynk/*inspector-stack* @[])
+  (set slynk/*inspector-forward-stack* @[])
+  (set slynk/*inspector-forward-stack* @[])
   (set slynk/*inspector-counter* 0)
   (set slynk/*inspector-object-counter* 0)
   (inf/ensure-interfaces-initialized!)
@@ -30,6 +32,7 @@
   (ensure-send-handler)
   (def prev-debug slynk/*slynk-debug-p*)
   (def prev-inspector-stack slynk/*inspector-stack*)
+  (def prev-inspector-forward-stack slynk/*inspector-forward-stack*)
   (def prev-inspector-counter slynk/*inspector-counter*)
   (def prev-inspector-object-counter slynk/*inspector-object-counter*)
   (set slynk/*slynk-debug-p* true)
@@ -87,6 +90,7 @@
    :dispose (fn []
               (set slynk/*slynk-debug-p* prev-debug)
               (set slynk/*inspector-stack* prev-inspector-stack)
+              (set slynk/*inspector-forward-stack* prev-inspector-forward-stack)
               (set slynk/*inspector-counter* prev-inspector-counter)
               (set slynk/*inspector-object-counter* prev-inspector-object-counter)
               (when prev-send (rpc/set-send-handler prev-send))

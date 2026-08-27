@@ -24,6 +24,10 @@
                                       :label "Abort to REPL"
                                       :restart-kind :synthetic
                                       :support-class :emulated))
+                            :control-capabilities
+                            (:support-class :pending-design
+                             :actions ((:operation :step :label "Step" :callable nil :support-class :pending-design)
+                                       (:operation :continue :label "Continue" :callable t :support-class :emulated)))
                             :frames ((:index 0
                                       :callable "trigger-debugger"
                                       :location (:file "slynet/slynk.janet"
@@ -49,6 +53,29 @@
           (should (string-match-p "source=janet-debug-stack" (buffer-string)))
           (should (string-match-p "janet-status=error" (buffer-string)))
           (should (string-match-p "pc=9" (buffer-string))))))))
+
+(ert-deftest slynet-debugger-controls-buttonize-only-callable-capabilities ()
+  (let ((slynet-current-connection (slynet-debugger-test--connection))
+        requested)
+    (cl-letf (((symbol-function 'slynet-client-send-rex-async)
+               (lambda (_connection form callback &rest _ignored)
+                 (setq requested form)
+                 (funcall callback '(:ok))
+                 34)))
+      (with-temp-buffer
+        (slynet-debugger-mode)
+        (let ((inhibit-read-only t))
+          (slynet--insert-debugger-controls
+           '(:actions ((:operation :step :label "Step" :callable nil :support-class :pending-design)
+                       (:operation :continue :label "Continue" :callable t :support-class :emulated))))
+          (goto-char (point-min))
+          (search-forward "Step")
+          (should-not (button-at (1- (point))))
+          (search-forward "Continue")
+          (let ((button (button-at (1- (point)))))
+            (should button)
+            (button-activate button))))
+      (should (equal requested '(sly-db-continue))))))
 
 (ert-deftest slynet-wire-event-renders-buffer ()
   (let ((payload (list :condition-record (list :message "boom" :kind :evaluation-error :support-class :emulated :cl-condition-equivalent nil)

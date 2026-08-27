@@ -91,6 +91,79 @@
   (cli/server/stop! server)
   true)
 
+(defn- require-context [context]
+  (unless (and (table? context)
+               (= :slynet-context (context :kind))
+               (= api-version (context :api-version)))
+    (error "Expected a SLYNET API-v1 lifecycle context"))
+  context)
+
+(defn create-context [&opt options]
+  "Create an initialized API-v1 lifecycle context.
+
+  The mutable context owns at most one server and can be deterministically
+  closed with close-context.  Registry and CLI details remain internal."
+  (default options @{})
+  (initialize options)
+  @{:kind :slynet-context
+    :api-version api-version
+    :version version
+    :status :ready
+    :server nil
+    :closed false})
+
+(defn context-start-server [context &opt options]
+  "Start and attach one server owned by CONTEXT."
+  (require-context context)
+  (default options @{})
+  (when (context :closed)
+    (error "Cannot start a server on a closed SLYNET context"))
+  (when (context :server)
+    (error "SLYNET context already owns a server"))
+  (def server-options (merge @{:initialize false} options))
+  (def server (start-server server-options))
+  (put context :server server)
+  (put context :status :serving)
+  server)
+
+(defn context-stop-server [context]
+  "Stop the server owned by CONTEXT, if any, and keep the context reusable."
+  (require-context context)
+  (when-let [server (context :server)]
+    (stop-server server)
+    (put context :server nil))
+  (unless (context :closed)
+    (put context :status :ready))
+  true)
+
+(defn close-context [context]
+  "Idempotently stop owned resources and permanently close CONTEXT."
+  (require-context context)
+  (unless (context :closed)
+    (context-stop-server context)
+    (put context :closed true)
+    (put context :status :closed))
+  true)
+
+(defn context-status [context]
+  "Return transport-independent lifecycle metadata for CONTEXT.
+
+  This intentionally reports only state owned by the embedding API. It does
+  not claim that a client is connected, a package is current, or an MREPL
+  channel is live; those remain real-session concerns on the wire protocol."
+  (require-context context)
+  (def server (context :server))
+  @{:kind :slynet-context-status
+    :api-version api-version
+    :version version
+    :status (context :status)
+    :closed (context :closed)
+    :owns-server (not (nil? server))
+    :server-mode (and server (server :mode))
+    :server-host (and server (server :host))
+    :server-port (and server (server :port))
+    :session-state :transport-dependent})
+
 (def export-api
   @{:api-version api-version
     :version version
@@ -100,4 +173,9 @@
     :rpc-implementation rpc-implementation
     :call-rpc call-rpc
     :start-server start-server
-    :stop-server stop-server})
+    :stop-server stop-server
+    :create-context create-context
+    :context-start-server context-start-server
+    :context-stop-server context-stop-server
+    :close-context close-context
+    :context-status context-status})

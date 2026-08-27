@@ -1,164 +1,153 @@
 ---
 layout: page
-title: SLYNET 1.0.7 release status
+title: SLYNET 1.1.0 release status
 ---
 
-# SLYNET 1.0.7 release status
+# SLYNET 1.1.0 release status
 
 Audited: 2026-08-27
 
-The exact qualified revision and artifact hashes are recorded by the release gate
-in `dist/release-evidence.yml`.
+SLYNET 1.1.0 is the capability-consolidation release: it adds a stable Janet
+embedding API, expands daily Emacs workflows and recovery behavior, makes
+protocol/test correspondence machine-auditable, and repairs the static xref
+substrate without pretending Janet provides Common Lisp runtime semantics.
 
-This document is the human-readable **frozen semantic snapshot** for SLYNET
-1.0.7. Its protocol counts describe the qualified v1.0.7 source tree and are
-not rewritten to match later `main`. For current post-release implementation
-state, see `DEVELOPMENT_STATUS.md`.
+The exact qualified revision, local release-gate results, and artifact hashes are
+recorded by `dist/release-evidence.yml`. The immutable v1.1.0 tag is valid only
+after the canonical GitHub Actions compatibility matrix and local release gate
+both pass.
+
+The frozen v1.0.7 semantic snapshot remains available as
+`RELEASE_STATUS_1.0.7.md`.
 
 ## Release posture
 
 ```yaml
-version: 1.0.7
-release_kind: qualified_semantic_release
-public_distribution: published
+version: 1.1.0
+release_kind: qualified_minor_release
 canonical_repository: https://github.com/fkr-0/slynet
-github_release: https://github.com/fkr-0/slynet/releases/tag/v1.0.7
+release_tag: v1.1.0
 supported_janet: 1.40.x-1.41.x
 supported_emacs: 27.1-30.x
+compatibility_matrix:
+  janet: [1.40.1, 1.41.1]
+  emacs: [27.1, 28.2, 29.4, 30.1]
+  cells: 8
 supported_os:
   - GNU/Linux
   - macOS
 unverified_os:
   - Windows
 security_boundary: trusted_localhost_only
+publication_gate: local_release_verify_plus_canonical_ci_matrix
 ```
 
-`make release-verify` is the release authority. It validates source and package
-metadata, generated protocol inventory freshness, Janet tests, Emacs tests,
-transport fuzzing, byte compilation, repeated live server lifecycle E2E, and an
-extracted-artifact start/connect/MREPL/eval smoke. It does not push, upload, or
-publish anything.
+## Release verification
 
-## What works as a user workflow
+`make release-verify` is the local release authority. It checks:
 
-The stable 1.0.x workflow is broader than the small set of protocol operations
-that have one-to-one inventory test-file mappings. In particular, the Emacs ERT
-and live E2E suites exercise composed user workflows across multiple RPCs.
+- release/version coherence and public-documentation freshness;
+- generated schema-6 protocol inventory and stable-surface coverage;
+- Janet parse/load and the complete Janet test suite;
+- Emacs ERT, lint, byte compilation, and deterministic transport fuzzing;
+- repeated live Janet/Emacs lifecycle E2E with server-leak detection;
+- packaged Janet and Emacs artifacts through an extracted-artifact
+  start/connect/MREPL/eval smoke;
+- machine-readable artifact checksums and release evidence.
 
-- **Transport and session lifecycle** — six-hex-byte framing, UTF-8 validation,
-  request IDs, timeout/cancellation handling, reconnect/disconnect, channel
-  lifecycle, and leak-checked local server teardown.
-- **Local server startup** — `janet slynet/cli.janet --tcp` is the documented and
-  tested server entrypoint; help and version output are release-gated.
-- **MREPL and evaluation** — create a REPL, submit forms, receive values/output,
-  retain REPL history, and surface evaluation failures.
-- **Completion and docs** — simple/flex completion, argument lists,
-  namespace-aware completion, autodoc, and Janet symbol documentation.
-- **Source navigation and xref** — source-index-backed definitions, frame source
-  locations, and xref-style navigation.
-- **Inspector** — inspect values and navigate inspector parts/actions through the
-  SLYNET-native inspector surface.
-- **Compile/load diagnostics** — compile strings/files, load files, and map Janet
-  diagnostics into Emacs-visible source locations.
-- **Debugger facade** — condition/frame information, frame locals, execution-unit
-  views, and limited restart-like/debug actions where Janet can represent them.
-- **Project-aware Emacs lifecycle** — start/connect/status/health/reconnect/quit
-  commands and project-scoped local server management.
+The canonical `.github/workflows/ci.yml` compatibility job additionally runs the
+cross product of Janet 1.40.1/1.41.1 with Emacs 27.1/28.2/29.4/30.1 and executes
+`make lint`, `make test-janet`, `make test-emacs`, and `make test-e2e` in each
+cell. Tagging is fail-closed on that matrix.
 
-## Protocol inventory: frozen v1.0.7 coverage
+## Stable user workflow
 
-The generated inventory contains **249** source protocol operations.
+The 1.1 line keeps the trusted-localhost SLYNET model and materially broadens the
+daily workflow:
+
+- **Stable Janet embedding API v1** — `slynet/api.janet` exposes version and
+  capability discovery, initialization, RPC metadata lookup, context-free
+  in-process calls, loopback-safe server lifecycle, owned lifecycle contexts,
+  and transport-independent context status. The historical
+  `slynet/slynet-api.janet` import is a compatibility shim.
+- **Daily Emacs editing commands** — eval last form/region/definition/buffer,
+  compile/load the current file, cooperative managed-execution-unit interrupt,
+  newest-pending request cancellation, project-aware connect/start/reconnect,
+  and deterministic quit/teardown.
+- **Recovery and UI state** — inspector back/forward/refresh/actions, source-aware
+  debugger controls, stale-buffer marking on connection loss, timeout/late-reply
+  recovery, and continued evaluation after recoverable failures.
+- **Source navigation and xref** — all top-level Janet forms are parsed, function
+  bodies are recursively analyzed, parser sourcemaps provide exact source
+  coordinates, caller context is retained, modified-file facts replace old
+  facts, deleted-file facts are pruned, and `list-callers` matches the reference
+  query signature.
+- **Compile/load compatibility** — structured Janet diagnostics retain source
+  provenance; compiler-macroexpand compatibility is explicit Janet emulation and
+  does not claim Common Lisp lexical-environment/compiler-macro equivalence.
+- **Transport, REPL, completion, inspector and debugger facade** — the existing
+  release-qualified local TCP/MREPL/completion/autodoc/inspection/debugger flows
+  remain part of the stable product contract.
+
+## Protocol inventory: schema 6
+
+The generated inventory tracks **284** historical SLY/SLYNK operations. The
+release-critical stable subset is deliberately smaller and is 100% functionally
+registered and directly mapped to tests on every declared frontend surface.
 
 | Inventory state | Count | Meaning |
 |---|---:|---|
-| implemented + directly mapped test | 24 | Implementation and a direct protocol test mapping are recorded. |
-| implemented, no direct inventory test mapping | 131 | Code exists; some are exercised indirectly by broader ERT/E2E tests, but the inventory does not claim a direct operation-level test. |
-| missing | 94 | No Janet implementation is recorded. |
+| implemented + directly tested | 70 | Callable functional registration plus explicit operation-level `:covers` evidence. |
+| implemented, no direct mapping | 27 | Callable functional registration without direct operation-level test ownership. |
+| defined but unwired | 10 | Janet implementation exists but no callable RPC registration exists. |
+| registered stub | 5 | Registered endpoint is truthfully an error/unsupported stub. |
+| missing | 172 | No Janet implementation or callable registration is present. |
 
-By frontend surface:
+Support classification is **247 native**, **35 emulated**, and **2 explicitly
+unsupported** operations.
 
-| Surface | Total | Tested impl. | Impl. / no direct mapping | Missing |
-|---|---:|---:|---:|---:|
-| backend | 94 | 3 | 40 | 51 |
-| compile/load | 15 | 4 | 9 | 2 |
-| completion | 12 | 5 | 5 | 2 |
-| debugger | 56 | 3 | 22 | 31 |
-| inspector | 20 | 1 | 19 | 0 |
-| namespace | 14 | 1 | 13 | 0 |
-| REPL | 15 | 2 | 10 | 3 |
-| transport | 6 | 3 | 1 | 2 |
-| xref | 17 | 2 | 12 | 3 |
+### Release-critical stable subset
 
-Support classification is **214 native**, **33 emulated**, and **2 explicitly
-unsupported** operations. The two unsupported Common Lisp compatibility
-operations are `remove-method-by-name` and `generic-method-specs`, because Janet
-does not expose a CLOS/MOP equivalent.
+| Surface | Stable operations | Directly tested | Coverage | Gate |
+|---|---:|---:|---:|---|
+| compile/load | 4 | 4 | 100% | pass |
+| completion | 6 | 6 | 100% | pass |
+| debugger | 7 | 7 | 100% | pass |
+| inspector | 5 | 5 | 100% | pass |
+| REPL | 3 | 3 | 100% | pass |
+| transport | 4 | 4 | 100% | pass |
+| xref | 2 | 2 | 100% | pass |
 
-The 24 directly mapped tested operations include the release-critical core:
-`ping`, `flow-control-test`, `io-speed-test`, `simple-completions`,
-`flex-completions`, `operator-arglist`, `arglist`, `describe-function`,
-`set-package`, `interactive-eval-region`, `pprint-eval`,
-`compile-file-for-emacs`, `compile-string-for-emacs`, `load-file`,
-`macroexpand-all`, `find-definitions-for-emacs`, `frame-source-location`,
-`inspector-nth-part`, `frame-locals-and-catch-tags`, `debug-nth-thread`,
-`kill-nth-thread`, `slynk-require`, `value-for-editing`, and
-`commit-edited-value`.
+These numbers remain conservative by design. Historical protocol operations are
+not automatically 1.1 product commitments merely because the reference corpus
+contains them.
 
-## What is missing or deliberately constrained
+## Deliberate semantic boundaries
 
-### Runtime-semantic gaps
+SLYNET remains explicit about Janet/Common-Lisp non-equivalence:
 
-These are not ordinary TODOs where a literal SLYNK port would be honest:
+- Janet modules/environments are not Common Lisp packages/reader semantics.
+- Janet exceptions, fibers and stack traces do not provide CL
+  conditions/restarts or resumable debugger continuations.
+- Janet execution units do not map one-to-one to implementation threads.
+- Janet has no CLOS/MOP substrate; CLOS-specific compatibility operations stay
+  unsupported rather than being faked.
+- Janet compiler diagnostics and macro expansion differ from CL compiler notes,
+  compiler macros and lexical expansion environments.
+- `who-references` remains deliberately unwired until static variable-read
+  analysis is precise enough to avoid false claims.
 
-- Janet modules/environments do not provide Common Lisp package/reader
-  semantics; package-like behavior is therefore emulated.
-- Janet exceptions and stack traces do not provide Common Lisp conditions and
-  restart semantics; debugger restart behavior is a facade, not CL parity.
-- Janet fibers/execution units do not map one-to-one to implementation threads.
-- Janet has no CLOS/MOP substrate; two compatibility operations are explicitly
-  unsupported rather than faked.
-- Janet compiler diagnostics do not carry Common Lisp compiler-note semantics;
-  compile/load diagnostics are adapted to Janet-native data.
-
-Eleven currently missing operations are explicitly constrained by these runtime
-differences, including `return-from-frame`, `restart-frame`, debugger step/next/
-out primitives, `spawn`, `initialize-multiprocessing`, `thread-status`, and
-`kill-thread`.
-
-### Product gaps identified at the v1.0.7 boundary
-
-- **No stable public Janet embedding API was included in v1.0.7.** A post-1.0.7
-  API-v1 implementation is under qualification for 1.1.0; see
-  `EMBEDDING_API.md` and `DEVELOPMENT_STATUS.md`.
-- **Debugger stepping is not a production claim.** True step/next/out and
-  resumability depend on Janet runtime capabilities that are not yet exposed as
-  a stable SLYNET contract.
-- **Instrumentation is incomplete.** v1.0.7 contains wrapper-based profiling
-  and source-linked trace/timing records, but full trace/profiler UI,
-  hierarchical timing trees, and sticker-like workflows remain roadmap work.
-- **Daily editor polish can go further.** Eval-last-form/definition/buffer/file,
-  richer inspector interactions, and recovery UX are not yet at SLY's maturity.
-- **Remote operation is not a supported security model.** No authentication or
-  sandbox boundary is provided; keep the server on loopback. Remote/TRAMP,
-  hostile-network, and multi-user operation are not release claims.
-- **Windows is unverified.** The current supported OS claim is GNU/Linux and
-  macOS.
-- **Public installation/distribution was completed after qualification.** The
-  immutable v1.0.7 tag and qualified artifacts are published at the canonical
-  GitHub repository; publication did not move or rebuild the release tag.
-- **Migration guidance for Common Lisp SLY users is still missing.** It remains
-  a roadmap deliverable for ecosystem publication.
+Debugger stepping for arbitrary uninstrumented native Janet frames, complete
+profiler/trace/sticker UI, Windows qualification, remote/TRAMP, hostile-network,
+and multi-user operation are not 1.1.0 release claims.
 
 ## Documentation authority
 
 Use these sources in this order:
 
 1. `docs/generated/protocol-inventory.yml` — generated operation-level truth.
-2. `ROADMAP.md` — current project-level priorities and release policy.
-3. this document — audited human release summary.
-4. `docs/missing_protocol.md` and `TASKS.md` — historical planning snapshots;
-   they may intentionally contain stale entries and are not release authority.
-
-This ordering matters because the historical missing-protocol document still
-names many operations that have since been implemented. Release claims must come
-from generated inventory plus executable verification, not those old checklists.
+2. `docs/generated/protocol-coverage.md` — generated stable-subset coverage.
+3. this document — audited 1.1.0 release summary.
+4. `ROADMAP.md` — post-release implementation priorities.
+5. `docs/RELEASE_STATUS_1.0.7.md` — immutable historical 1.0.7 snapshot.
+6. `docs/missing_protocol.md` and `TASKS.md` — historical planning inputs only.

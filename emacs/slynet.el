@@ -3,7 +3,7 @@
 ;; Copyright (C) 2026
 
 ;; Author: SLYNET contributors
-;; Version: 1.0.7
+;; Version: 1.1.0
 ;; Package-Requires: ((emacs "27.1"))
 ;; Keywords: languages, lisp, janet, tools, processes
 
@@ -78,6 +78,50 @@ that is not inside that checkout."
 (defvar slynet-current-connection nil
   "Current SLYNET client connection, or nil when disconnected.")
 
+(defun slynet--plist-key-name (key)
+  "Return KEY's property name without a keyword colon."
+  (cond
+   ((keywordp key) (substring (symbol-name key) 1))
+   ((symbolp key) (symbol-name key))
+   ((stringp key) (string-remove-prefix ":" key))
+   (t (format "%s" key))))
+
+(defun slynet--enum= (value expected)
+  "Return non-nil when VALUE and EXPECTED name the same protocol enum.
+Live Janet keywords are decoded as ordinary Emacs symbols, while local test
+fixtures often use Emacs keywords.  Compare their normalized names."
+  (equal (slynet--plist-key-name value)
+         (slynet--plist-key-name expected)))
+
+(defun slynet--plist-get (plist key)
+  "Read KEY from PLIST across live-wire and local plist representations.
+Janet keyword properties arrive over the S-expression wire as ordinary Emacs
+symbols (for example `values' rather than `:values').  Public UI renderers use
+this accessor so the same code accepts those live records, local keyword plists,
+and vector-backed sequences without changing protocol operation symbols."
+  (let ((items (cond
+                ((vectorp plist) (append plist nil))
+                ((listp plist) plist)
+                (t nil)))
+        (wanted (slynet--plist-key-name key)))
+    (catch 'slynet-property
+      (while (consp items)
+        (let ((candidate (car items))
+              (value (cadr items)))
+          (when (equal wanted (slynet--plist-key-name candidate))
+            (throw 'slynet-property value)))
+        (setq items (cddr items)))
+      nil)))
+
+(defvar-local slynet-buffer-connection nil
+  "SLYNET connection that produced the contents of this UI buffer.")
+
+(defvar-local slynet-buffer-stale nil
+  "Non-nil when this SLYNET UI buffer belongs to a disconnected session.")
+
+(put 'slynet-buffer-connection 'permanent-local t)
+(put 'slynet-buffer-stale 'permanent-local t)
+
 (defcustom slynet-repl-buffer-name "*slynet-repl*"
   "Default buffer name for the SLYNET REPL."
   :type 'string
@@ -103,6 +147,14 @@ that is not inside that checkout."
     (define-key map (kbd "s") #'slynet-status)
     (define-key map (kbd "h") #'slynet-health)
     (define-key map (kbd "e") #'slynet-eval-string)
+    (define-key map (kbd "l") #'slynet-eval-last-form)
+    (define-key map (kbd "R") #'slynet-eval-region)
+    (define-key map (kbd "f") #'slynet-eval-definition)
+    (define-key map (kbd "B") #'slynet-eval-buffer)
+    (define-key map (kbd "L") #'slynet-load-current-file)
+    (define-key map (kbd "C") #'slynet-compile-current-file)
+    (define-key map (kbd "I") #'slynet-interrupt-execution-unit)
+    (define-key map (kbd "K") #'slynet-cancel-latest-request)
     (define-key map (kbd "m") #'slynet-create-mrepl)
     (define-key map (kbd "i") #'slynet-inspect-value)
     (define-key map (kbd "x") #'slynet-find-definitions)
@@ -140,6 +192,14 @@ server by itself; use `slynet-connect', `slynet-start-server', or
     "---"
     ["REPL" slynet-repl t]
     ["Eval string" slynet-eval-string t]
+    ["Eval last form" slynet-eval-last-form t]
+    ["Eval region" slynet-eval-region (use-region-p)]
+    ["Eval definition" slynet-eval-definition t]
+    ["Eval buffer" slynet-eval-buffer t]
+    ["Compile current file" slynet-compile-current-file buffer-file-name]
+    ["Load current file" slynet-load-current-file buffer-file-name]
+    ["Interrupt execution unit" slynet-interrupt-execution-unit t]
+    ["Cancel latest client request" slynet-cancel-latest-request t]
     ["Inspector" slynet-inspect-value t]
     ["Find definitions" slynet-find-definitions t]
     ["Debugger" slynet-debugger-info t]
@@ -216,14 +276,14 @@ receives decoded protocol messages.  The endpoint is remembered for
   "Return a compact human-readable status label for CONNECTION."
   (let* ((status (slynet-connection-status connection))
          (state (cond
-                 ((plist-get status :live) "live")
-                 ((plist-get status :connected) "stale")
+                 ((slynet--plist-get status :live) "live")
+                 ((slynet--plist-get status :connected) "stale")
                  (t "off"))))
     (format "SLYNET:%s %s:%s pending=%s"
             state
-            (or (plist-get status :host) "?")
-            (or (plist-get status :port) "?")
-            (plist-get status :pending-requests))))
+            (or (slynet--plist-get status :host) "?")
+            (or (slynet--plist-get status :port) "?")
+            (slynet--plist-get status :pending-requests))))
 
 (defun slynet--refresh-mode-line ()
   "Refresh `slynet-mode-line-string' from current connection state."
@@ -251,22 +311,106 @@ receives decoded protocol messages.  The endpoint is remembered for
 ")
         (insert (format "State: %s
 " (cond
-                                      ((plist-get status :live) "live")
-                                      ((plist-get status :connected) "stale")
+                                      ((slynet--plist-get status :live) "live")
+                                      ((slynet--plist-get status :connected) "stale")
                                       (t "off"))))
         (insert (format "Endpoint: %s:%s
 "
-                        (or (plist-get status :host) "?")
-                        (or (plist-get status :port) "?")))
+                        (or (slynet--plist-get status :host) "?")
+                        (or (slynet--plist-get status :port) "?")))
         (insert (format "Package: %s
-" (or (plist-get status :package) "-")))
+" (or (slynet--plist-get status :package) "-")))
         (insert (format "Pending requests: %s
-" (plist-get status :pending-requests)))
+" (slynet--plist-get status :pending-requests)))
         (insert (format "Last error: %s
-" (or (plist-get status :last-error) "-")))
+" (or (slynet--plist-get status :last-error) "-")))
         (goto-char (point-min))))
     (when (called-interactively-p 'interactive)
       (display-buffer buffer))
+    buffer))
+
+(defun slynet-inspector-next ()
+  "Navigate forward through SLYNET inspector history and render the result."
+  (interactive)
+  (let ((buffer (slynet--display-buffer slynet-inspector-buffer-name #'slynet-inspector-mode)))
+    (slynet-client-send-rex-async
+     (slynet--require-connection)
+     '(inspector-next)
+     (lambda (payload) (slynet--render-inspector payload buffer)))
+    buffer))
+
+(defun slynet-inspector-reinspect ()
+  "Refresh the current SLYNET inspector object."
+  (interactive)
+  (let ((buffer (slynet--display-buffer slynet-inspector-buffer-name #'slynet-inspector-mode)))
+    (slynet-client-send-rex-async
+     (slynet--require-connection)
+     '(inspector-reinspect)
+     (lambda (payload) (slynet--render-inspector payload buffer)))
+    buffer))
+
+(defun slynet-inspector-history ()
+  "Display the current SLYNET inspector history."
+  (interactive)
+  (let ((buffer (get-buffer-create "*slynet-inspector-history*")))
+    (slynet-client-send-rex-async
+     (slynet--require-connection)
+     '(inspector-history)
+     (lambda (history)
+       (with-current-buffer buffer
+         (let ((inhibit-read-only t))
+           (erase-buffer)
+           (special-mode)
+           (insert "SLYNET inspector history\n\n")
+           (dolist (entry (slynet--sequence-to-list history))
+             (slynet--insert-line "%s%s %s [%s]"
+                                  (if (slynet--plist-get entry :current) "* " "  ")
+                                  (slynet--plist-string entry :index "?")
+                                  (slynet--plist-string entry :title "<untitled>")
+                                  (slynet--plist-string entry :object-id "?")))))))
+    (when (called-interactively-p 'interactive) (pop-to-buffer buffer))
+    buffer))
+
+(defun slynet-inspector-call-action (index)
+  "Invoke inspector action INDEX and apply safe editor-side effects."
+  (interactive "nInspector action index: ")
+  (slynet-client-send-rex-async
+   (slynet--require-connection)
+   (list 'inspector-call-nth-action index)
+   (lambda (payload)
+     (if (and (slynet--enum= (slynet--plist-get payload :status) :ok)
+              (slynet--enum= (slynet--plist-get payload :action-id) :copy-value))
+         (progn
+           (kill-new (slynet--plist-string payload :value))
+           (message "Copied SLYNET inspector value"))
+       (message "SLYNET inspector action: %S" payload)))))
+
+(defun slynet-inspector-actions ()
+  "Display available inspector actions, buttonizing only callable actions."
+  (interactive)
+  (let ((buffer (get-buffer-create "*slynet-inspector-actions*")))
+    (slynet-client-send-rex-async
+     (slynet--require-connection)
+     '(inspector-actions)
+     (lambda (actions)
+       (with-current-buffer buffer
+         (let ((inhibit-read-only t)
+               (index 0))
+           (erase-buffer)
+           (special-mode)
+           (insert "SLYNET inspector actions\n\n")
+           (dolist (action (slynet--sequence-to-list actions))
+             (let ((label (slynet--plist-string action :label "<action>"))
+                   (action-index index))
+               (if (slynet--plist-get action :callable)
+                   (insert-text-button label
+                                       'action (lambda (_button)
+                                                 (slynet-inspector-call-action action-index))
+                                       'follow-link t)
+                 (insert label))
+               (insert (format " [%s]\n" (slynet--plist-string action :support-class "unknown"))))
+             (setq index (1+ index)))))))
+    (when (called-interactively-p 'interactive) (pop-to-buffer buffer))
     buffer))
 
 (defun slynet--require-connection ()
@@ -288,6 +432,9 @@ current SLYNET connection."
       (unless (derived-mode-p 'slynet-repl-mode)
         (slynet-repl-mode))
       (setq-local slynet-repl-connection connection)
+      (setq-local slynet-buffer-connection connection)
+      (setq-local slynet-buffer-stale nil)
+      (setq-local header-line-format nil)
       (unless (local-variable-p 'slynet-repl-input-history buffer)
         (setq-local slynet-repl-input-history nil)))
     (when (called-interactively-p 'interactive)
@@ -455,11 +602,20 @@ Call CALLBACK with an autodoc payload."
 (define-derived-mode slynet-inspector-mode special-mode "SLYNET-Inspector"
   "Major mode for displaying SLYNET inspector objects.")
 
+(define-key slynet-inspector-mode-map (kbd "[") #'slynet-inspector-pop)
+(define-key slynet-inspector-mode-map (kbd "]") #'slynet-inspector-next)
+(define-key slynet-inspector-mode-map (kbd "g") #'slynet-inspector-reinspect)
+(define-key slynet-inspector-mode-map (kbd "h") #'slynet-inspector-history)
+(define-key slynet-inspector-mode-map (kbd "a") #'slynet-inspector-actions)
+
 (define-derived-mode slynet-xref-mode special-mode "SLYNET-Xref"
   "Major mode for displaying SLYNET source-index xref results.")
 
 (define-derived-mode slynet-debugger-mode special-mode "SLYNET-Debugger"
   "Major mode for displaying SLYNET debugger and execution-unit state.")
+
+(define-key slynet-debugger-mode-map (kbd "RET") #'slynet-debugger-visit-frame-source)
+(define-key slynet-debugger-mode-map (kbd "c") #'slynet-debugger-continue)
 
 (define-derived-mode slynet-doc-mode special-mode "SLYNET-Doc"
   "Major mode for scrollable Janet doc/autodoc payloads.")
@@ -471,7 +627,25 @@ Call CALLBACK with an autodoc payload."
       (let ((inhibit-read-only t))
         (erase-buffer))
       (funcall mode))
+    (with-current-buffer buffer
+      (setq-local slynet-buffer-connection slynet-current-connection)
+      (setq-local slynet-buffer-stale nil)
+      (setq-local header-line-format nil))
     buffer))
+
+(defun slynet--handle-client-state-change (connection state reason)
+  "Reflect CONNECTION lifecycle STATE and REASON in SLYNET UI buffers."
+  (when (eq state :disconnected)
+    (dolist (buffer (buffer-list))
+      (with-current-buffer buffer
+        (when (eq slynet-buffer-connection connection)
+          (setq-local slynet-buffer-stale t)
+          (setq-local header-line-format
+                      (format " SLYNET stale session (%s) — reconnect/refresh before acting "
+                              (or reason :disconnected)))))))
+  (slynet--refresh-mode-line))
+
+(add-hook 'slynet-client-state-change-functions #'slynet--handle-client-state-change)
 
 (defun slynet--insert-line (format-string &rest args)
   "Insert one formatted line using FORMAT-STRING and ARGS."
@@ -480,7 +654,7 @@ Call CALLBACK with an autodoc payload."
 (defun slynet--plist-string (plist key &optional default)
   "Return PLIST value for KEY formatted as a user-facing string.
 When KEY is absent or nil, return DEFAULT or the empty string."
-  (let ((value (plist-get plist key)))
+  (let ((value (slynet--plist-get plist key)))
     (cond
      ((null value) (or default ""))
      ((stringp value) value)
@@ -522,9 +696,9 @@ When KEY is absent or nil, return DEFAULT or the empty string."
 
 (defun slynet--render-xref-hit (hit)
   "Insert one source-index HIT with navigation metadata text properties."
-  (let* ((file (plist-get hit :file))
-         (line (or (plist-get hit :line) 0))
-         (column (or (plist-get hit :column) 0))
+  (let* ((file (slynet--plist-get hit :file))
+         (line (or (slynet--plist-get hit :line) 0))
+         (column (or (slynet--plist-get hit :column) 0))
          (name (slynet--plist-string hit :name "<unknown>"))
          (snippet (slynet--plist-string hit :snippet ""))
          (start (point)))
@@ -534,8 +708,8 @@ When KEY is absent or nil, return DEFAULT or the empty string."
                          (list 'slynet-xref-file file
                                'slynet-xref-line line
                                'slynet-xref-column column
-                               'slynet-source-index (plist-get hit :source-index)
-                               'slynet-xref-kind (plist-get hit :xref-kind)))))
+                               'slynet-source-index (slynet--plist-get hit :source-index)
+                               'slynet-xref-kind (slynet--plist-get hit :xref-kind)))))
 
 (defun slynet--render-xrefs (symbol hits buffer)
   "Render xref HITS for SYMBOL into BUFFER and return BUFFER."
@@ -563,11 +737,11 @@ When KEY is absent or nil, return DEFAULT or the empty string."
 
 (defun slynet--render-location-string (location)
   "Return LOCATION plist as a compact source string."
-  (if (and (listp location) (plist-get location :file))
+  (if (and (listp location) (slynet--plist-get location :file))
       (format "%s:%s:%s"
-              (plist-get location :file)
-              (or (plist-get location :line) 0)
-              (or (plist-get location :column) 0))
+              (slynet--plist-get location :file)
+              (or (slynet--plist-get location :line) 0)
+              (or (slynet--plist-get location :column) 0))
     "<unknown location>"))
 
 (defun slynet-debugger-info ()
@@ -617,7 +791,7 @@ When KEY is absent or nil, return DEFAULT or the empty string."
              (slynet--insert-line "  Model: %s"
                                   (slynet--plist-string unit :thread-model "unknown"))
              (slynet--insert-line "  CL thread equivalent: %S"
-                                  (plist-get unit :cl-thread-equivalent)))))))
+                                  (slynet--plist-get unit :cl-thread-equivalent)))))))
     buffer))
 
 
@@ -662,9 +836,9 @@ When KEY is absent or nil, return DEFAULT or the empty string."
 
 (defun slynet--insert-inspector-part-button (part)
   "Insert a clickable inspector PART button."
-  (let* ((index (plist-get part :index))
-         (label (slynet--button-label (plist-get part :label) (format "[%s]" index)))
-         (summary (slynet--button-label (plist-get part :summary) "")))
+  (let* ((index (slynet--plist-get part :index))
+         (label (slynet--button-label (slynet--plist-get part :label) (format "[%s]" index)))
+         (summary (slynet--button-label (slynet--plist-get part :summary) "")))
     (insert-button label
                    'slynet-inspector-part-index index
                    'action (lambda (button)
@@ -681,13 +855,13 @@ This interactive version also renders clickable part navigation buttons."
   (with-current-buffer buffer
     (let ((inhibit-read-only t)
           (title (slynet--plist-string payload :title "<untitled>"))
-          (content (slynet--sequence-to-list (plist-get payload :content)))
-          (parts (slynet--sequence-to-list (plist-get payload :parts))))
+          (content (slynet--sequence-to-list (slynet--plist-get payload :content)))
+          (parts (slynet--sequence-to-list (slynet--plist-get payload :parts))))
       (erase-buffer)
       (slynet-inspector-mode)
-      (setq-local slynet-inspector-object-id (plist-get payload :object-id))
-      (setq-local slynet-inspector-parent-object-id (plist-get payload :parent-object-id))
-      (setq-local slynet-inspector-part-key (plist-get payload :part-key))
+      (setq-local slynet-inspector-object-id (slynet--plist-get payload :object-id))
+      (setq-local slynet-inspector-parent-object-id (slynet--plist-get payload :parent-object-id))
+      (setq-local slynet-inspector-part-key (slynet--plist-get payload :part-key))
       (slynet--insert-line "Inspector: %s" title)
       (when slynet-inspector-object-id
         (slynet--insert-line "Object id: %s" slynet-inspector-object-id))
@@ -718,15 +892,15 @@ This interactive version also renders clickable part navigation buttons."
   "Visit the xref source location stored at point."
   (interactive)
   (let* ((loc (slynet--xref-location-at-point))
-         (file (plist-get loc :file)))
+         (file (slynet--plist-get loc :file)))
     (unless file
       (user-error "No SLYNET xref location at point"))
-    (slynet--goto-source-location file (plist-get loc :line) (plist-get loc :column))))
+    (slynet--goto-source-location file (slynet--plist-get loc :line) (slynet--plist-get loc :column))))
 
 (defun slynet--insert-debugger-restart-button (index restart)
   "Insert clickable debugger RESTART button at INDEX."
-  (let ((label (slynet--button-label (or (plist-get restart :label)
-                                         (plist-get restart :name))
+  (let ((label (slynet--button-label (or (slynet--plist-get restart :label)
+                                         (slynet--plist-get restart :name))
                                      "<restart>")))
     (insert "  ")
     (insert-button label
@@ -735,31 +909,62 @@ This interactive version also renders clickable part navigation buttons."
                              (slynet-debugger-invoke-restart
                               (button-get button 'slynet-restart-index)))
                    'follow-link t)
-    (when-let ((name (plist-get restart :name)))
+    (when-let ((name (slynet--plist-get restart :name)))
       (unless (equal name label)
         (insert (format " (%s)" name))))
     (insert (format " [%s/%s eq=%S]\n"
                     (slynet--plist-string restart :restart-kind "unknown")
                     (slynet--plist-string restart :support-class "unknown")
-                    (plist-get restart :cl-restart-equivalent)))))
+                    (slynet--plist-get restart :cl-restart-equivalent)))))
 
 (defun slynet--insert-debugger-frame-button (frame)
   "Insert clickable debugger FRAME source button."
-  (let* ((location (plist-get frame :location))
-         (file (and (listp location) (plist-get location :file)))
-         (line (and (listp location) (plist-get location :line)))
-         (column (and (listp location) (plist-get location :column)))
-         (start (point)))
-    (slynet--insert-line "  %s %s at %s [%s]"
-                         (slynet--plist-string frame :index "?")
-                         (slynet--plist-string frame :callable "<unknown>")
-                         (slynet--render-location-string location)
-                         (slynet--render-location-support-string location))
-    (when file
-      (add-text-properties start (point)
-                           (list 'slynet-frame-file file
-                                 'slynet-frame-line line
-                                 'slynet-frame-column column)))))
+  (let* ((location (slynet--plist-get frame :location))
+         (file (and (listp location) (slynet--plist-get location :file)))
+         (line (and (listp location) (slynet--plist-get location :line)))
+         (column (and (listp location) (slynet--plist-get location :column)))
+         (label (format "  %s %s at %s [%s]"
+                        (slynet--plist-string frame :index "?")
+                        (slynet--plist-string frame :callable "<unknown>")
+                        (slynet--render-location-string location)
+                        (slynet--render-location-support-string location))))
+    (if file
+        (insert-text-button label
+                            'slynet-frame-file file
+                            'slynet-frame-line line
+                            'slynet-frame-column column
+                            'action (lambda (_button) (slynet-debugger-visit-frame-source))
+                            'follow-link t)
+      (insert label))
+    (insert "\n")))
+
+(defun slynet-debugger-continue ()
+  "Leave the current SLYNET debugger facade through its emulated continue action."
+  (interactive)
+  (slynet-client-send-rex-async
+   (slynet--require-connection)
+   '(sly-db-continue)
+   (lambda (payload) (message "SLYNET debugger continue: %S" payload))))
+
+(defun slynet--insert-debugger-controls (capabilities)
+  "Render capability-aware debugger controls from CAPABILITIES."
+  (when capabilities
+    (insert "\nControls:\n")
+    (dolist (action (slynet--sequence-to-list (slynet--plist-get capabilities :actions)))
+      (let ((label (slynet--plist-string action :label "<control>"))
+            (operation (slynet--plist-get action :operation)))
+        (insert "  ")
+        (if (slynet--plist-get action :callable)
+            (insert-text-button label
+                                'action (lambda (_button)
+                                          (if (slynet--enum= operation :continue)
+                                              (slynet-debugger-continue)
+                                            (user-error "Unsupported debugger control %s" operation)))
+                                'follow-link t)
+          (insert label))
+        (insert (format " [%s%s]\n"
+                        (slynet--plist-string action :support-class "unknown")
+                        (if (slynet--plist-get action :callable) "" "/unavailable")))))))
 
 (defun slynet--frame-location-at-point ()
   "Return debugger frame source metadata at point or line beginning."
@@ -775,19 +980,19 @@ This interactive version also renders clickable part navigation buttons."
   "Visit the debugger frame source location stored at point."
   (interactive)
   (let* ((loc (slynet--frame-location-at-point))
-         (file (plist-get loc :file)))
+         (file (slynet--plist-get loc :file)))
     (unless file
       (user-error "No SLYNET frame source location at point"))
-    (slynet--goto-source-location file (plist-get loc :line) (plist-get loc :column))))
+    (slynet--goto-source-location file (slynet--plist-get loc :line) (slynet--plist-get loc :column))))
 
 (defun slynet--render-debugger-info (payload buffer)
   "Render debugger info PAYLOAD into BUFFER and return BUFFER.
 This interactive version buttonizes restart actions and frame source metadata."
   (with-current-buffer buffer
     (let ((inhibit-read-only t)
-          (condition (plist-get payload :condition-record))
-          (restarts (slynet--sequence-to-list (plist-get payload :restarts)))
-          (frames (slynet--sequence-to-list (plist-get payload :frames)))
+          (condition (slynet--plist-get payload :condition-record))
+          (restarts (slynet--sequence-to-list (slynet--plist-get payload :restarts)))
+          (frames (slynet--sequence-to-list (slynet--plist-get payload :frames)))
           (index 0))
       (erase-buffer)
       (slynet-debugger-mode)
@@ -797,7 +1002,8 @@ This interactive version buttonizes restart actions and frame source metadata."
       (slynet--insert-line "Condition support: %s"
                            (slynet--plist-string condition :support-class "unknown"))
       (slynet--insert-line "CL condition equivalent: %S"
-                           (plist-get condition :cl-condition-equivalent))
+                           (slynet--plist-get condition :cl-condition-equivalent))
+      (slynet--insert-debugger-controls (slynet--plist-get payload :control-capabilities))
       (insert "\nRestarts:\n")
       (dolist (restart restarts)
         (slynet--insert-debugger-restart-button index restart)
@@ -821,16 +1027,16 @@ This interactive version buttonizes restart actions and frame source metadata."
   "Visit the diagnostic source location stored at point."
   (interactive)
   (let* ((loc (slynet--diagnostic-location-at-point))
-         (file (plist-get loc :file)))
+         (file (slynet--plist-get loc :file)))
     (unless file
       (user-error "No SLYNET diagnostic location at point"))
-    (slynet--goto-source-location file (plist-get loc :line) (plist-get loc :column))))
+    (slynet--goto-source-location file (slynet--plist-get loc :line) (slynet--plist-get loc :column))))
 
 (defun slynet--render-diagnostics (payload buffer)
   "Render diagnostic PAYLOAD into BUFFER and return BUFFER."
   (with-current-buffer buffer
     (let ((inhibit-read-only t)
-          (diagnostics (slynet--sequence-to-list (plist-get payload :diagnostics))))
+          (diagnostics (slynet--sequence-to-list (slynet--plist-get payload :diagnostics))))
       (erase-buffer)
       (slynet-diagnostics-mode)
       (slynet--insert-line "SLYNET diagnostics [%s]"
@@ -842,13 +1048,13 @@ This interactive version buttonizes restart actions and frame source metadata."
                                (slynet--plist-string diagnostic :severity "info")
                                (slynet--plist-string diagnostic :phase "unknown")
                                (slynet--plist-string diagnostic :path "<buffer>")
-                               (or (plist-get diagnostic :line) 1)
-                               (or (plist-get diagnostic :column) 0)
+                               (or (slynet--plist-get diagnostic :line) 1)
+                               (or (slynet--plist-get diagnostic :column) 0)
                                (slynet--plist-string diagnostic :message ""))
           (add-text-properties start (point)
-                               (list 'slynet-diagnostic-path (plist-get diagnostic :path)
-                                     'slynet-diagnostic-line (plist-get diagnostic :line)
-                                     'slynet-diagnostic-column (plist-get diagnostic :column)))))))
+                               (list 'slynet-diagnostic-path (slynet--plist-get diagnostic :path)
+                                     'slynet-diagnostic-line (slynet--plist-get diagnostic :line)
+                                     'slynet-diagnostic-column (slynet--plist-get diagnostic :column)))))))
   buffer)
 
 (defun slynet-compile-string (string buffer-name)
@@ -914,13 +1120,22 @@ This interactive version buttonizes restart actions and frame source metadata."
         (accept-process-output nil 0.05)))
     ready))
 
+(defun slynet--server-command-for-endpoint (command host port)
+  "Return COMMAND with explicit HOST and PORT flags when they are absent."
+  (let ((argv (copy-sequence (if (listp command) command (list command)))))
+    (unless (member "--host" argv)
+      (setq argv (append argv (list "--host" host))))
+    (unless (member "--port" argv)
+      (setq argv (append argv (list "--port" (number-to-string port)))))
+    argv))
+
 (cl-defun slynet-start-project-server (project-name &key command host port readiness-timeout)
   "Start a SLYNET server for PROJECT-NAME.
 Use COMMAND, HOST, PORT, and READINESS-TIMEOUT when supplied."
   (let* ((host (or host slynet-host))
          (port (or port slynet-port))
          (command (or command slynet-server-command))
-         (argv (if (listp command) command (list command)))
+         (argv (slynet--server-command-for-endpoint command host port))
          (program (car argv))
          (args (cdr argv))
          (default-directory (file-name-as-directory
@@ -940,32 +1155,70 @@ Use COMMAND, HOST, PORT, and READINESS-TIMEOUT when supplied."
                        :process process
                        :host host
                        :port port
+                       :owned-by-emacs t
                        :status (if ready :ready :starting)
                        :ready ready)))
     (puthash project-name record slynet-project-servers)
     (setq slynet-server-process process)
     process))
 
-(defun slynet-reconnect-project (project-name)
-  "Reconnect named PROJECT-NAME while preserving project identity."
-  (let* ((old (gethash project-name slynet-named-connections))
-         (host (or (and old (slynet-client-connection-host old)) slynet-last-host slynet-host))
-         (port (or (and old (slynet-client-connection-port old)) slynet-last-port slynet-port)))
+(cl-defun slynet-connect-project (&optional project-name &key command host port readiness-timeout)
+  "Connect to PROJECT-NAME through one ownership-aware lifecycle path.
+Use COMMAND, HOST, PORT, and READINESS-TIMEOUT for a server SLYNET owns.  Start
+a server only when the project has no external named connection or when an
+Emacs-owned project server became stale."
+  (interactive)
+  (let* ((root (slynet-project-root))
+         (project-name (or project-name (file-name-nondirectory root)))
+         (record (gethash project-name slynet-project-servers))
+         (old (gethash project-name slynet-named-connections))
+         (owned (slynet--plist-get record :owned-by-emacs))
+         (process (slynet--plist-get record :process))
+         (host (or host (slynet--plist-get record :host)
+                   (and old (slynet-client-connection-host old))
+                   slynet-last-host slynet-host))
+         (port (or port (slynet--plist-get record :port)
+                   (and old (slynet-client-connection-port old))
+                   slynet-last-port slynet-port)))
+    (when (or (and owned (not (and process (process-live-p process))))
+              (and (null record) (null old)))
+      (slynet-start-project-server project-name
+                                   :command command :host host :port port
+                                   :readiness-timeout readiness-timeout))
     (when old
       (slynet-client-disconnect old))
-    (let ((connection (slynet-client-connect :host host :port port)))
-      (puthash project-name connection slynet-named-connections)
-      (setq slynet-current-connection connection)
+    (let ((connection (slynet-connect-named project-name :host host :port port)))
+      (setq slynet-last-host host
+            slynet-last-port port)
       connection)))
+
+(defun slynet-reconnect-project (project-name)
+  "Reconnect PROJECT-NAME through `slynet-connect-project'."
+  (slynet-connect-project project-name))
+
+(defun slynet-stop-owned-project-servers ()
+  "Stop and forget project servers explicitly owned by this Emacs session."
+  (let (owned-projects)
+    (maphash
+     (lambda (project record)
+       (when (slynet--plist-get record :owned-by-emacs)
+         (push project owned-projects)
+         (when-let ((process (slynet--plist-get record :process)))
+           (when (process-live-p process)
+             (delete-process process)))))
+     slynet-project-servers)
+    (dolist (project owned-projects)
+      (remhash project slynet-project-servers))
+    owned-projects))
 
 (defun slynet-project-server-status (project-name)
   "Render and return a status buffer for PROJECT-NAME."
   (let* ((record (gethash project-name slynet-project-servers))
-         (process (plist-get record :process))
+         (process (slynet--plist-get record :process))
          (live (and process (process-live-p process)))
          (status (cond
                   ((not record) "not-started")
-                  (live (substring (symbol-name (plist-get record :status)) 1))
+                  (live (substring (symbol-name (slynet--plist-get record :status)) 1))
                   (t "stale")))
          (buffer (get-buffer-create slynet-status-buffer-name)))
     (with-current-buffer buffer
@@ -979,8 +1232,8 @@ Use COMMAND, HOST, PORT, and READINESS-TIMEOUT when supplied."
         (when record
           (insert (format "Endpoint: %s:%s
 "
-                          (plist-get record :host)
-                          (plist-get record :port))))
+                          (slynet--plist-get record :host)
+                          (slynet--plist-get record :port))))
         (goto-char (point-min))))
     buffer))
 
@@ -1023,6 +1276,7 @@ COMMAND may be a string program name or a list of program plus arguments."
   (slynet-disconnect)
   (when (and slynet-server-process (process-live-p slynet-server-process))
     (delete-process slynet-server-process))
+  (slynet-stop-owned-project-servers)
   (setq slynet-server-process nil)
   (slynet--refresh-mode-line)
   nil)
@@ -1043,10 +1297,10 @@ COMMAND may be a string program name or a list of program plus arguments."
 (defun slynet--completion-entry-doc (entry)
   "Return documentation metadata from completion ENTRY, when available."
   (cond
-   ((and (consp entry) (plist-get (cadr entry) :doc))
-    (plist-get (cadr entry) :doc))
-   ((and (consp entry) (plist-get (cdr entry) :doc))
-    (plist-get (cdr entry) :doc))
+   ((and (consp entry) (slynet--plist-get (cadr entry) :doc))
+    (slynet--plist-get (cadr entry) :doc))
+   ((and (consp entry) (slynet--plist-get (cdr entry) :doc))
+    (slynet--plist-get (cdr entry) :doc))
    (t nil)))
 
 (defun slynet--normalize-rich-completion-result (result source support-class)
@@ -1088,9 +1342,148 @@ Return the request id assigned to the wire message."
   (slynet-client-send-rex (slynet--require-connection)
                           (list 'interactive-eval-region string)))
 
-(defun slynet-create-mrepl (callback)
-  "Create an MREPL on the current connection and call CALLBACK with its result."
-  (slynet-client-create-mrepl (slynet--require-connection) callback))
+(defun slynet-eval-region (start end)
+  "Evaluate the Janet source between START and END.
+The region is sent without text properties through `slynet-eval-string'."
+  (interactive "r")
+  (unless (< start end)
+    (user-error "No non-empty region to evaluate"))
+  (slynet-eval-string (buffer-substring-no-properties start end)))
+
+(defun slynet--last-form-bounds ()
+  "Return bounds of the Janet form immediately preceding point.
+This deliberately relies on the active Janet/Lisp syntax table rather than
+attempting to implement a second Janet reader in Emacs Lisp."
+  (save-excursion
+    (skip-chars-backward " \t\r\n")
+    (let ((end (point)))
+      (condition-case err
+          (progn
+            (backward-sexp)
+            (cons (point) end))
+        (scan-error
+         (user-error "Cannot locate previous Janet form: %s"
+                     (error-message-string err)))))))
+
+(defun slynet-eval-last-form ()
+  "Evaluate the complete Janet form immediately preceding point."
+  (interactive)
+  (pcase-let ((`(,start . ,end) (slynet--last-form-bounds)))
+    (slynet-eval-region start end)))
+
+(defun slynet--definition-bounds ()
+  "Return bounds of the current top-level Janet definition/form.
+SLYNET follows balanced expression structure from the active syntax table.  It
+does not depend on a mode-specific `beginning-of-defun' regexp knowing Janet's
+`defn', `defmacro', or other top-level forms."
+  (save-excursion
+    (condition-case err
+        (let* ((state (syntax-ppss))
+               (container (nth 1 state)))
+          (cond
+           (container
+            ;; Walk outward until the containing form itself is top-level.
+            (goto-char container)
+            (while (> (car (syntax-ppss)) 0)
+              (backward-up-list 1)))
+           ((looking-at-p "\\s(") nil)
+           (t
+            ;; At top-level whitespace or just after a form, use the nearest
+            ;; complete preceding form, matching normal eval-definition UX.
+            (skip-chars-backward " \t\r\n")
+            (backward-sexp)))
+          (let ((start (point)))
+            (forward-sexp)
+            (cons start (point))))
+      ((scan-error error)
+       (user-error "Cannot locate Janet definition: %s"
+                   (error-message-string err))))))
+
+(defun slynet-eval-definition ()
+  "Evaluate the current Janet top-level definition/form."
+  (interactive)
+  (pcase-let ((`(,start . ,end) (slynet--definition-bounds)))
+    (slynet-eval-region start end)))
+
+(defun slynet-eval-buffer ()
+  "Evaluate the entire current Janet buffer."
+  (interactive)
+  (slynet-eval-region (point-min) (point-max)))
+
+(defun slynet--require-current-file ()
+  "Return the current buffer file name or signal a user-facing error."
+  (unless buffer-file-name
+    (user-error "Current buffer is not visiting a file"))
+  (expand-file-name buffer-file-name))
+
+(defun slynet-compile-current-file ()
+  "Compile the current Janet file and render structured diagnostics."
+  (interactive)
+  (let ((path (slynet--require-current-file))
+        (buffer (slynet--display-buffer slynet-diagnostics-buffer-name
+                                        #'slynet-diagnostics-mode)))
+    (slynet-client-send-rex-async
+     (slynet--require-connection)
+     (list 'compile-file-for-emacs path)
+     (lambda (payload)
+       (slynet--render-diagnostics payload buffer)))
+    buffer))
+
+(defun slynet-load-current-file ()
+  "Load the current Janet file and render any structured diagnostics."
+  (interactive)
+  (let ((path (slynet--require-current-file))
+        (buffer (slynet--display-buffer slynet-diagnostics-buffer-name
+                                        #'slynet-diagnostics-mode)))
+    (slynet-client-send-rex-async
+     (slynet--require-connection)
+     (list 'load-file path)
+     (lambda (payload)
+       (slynet--render-diagnostics payload buffer)))
+    buffer))
+
+(defun slynet-interrupt-execution-unit (unit-id)
+  "Request cooperative interruption of managed execution UNIT-ID.
+This command does not claim to interrupt arbitrary Janet runtime frames; it
+targets SLYNET-owned execution units and renders the backend's actual result."
+  (interactive "sExecution unit id: ")
+  (when (string-empty-p unit-id)
+    (user-error "Execution unit id must not be empty"))
+  (slynet-client-send-rex-async
+   (slynet--require-connection)
+   (list 'interrupt-execution-unit unit-id)
+   (lambda (payload)
+     (message "SLYNET interrupt %s: %S" unit-id payload))))
+
+(defun slynet-cancel-latest-request ()
+  "Cancel the newest pending client request on the current connection.
+This resolves SLYNET client bookkeeping and callback state; it does not claim
+to stop arbitrary backend work.  Use `slynet-interrupt-execution-unit' for a
+cooperative backend execution-unit interruption."
+  (interactive)
+  (let* ((connection (slynet--require-connection))
+         (pending (slynet-client-connection-pending-requests connection))
+         ids)
+    (maphash (lambda (request-id _request) (push request-id ids)) pending)
+    (unless ids
+      (user-error "No pending SLYNET client request to cancel"))
+    (let ((request-id (apply #'max ids)))
+      (unless (slynet-client-cancel-request connection request-id :user-cancelled)
+        (user-error "SLYNET request %s was no longer pending" request-id))
+      (message "Cancelled SLYNET client request %s" request-id)
+      request-id)))
+
+(defun slynet-create-mrepl (&optional callback)
+  "Create an MREPL on the current connection.
+When CALLBACK is non-nil, call it with the backend result.  Interactively,
+create the MREPL and open the associated SLYNET REPL buffer when ready."
+  (interactive)
+  (let ((connection (slynet--require-connection)))
+    (slynet-client-create-mrepl
+     connection
+     (or callback
+         (lambda (_result)
+           (pop-to-buffer (slynet-repl connection)))))))
 
 (defun slynet-eval-mrepl-string (string callback)
   "Evaluate STRING on the active MREPL and call CALLBACK with returned values."
@@ -1100,10 +1493,10 @@ Return the request id assigned to the wire message."
 (defun slynet--render-location-support-string (location)
   "Return source/support metadata for LOCATION."
   (let ((source-kind (slynet--plist-string location :source-kind "unknown"))
-        (synthetic (plist-get location :synthetic-location))
-        (pc (plist-get location :janet-pc))
-        (status (plist-get location :janet-status))
-        (slots (plist-get location :janet-slots-count)))
+        (synthetic (slynet--plist-get location :synthetic-location))
+        (pc (slynet--plist-get location :janet-pc))
+        (status (slynet--plist-get location :janet-status))
+        (slots (slynet--plist-get location :janet-slots-count)))
     (concat
      (format "source=%s synthetic=%S" source-kind synthetic)
      (if status (format " janet-status=%s" (slynet--plist-string location :janet-status)) "")
@@ -1126,19 +1519,19 @@ Return the request id assigned to the wire message."
       (erase-buffer)
       (slynet-doc-mode)
       (slynet--insert-line "SLYNET Janet Docs")
-      (slynet--insert-line "Name: %s" (or (plist-get payload :name)
-                                          (plist-get payload :operator)
+      (slynet--insert-line "Name: %s" (or (slynet--plist-get payload :name)
+                                          (slynet--plist-get payload :operator)
                                           ""))
       (slynet--insert-line "Surface: %s" (slynet--plist-string payload :frontend-surface "doc-browser"))
       (slynet--insert-line "Support: %s" (slynet--plist-string payload :support-class "unknown"))
       (slynet--insert-line "CL-equivalent: %s"
-                           (or (plist-get payload :cl-autodoc-equivalent)
-                               (plist-get payload :cl-documentation-equivalent)
+                           (or (slynet--plist-get payload :cl-autodoc-equivalent)
+                               (slynet--plist-get payload :cl-documentation-equivalent)
                                "false"))
       (slynet--insert-line "Arglist: %s" (slynet--plist-string payload :arglist ""))
       (insert "\n")
       (slynet--insert-line "%s" (slynet--plist-string payload :documentation ""))
-      (let ((sources (slynet--listify (plist-get payload :source-locations))))
+      (let ((sources (slynet--listify (slynet--plist-get payload :source-locations))))
         (when sources
           (insert "\nSource locations:\n")
           (dolist (source sources)

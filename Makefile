@@ -1,6 +1,6 @@
 .NOTPARALLEL: release-verify
-.PHONY: all lint compile test test-janet test-emacs test-fuzz test-e2e \
-	protocol-warning-check protocol-inventory-check release-integrity \
+.PHONY: all lint compile test test-janet test-emacs test-fuzz test-e2e docs-contract \
+	protocol-warning-check protocol-inventory-check protocol-coverage-check release-integrity \
 	publication-verify release-artifact-smoke package clean \
 	release-verify
 
@@ -33,7 +33,11 @@ test-janet:
 
 test-emacs:
 	@echo "Running SLYNET Emacs ERT tests through Eldev..."
-	$(ELDEV) $(ELDEV_FLAGS) test --expect 81
+	$(ELDEV) $(ELDEV_FLAGS) test --expect 100
+
+docs-contract:
+	@echo "Checking public documentation against implemented commands and API..."
+	python3 tools/public_docs_contract.py
 
 test-fuzz:
 	@echo "Running extended deterministic transport fuzzing..."
@@ -49,6 +53,12 @@ test-e2e:
 		echo "E2E run $$run/3"; \
 		$(ELDEV) $(ELDEV_FLAGS) test slynet-e2e-creates-mrepl-evals-and-closes-live-janet-server \
 			slynet-e2e-repeated-sessions-remain-clean \
+			slynet-e2e-inflight-rpc-aborts-when-live-server-disappears \
+			slynet-e2e-daily-eval-compile-load-interrupt-and-cancel-live \
+			slynet-e2e-inspector-history-and-actions-live \
+			slynet-e2e-session-loss-marks-stale-and-reconnect-recovers-live \
+			slynet-e2e-request-timeout-ignores-late-reply-and-recovers-live \
+			slynet-e2e-debugger-diagnostics-xref-and-recovery-live \
 			slynet-start-server-reports-missing-executable; \
 	done; \
 	after=$$(pgrep -fc 'janet .*slynet/cli.janet.*--tcp' || true); \
@@ -71,20 +81,31 @@ protocol-warning-check:
 
 protocol-inventory-check:
 	@echo "Checking generated protocol inventory freshness..."
-	@tmp=$$(mktemp); \
-	trap 'rm -f "$$tmp"' EXIT; \
-	SLYNET_PROTOCOL_INVENTORY_OUTPUT="$$tmp" JANET_PATH="$${JANET_PATH}:$(CURDIR)" \
+	@tmp_inventory=$$(mktemp); tmp_coverage=$$(mktemp); \
+	trap 'rm -f "$$tmp_inventory" "$$tmp_coverage"' EXIT; \
+	SLYNET_PROTOCOL_INVENTORY_OUTPUT="$$tmp_inventory" \
+	SLYNET_PROTOCOL_COVERAGE_OUTPUT="$$tmp_coverage" \
+	JANET_PATH="$${JANET_PATH}:$(CURDIR)" \
 		$(JANET) tools/protocol_inventory.janet; \
-	cmp -s docs/generated/protocol-inventory.yml "$$tmp" || { \
+	cmp -s docs/generated/protocol-inventory.yml "$$tmp_inventory" || { \
 		echo "ERROR: docs/generated/protocol-inventory.yml is stale; regenerate with janet tools/protocol_inventory.janet"; \
-		diff -u docs/generated/protocol-inventory.yml "$$tmp" | head -n 120 || true; \
+		diff -u docs/generated/protocol-inventory.yml "$$tmp_inventory" | head -n 120 || true; \
+		exit 1; \
+	}; \
+	cmp -s docs/generated/protocol-coverage.md "$$tmp_coverage" || { \
+		echo "ERROR: docs/generated/protocol-coverage.md is stale; regenerate with janet tools/protocol_inventory.janet"; \
+		diff -u docs/generated/protocol-coverage.md "$$tmp_coverage" | head -n 120 || true; \
 		exit 1; \
 	}
+
+protocol-coverage-check:
+	@echo "Checking release-critical protocol coverage thresholds..."
+	JANET_PATH="$${JANET_PATH}:$(CURDIR)" $(JANET) tools/protocol_coverage_gate.janet
 
 package: clean
 	@echo "Building release artifacts for $(VERSION)..."
 	@mkdir -p $(DIST_DIR)/slynet-$(VERSION)
-	@cp -R slynet bundle docs project.janet LICENSE README.md CHANGELOG.md \
+	@cp -R slynet bundle docs examples project.janet LICENSE README.md CHANGELOG.md \
 		CONTRIBUTING.md ROADMAP.md SECURITY.md RELEASE_ANNOUNCEMENT.md \
 		$(DIST_DIR)/slynet-$(VERSION)/
 	@tar -C $(DIST_DIR) -czf $(DIST_DIR)/slynet-$(VERSION).tar.gz slynet-$(VERSION)
@@ -99,7 +120,7 @@ clean:
 	rm -rf $(DIST_DIR) .eldev
 	find . -name '*.elc' -o -name '*.jimage' -o -name '*.o' | xargs -r rm -f
 
-release-verify: clean release-integrity protocol-warning-check protocol-inventory-check \
+release-verify: clean release-integrity protocol-warning-check protocol-inventory-check protocol-coverage-check docs-contract \
 	lint test-janet test-emacs test-fuzz compile test-e2e package \
 	release-artifact-smoke
 	@echo "Verifying release metadata..."

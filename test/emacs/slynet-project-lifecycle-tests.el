@@ -25,8 +25,11 @@
         (should (equal (plist-get (gethash "proj-a" slynet-project-servers) :status) :ready))
         (should (equal (plist-get (gethash "proj-a" slynet-project-servers) :host) "127.0.0.1"))
         (should (equal (plist-get (gethash "proj-a" slynet-project-servers) :port) 4777))
+        (should (eq (plist-get (gethash "proj-a" slynet-project-servers) :owned-by-emacs) t))
         (should (>= ready-count 2))
-        (should (equal (car started) "slynet-proj-a"))))))
+        (should (equal (car started) "slynet-proj-a"))
+        (should (member "--host" started))
+        (should (member "4777" started))))))
 
 (ert-deftest slynet-reconnect-project-preserves-project-identity ()
   (let ((connection-a (slynet-client-make-test-connection nil))
@@ -60,6 +63,46 @@
           (should (search-forward "proj-c" nil t))
           (should (search-forward "stale" nil t))
           (should (search-forward "127.0.0.1:4555" nil t)))))))
+
+(ert-deftest slynet-connect-project-starts-and-owns-missing-local-server ()
+  (let ((slynet-project-servers (make-hash-table :test 'equal))
+        (slynet-named-connections (make-hash-table :test 'equal))
+        started
+        connected)
+    (cl-letf (((symbol-function 'slynet-start-project-server)
+               (lambda (name &rest args)
+                 (setq started (cons name args))
+                 (puthash name (list :project name :process 'fake :host "127.0.0.1"
+                                     :port 4888 :owned-by-emacs t :status :ready)
+                          slynet-project-servers)
+                 'fake))
+              ((symbol-function 'slynet-connect-named)
+               (lambda (name &rest args)
+                 (setq connected (cons name args))
+                 (let ((connection (slynet-client-make-test-connection nil)))
+                   (puthash name connection slynet-named-connections)
+                   (setq slynet-current-connection connection)
+                   connection))))
+      (let ((connection (slynet-connect-project "proj-owned" :host "127.0.0.1" :port 4888)))
+        (should connection)
+        (should (equal (car started) "proj-owned"))
+        (should (equal (car connected) "proj-owned"))
+        (should (eq (plist-get (gethash "proj-owned" slynet-project-servers)
+                               :owned-by-emacs)
+                    t))))))
+
+(ert-deftest slynet-disconnected-session-marks-bound-ui-buffer-stale ()
+  (let* ((connection (slynet-client-make-test-connection nil))
+         (slynet-current-connection connection)
+         (buffer (slynet--display-buffer "*slynet-stale-test*" #'special-mode)))
+    (unwind-protect
+        (progn
+          (slynet--handle-client-state-change connection :disconnected :connection-lost)
+          (with-current-buffer buffer
+            (should slynet-buffer-stale)
+            (should (string-match-p "stale session" header-line-format))
+            (should (string-match-p "connection-lost" header-line-format))))
+      (kill-buffer buffer))))
 
 (provide 'slynet-project-lifecycle-tests)
 ;;; slynet-project-lifecycle-tests.el ends here

@@ -28,7 +28,7 @@
       (set found table)))
   found)
 
-(deftest p29-autodoc-returns-operator-arglist-doc-and-provenance {:tags [:phase29 :autodoc]}
+(deftest p29-autodoc-returns-operator-arglist-doc-and-provenance {:tags [:phase29 :autodoc] :covers ["autodoc"]}
   (tt/with-test-server [srv]
     (def auto (plist->table ((srv :emacs-rex!) '(autodoc "(connection-info") :core nil 2902)))
     (assert= :ok (auto :status))

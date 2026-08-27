@@ -33,7 +33,7 @@
     (assert= "5" (first :summary))
     (assert= :native (first :support-class))))
 
-(deftest p19-inspector-history-preserves-object-identity {:tags [:phase19 :inspector-history]}
+(deftest p19-inspector-history-preserves-object-identity {:tags [:phase19 :inspector-history] :covers ["inspector-history" "inspector-reinspect"]}
   (tt/with-test-server [srv]
     (def root (plist->table ((srv :emacs-rex!) '(inspect-for-emacs @[10 20 30]) :core nil 1903)))
     (def child (plist->table ((srv :emacs-rex!) '(inspector-nth-part 1) :core nil 1904)))
@@ -44,9 +44,11 @@
     (assert= (root :object-id) (first :object-id))
     (assert= (child :object-id) (second :object-id))
     (assert= true (second :current))
-    (assert= (root :object-id) (second :parent-object-id))))
+    (assert= (root :object-id) (second :parent-object-id))
+    (def refreshed (plist->table ((srv :emacs-rex!) '(inspector-reinspect) :core nil 1908)))
+    (assert= (child :object-id) (refreshed :object-id))))
 
-(deftest p19-inspector-actions-support-metadata {:tags [:phase19 :inspector-actions]}
+(deftest p19-inspector-actions-support-metadata {:tags [:phase19 :inspector-actions] :covers ["inspector-call-nth-action"]}
   (tt/with-test-server [srv]
     ((srv :emacs-rex!) '(inspect-for-emacs @{:a 1}) :core nil 1906)
     (def actions ((srv :emacs-rex!) '(inspector-actions) :core nil 1907))
@@ -59,4 +61,19 @@
     (assert= :safe (copy-action :safety-level))
     (assert= :unsupported (edit-action :support-class))
     (assert= :unsafe (edit-action :safety-level))
-    (assert-true (string? (edit-action :unsupported-reason)))))
+    (assert-true (string? (edit-action :unsupported-reason)))
+    (def copied (plist->table ((srv :emacs-rex!) '(inspector-call-nth-action 0) :core nil 1909)))
+    (assert= :ok (copied :status))
+    (assert= :copy-value (copied :action-id))
+    (assert-true (string? (copied :value)))
+    (def unsupported (plist->table ((srv :emacs-rex!) '(inspector-call-nth-action 1) :core nil 1910)))
+    (assert= :unsupported (unsupported :status))))
+
+(deftest p19-inspector-back-forward-preserves-history {:tags [:phase19 :inspector-history] :covers ["inspector-next"]}
+  (tt/with-test-server [srv]
+    (def root (plist->table ((srv :emacs-rex!) '(inspect-for-emacs @[10 20 30]) :core nil 1911)))
+    (def child (plist->table ((srv :emacs-rex!) '(inspector-nth-part 2) :core nil 1912)))
+    (def back (plist->table ((srv :emacs-rex!) '(inspector-pop) :core nil 1913)))
+    (def forward (plist->table ((srv :emacs-rex!) '(inspector-next) :core nil 1914)))
+    (assert= (root :object-id) (back :object-id))
+    (assert= (child :object-id) (forward :object-id))))

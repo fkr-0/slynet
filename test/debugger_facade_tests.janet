@@ -1,5 +1,6 @@
 (use ../mini-test)
 (import ../test-tools :as tt)
+(import ../slynet/print-for-emacs :as pfe)
 
 (defn- expect-error [thunk]
   (try
@@ -184,4 +185,39 @@
            (assert-true (table? location))
            (assert= true (location :synthetic-location))
            (assert= :synthetic-facade (location :source-kind))))})
+
+(register-test
+  {:name "wire printer handles tuple debug metadata without hashing tuple contents"
+   :tags [:phase3 :debugger :wire]
+   :fn (fn []
+         (def payload
+           @[(tuple :frame @{:args (tuple (fn [] 1) @{:x 1})})])
+         (def printed (pfe/prin1-to-string-for-emacs payload nil))
+         (assert-true (string? printed))
+         (assert-true (not (nil? (string/find "frame" printed))))
+         (assert-true (not (nil? (string/find "#<function>" printed))))
+         (def cyclic @[])
+         (array/push cyclic cyclic)
+         (def cyclic-printed (pfe/prin1-to-string-for-emacs cyclic nil))
+         (assert-true (string? cyclic-printed))
+         (assert-true (not (nil? (string/find "#<...>" cyclic-printed)))))} )
+
+(register-test
+  {:name "debugger compatibility restart and frame package tools remain truthful"
+   :tags [:phase3 :debugger :compatibility]
+   :covers ["invoke-nth-restart-for-emacs" "frame-package-name"]
+   :fn (fn []
+         (tt/with-test-server [srv]
+           (expect-error (fn [] ((srv :emacs-rex!) '(not-a-real-symbol) :core nil 1012)))
+           (def package ((srv :emacs-rex!) '(frame-package-name 0) :core nil 1013))
+           (assert= "core" package)
+           (def invoked (plist->table
+                          ((srv :emacs-rex!) '(invoke-nth-restart-for-emacs 1 0)
+                           :core nil 1014)))
+           (assert= :ok (invoked :status))
+           (assert= 1 (invoked :level))
+           (assert= 0 (invoked :restart-index))
+           (assert= "abort-to-repl" (invoked :restart-name))
+           (assert= :emulated (invoked :support-class))
+           (assert= false (invoked :cl-restart-equivalent))))})
 

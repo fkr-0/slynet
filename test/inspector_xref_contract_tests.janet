@@ -142,3 +142,52 @@
              (assert= :macro (macro-hit :kind))
              (assert= :interface (interface-hit :kind)))))} )
 
+(register-test
+  {:name "inspector compatibility tools reuse native inspector state"
+   :tags [:phase4 :inspector :compatibility]
+   :covers ["init-inspector" "inspect-in-emacs" "inspect-nth-part"
+            "inspector-nth-part-or-lose" "describe-inspectee"
+            "pprint-inspector-part" "inspector-eval" "eval-for-inspector"
+            "quit-inspector"]
+   :fn (fn []
+         (tt/with-test-server [srv]
+           (def root (plist->table ((srv :emacs-rex!) '(init-inspector @[10 20 30]) :core nil 2020)))
+           (assert-true (string? (root :object-id)))
+           (def child (plist->table ((srv :emacs-rex!) '(inspect-nth-part 1) :core nil 2021)))
+           (assert= "20" (child :title))
+           ((srv :emacs-rex!) '(inspector-pop) :core nil 2022)
+           (assert= "30" ((srv :emacs-rex!) '(pprint-inspector-part 2) :core nil 2023))
+           (def described (plist->table ((srv :emacs-rex!) '(describe-inspectee) :core nil 2024)))
+           (assert= :ok (described :status))
+           (assert= :array (described :type))
+           (def evaluated (plist->table ((srv :emacs-rex!) '(inspector-eval "(+ 20 22)") :core nil 2025)))
+           (assert= "42" (evaluated :title))
+           (def evaluated-form (plist->table ((srv :emacs-rex!) '(eval-for-inspector (+ 40 3)) :core nil 2026)))
+           (assert= "43" (evaluated-form :title))
+           (def direct (plist->table ((srv :emacs-rex!) '(inspect-in-emacs @[7 8]) :core nil 2027)))
+           (assert-true (string? (direct :object-id)))
+           (def exact (plist->table ((srv :emacs-rex!) '(inspector-nth-part-or-lose 0) :core nil 2028)))
+           (assert= "7" (exact :title))
+           (def closed (plist->table ((srv :emacs-rex!) '(quit-inspector) :core nil 2029)))
+           (assert= :closed (closed :status))
+           (assert-true (> (closed :cleared) 0))))})
+
+(register-test
+  {:name "definition compatibility tools expose source-index locations"
+   :tags [:phase4 :xref :compatibility]
+   :covers ["find-definition-for-thing" "find-source-location-for-emacs"]
+   :fn (fn []
+         (tt/with-test-server [srv]
+           (def hit (plist->table
+                      ((srv :emacs-rex!) '(find-definition-for-thing "fixture-target")
+                       :core nil 2030)))
+           (assert= "fixture-target" (hit :name))
+           (assert-true (string? (hit :file)))
+           (def location (plist->table
+                           ((srv :emacs-rex!) '(find-source-location-for-emacs "fixture-target")
+                            :core nil 2031)))
+           (assert= (hit :file) (location :file))
+           (assert= (hit :line) (location :line))
+           (assert= (hit :column) (location :column))
+           (assert= :definition (location :xref-kind))))})
+

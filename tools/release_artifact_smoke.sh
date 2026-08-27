@@ -30,6 +30,7 @@ EMACS_ROOT="$TMP/emacs/slynet-$VERSION"
 [ -f "$JANET_ROOT/slynet/cli.janet" ] || { echo "artifact-smoke: Janet CLI missing after extraction" >&2; exit 1; }
 [ -f "$JANET_ROOT/docs/RELEASE_STATUS.md" ] || { echo "artifact-smoke: release status missing from Janet artifact" >&2; exit 1; }
 [ -f "$JANET_ROOT/docs/generated/protocol-inventory.yml" ] || { echo "artifact-smoke: protocol inventory missing from Janet artifact" >&2; exit 1; }
+[ -x "$JANET_ROOT/examples/embed-server.janet" ] || { echo "artifact-smoke: executable embedding example missing from Janet artifact" >&2; exit 1; }
 [ -f "$EMACS_ROOT/slynet.el" ] || { echo "artifact-smoke: Emacs slynet.el missing after extraction" >&2; exit 1; }
 [ -f "$EMACS_ROOT/slynet-client.el" ] || { echo "artifact-smoke: Emacs slynet-client.el missing after extraction" >&2; exit 1; }
 
@@ -37,6 +38,14 @@ VERSION_OUTPUT=$(cd "$JANET_ROOT" && JANET_PATH="${JANET_PATH:-}:$JANET_ROOT" ja
 printf '%s\n' "$VERSION_OUTPUT" | grep -F "$VERSION" >/dev/null || {
   echo "artifact-smoke: extracted Janet CLI version mismatch" >&2
   printf '%s\n' "$VERSION_OUTPUT" >&2
+  exit 1
+}
+
+(
+  cd "$JANET_ROOT"
+  JANET_PATH="${JANET_PATH:-}:$JANET_ROOT" ./examples/embed-server.janet --check
+) | grep -F "embedding check passed" >/dev/null || {
+  echo "artifact-smoke: extracted embedding example failed" >&2
   exit 1
 }
 

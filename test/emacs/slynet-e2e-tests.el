@@ -163,5 +163,317 @@ run, then checks PREDICATE again."
       (ignore-errors (slynet-disconnect))
       (slynet-e2e--cleanup-process server))))
 
+
+(defun slynet-e2e--rex (form &optional timeout)
+  "Send FORM to the live backend and synchronously await its RPC payload."
+  (let ((done nil)
+        result)
+    (slynet-client-send-rex-async
+     slynet-current-connection form
+     (lambda (payload)
+       (setq result payload
+             done t))
+     nil nil (or timeout 5.0))
+    (slynet-e2e--wait-until (lambda () done) (format "RPC %S" form) (or timeout 5.0))
+    result))
+
+(defun slynet-e2e--eval-values (code)
+  "Evaluate CODE through the live backend and return its printed values."
+  (let ((payload (slynet--sequence-to-list
+                  (slynet-e2e--rex (list 'interactive-eval-region code)))))
+    (slynet--sequence-to-list
+     (or (slynet--plist-get payload :values)
+         (slynet--plist-get payload 'values)))))
+
+(defun slynet-e2e--connect-live (port)
+  "Connect the public Emacs client to localhost PORT."
+  (slynet-connect :host "127.0.0.1" :port port))
+
+(ert-deftest slynet-e2e-daily-eval-compile-load-interrupt-and-cancel-live ()
+  (let* ((port (slynet-e2e--free-port))
+         (server (slynet-e2e--start-server port))
+         (source-file (make-temp-file "slynet-editor-e2e-" nil ".janet"))
+         cancel-result)
+    (unwind-protect
+        (progn
+          (slynet-e2e--wait-until
+           (lambda () (and (process-live-p server) (slynet-e2e--tcp-accepts-p port)))
+           "Janet server TCP readiness")
+          (slynet-e2e--connect-live port)
+
+          ;; Region: define a value and prove the following live RPC observes it.
+          (with-temp-buffer
+            (emacs-lisp-mode)
+            (insert "(def slynet-e2e-region 101)")
+            (slynet-eval-region (point-min) (point-max)))
+          (should (equal (slynet-e2e--eval-values "slynet-e2e-region") '("101")))
+
+          ;; Last form: only the final balanced form is submitted.
+          (with-temp-buffer
+            (emacs-lisp-mode)
+            (insert "(def slynet-e2e-ignore 1)\n(def slynet-e2e-last 102)\n")
+            (goto-char (point-max))
+            (slynet-eval-last-form))
+          (should (equal (slynet-e2e--eval-values "slynet-e2e-last") '("102")))
+
+          ;; Definition: locate and evaluate the top-level form at point.
+          (with-temp-buffer
+            (emacs-lisp-mode)
+            (insert "(def slynet-e2e-definition 103)\n")
+            (goto-char (point-min))
+            (forward-char 8)
+            (slynet-eval-definition))
+          (should (equal (slynet-e2e--eval-values "slynet-e2e-definition") '("103")))
+
+          ;; Buffer: preserve order across multiple top-level forms.
+          (with-temp-buffer
+            (emacs-lisp-mode)
+            (insert "(def slynet-e2e-buffer-a 104)\n(def slynet-e2e-buffer-b 105)\n")
+            (slynet-eval-buffer))
+          (should (equal (slynet-e2e--eval-values "(+ slynet-e2e-buffer-a slynet-e2e-buffer-b)")
+                         '("209")))
+
+          ;; Compile/load commands use an actual visiting file and their rendered
+          ;; diagnostics buffers; load is additionally proven by backend state.
+          (with-temp-file source-file
+            (insert "(def slynet-e2e-file-value 211)\n"))
+          (with-current-buffer (find-file-noselect source-file)
+            (unwind-protect
+                (progn
+                  (let ((diagnostics (slynet-compile-current-file)))
+                    (slynet-e2e--wait-until
+                     (lambda () (> (buffer-size diagnostics) 0))
+                     "compile-current-file diagnostics"))
+                  (let ((diagnostics (slynet-load-current-file)))
+                    (slynet-e2e--wait-until
+                     (lambda () (> (buffer-size diagnostics) 0))
+                     "load-current-file diagnostics")))
+              (kill-buffer (current-buffer))))
+          (should (equal (slynet-e2e--eval-values "slynet-e2e-file-value") '("211")))
+
+          ;; Cooperative interruption targets a managed execution unit and is
+          ;; verified through the live unit registry, not an Emacs message mock.
+          (slynet-e2e--rex
+           '(register-execution-unit "e2e-unit" "editor-e2e" :worker nil 1 1))
+          (slynet-interrupt-execution-unit "e2e-unit")
+          (let ((status (slynet-e2e--rex '(execution-unit-status "e2e-unit"))))
+            (should (slynet--enum= (slynet--plist-get status :status) :interrupt-requested))
+            (should (eq (slynet--plist-get status :interrupt-requested) t)))
+
+          ;; Client cancellation resolves local callback/bookkeeping exactly
+          ;; once. It deliberately does not claim to terminate arbitrary Janet
+          ;; evaluation; the short backend sleep is allowed to complete later.
+          (let ((request-id
+                 (slynet-client-send-rex-async
+                  slynet-current-connection
+                  '(interactive-eval-region "(os/sleep 0.25)")
+                  (lambda (payload) (setq cancel-result payload))
+                  nil nil 2.0)))
+            (should (= request-id (slynet-cancel-latest-request)))
+            (slynet-e2e--wait-until (lambda () cancel-result) "client cancellation callback")
+            (should (equal cancel-result '(:abort :user-cancelled)))
+            (should-not (gethash request-id
+                                 (slynet-client-connection-pending-requests
+                                  slynet-current-connection))))
+          (accept-process-output nil 0.35))
+      (ignore-errors (slynet-disconnect))
+      (ignore-errors (delete-file source-file))
+      (slynet-e2e--cleanup-process server))))
+
+(ert-deftest slynet-e2e-inspector-history-and-actions-live ()
+  (let* ((port (slynet-e2e--free-port))
+         (server (slynet-e2e--start-server port))
+         kill-ring)
+    (unwind-protect
+        (progn
+          (slynet-e2e--wait-until
+           (lambda () (and (process-live-p server) (slynet-e2e--tcp-accepts-p port)))
+           "Janet server TCP readiness")
+          (slynet-e2e--connect-live port)
+          (let ((buffer (slynet-inspect-value '(10 20 30))))
+            (slynet-e2e--wait-until
+             (lambda () (with-current-buffer buffer slynet-inspector-object-id))
+             "root inspector render")
+            (let ((root-id (with-current-buffer buffer slynet-inspector-object-id)))
+              (slynet-inspector-nth-part 1)
+              (slynet-e2e--wait-until
+               (lambda ()
+                 (with-current-buffer buffer
+                   (and slynet-inspector-parent-object-id
+                        (not (equal slynet-inspector-object-id root-id)))))
+               "inspector child navigation")
+              (let ((child-id (with-current-buffer buffer slynet-inspector-object-id)))
+                (slynet-inspector-pop)
+                (slynet-e2e--wait-until
+                 (lambda () (with-current-buffer buffer (equal slynet-inspector-object-id root-id)))
+                 "inspector back navigation")
+                (slynet-inspector-next)
+                (slynet-e2e--wait-until
+                 (lambda () (with-current-buffer buffer (equal slynet-inspector-object-id child-id)))
+                 "inspector forward navigation")
+                (slynet-inspector-reinspect)
+                (slynet-e2e--wait-until
+                 (lambda () (with-current-buffer buffer (equal slynet-inspector-object-id child-id)))
+                 "inspector refresh")
+                (let ((actions (slynet-inspector-actions)))
+                  (slynet-e2e--wait-until
+                   (lambda () (with-current-buffer actions (> (buffer-size) 0)))
+                   "inspector action discovery"))
+                (slynet-inspector-call-action 0)
+                (slynet-e2e--wait-until
+                 (lambda () (and kill-ring (string-match-p "20" (car kill-ring))))
+                 "inspector copy action")))))
+      (ignore-errors (slynet-disconnect))
+      (slynet-e2e--cleanup-process server))))
+
+(ert-deftest slynet-e2e-session-loss-marks-stale-and-reconnect-recovers-live ()
+  (let* ((port (slynet-e2e--free-port))
+         (server (slynet-e2e--start-server port))
+         stale-buffer)
+    (unwind-protect
+        (progn
+          (slynet-e2e--wait-until
+           (lambda () (and (process-live-p server) (slynet-e2e--tcp-accepts-p port)))
+           "initial Janet server TCP readiness")
+          (slynet-e2e--connect-live port)
+          (setq stale-buffer (slynet-inspect-value '(1 2 3)))
+          (slynet-e2e--wait-until
+           (lambda () (with-current-buffer stale-buffer slynet-inspector-object-id))
+           "pre-loss inspector render")
+
+          (let (loss-result)
+            (slynet-client-send-rex-async
+             slynet-current-connection
+             '(interactive-eval-region "(os/sleep 10)")
+             (lambda (payload) (setq loss-result payload)))
+            (delete-process server)
+            (slynet-e2e--wait-until
+             (lambda () (equal loss-result '(:abort :connection-lost)))
+             "connection-loss callback during server restart")
+            (slynet-e2e--wait-until
+             (lambda ()
+               (and (not (slynet-client-connection-process slynet-current-connection))
+                    (with-current-buffer stale-buffer slynet-buffer-stale)))
+             "stale-session marking after server loss"))
+          (with-current-buffer stale-buffer
+            (should (string-match-p "stale session" (format "%s" header-line-format))))
+
+          ;; Restart the same endpoint, reconnect through the public command,
+          ;; and prove a fresh UI request clears stale state and reaches Janet.
+          (setq server (slynet-e2e--start-server port))
+          (slynet-e2e--wait-until
+           (lambda () (and (process-live-p server) (slynet-e2e--tcp-accepts-p port)))
+           "replacement Janet server TCP readiness")
+          (slynet-reconnect)
+          (should (equal (slynet-e2e--eval-values "(+ 40 2)") '("42")))
+          (setq stale-buffer (slynet-inspect-value '(4 5 6)))
+          (slynet-e2e--wait-until
+           (lambda ()
+             (with-current-buffer stale-buffer
+               (and slynet-inspector-object-id (not slynet-buffer-stale))))
+           "fresh inspector after reconnect"))
+      (ignore-errors (slynet-disconnect))
+      (slynet-e2e--cleanup-process server))))
+
+(ert-deftest slynet-e2e-request-timeout-ignores-late-reply-and-recovers-live ()
+  (let* ((port (slynet-e2e--free-port))
+         (server (slynet-e2e--start-server port))
+         result)
+    (unwind-protect
+        (progn
+          (slynet-e2e--wait-until
+           (lambda () (and (process-live-p server) (slynet-e2e--tcp-accepts-p port)))
+           "Janet server TCP readiness")
+          (slynet-e2e--connect-live port)
+          (let ((request-id
+                 (slynet-client-send-rex-async
+                  slynet-current-connection
+                  '(interactive-eval-region "(os/sleep 0.25)")
+                  (lambda (payload) (setq result payload))
+                  nil nil 0.05)))
+            (slynet-e2e--wait-until (lambda () result) "live request timeout")
+            (should (equal result '(:abort :timeout)))
+            (should-not
+             (gethash request-id
+                      (slynet-client-connection-pending-requests
+                       slynet-current-connection)))
+            (should (= 0 (hash-table-count
+                          (slynet-client-connection-pending-requests
+                           slynet-current-connection)))))
+          ;; Let the backend's late reply arrive.  It must not resurrect the
+          ;; timed-out callback or poison the next request on this connection.
+          (accept-process-output nil 0.35)
+          (should (equal result '(:abort :timeout)))
+          (should (equal (slynet-e2e--eval-values "(+ 6 7)") '("13"))))
+      (ignore-errors (slynet-disconnect))
+      (slynet-e2e--cleanup-process server))))
+
+(ert-deftest slynet-e2e-debugger-diagnostics-xref-and-recovery-live ()
+  (let* ((port (slynet-e2e--free-port))
+         (server (slynet-e2e--start-server port))
+         (source-file (make-temp-file "slynet-error-e2e-" nil ".janet")))
+    (unwind-protect
+        (progn
+          (slynet-e2e--wait-until
+           (lambda () (and (process-live-p server) (slynet-e2e--tcp-accepts-p port)))
+           "Janet server TCP readiness")
+          (slynet-e2e--connect-live port)
+
+          ;; A real evaluation failure must populate debugger state without
+          ;; rendering the connection unusable.
+          (let ((failed (slynet-e2e--rex
+                         '(interactive-eval-region "(not-a-real-e2e-symbol)"))))
+            (should (and (consp failed) (eq (car failed) :abort))))
+          (let ((debugger (slynet-debugger-info)))
+            (slynet-e2e--wait-until
+             (lambda ()
+               (with-current-buffer debugger
+                 (and (string-match-p "Condition:" (buffer-string))
+                      (string-match-p "evaluation-error" (buffer-string))
+                      (string-match-p "Frames:" (buffer-string)))))
+             "live debugger rendering")
+            (let ((restart-buffer (slynet-debugger-invoke-restart 0)))
+              (slynet-e2e--wait-until
+               (lambda ()
+                 (with-current-buffer restart-buffer
+                   (string-match-p "abort-to-repl" (buffer-string))))
+               "live debugger restart")))
+
+          ;; Source navigation is exercised through the public UI command and
+          ;; the real project source index.
+          (let ((xref-buffer (slynet-find-definitions "connection-info")))
+            (slynet-e2e--wait-until
+             (lambda ()
+               (with-current-buffer xref-buffer
+                 (and (string-match-p "connection-info" (buffer-string))
+                      (string-match-p "slynet/" (buffer-string)))))
+             "live xref rendering"))
+
+          ;; Compile a genuinely malformed visiting file and assert that the
+          ;; diagnostic renderer receives a path-aware backend error.
+          (with-temp-file source-file
+            (insert "(def slynet-e2e-broken "))
+          (with-current-buffer (find-file-noselect source-file)
+            (unwind-protect
+                (let ((diagnostics (slynet-compile-current-file)))
+                  (slynet-e2e--wait-until
+                   (lambda ()
+                     (with-current-buffer diagnostics
+                       (and (string-match-p "SLYNET diagnostics" (buffer-string))
+                            (string-match-p "error" (buffer-string))
+                            (string-match-p
+                             (regexp-quote source-file) (buffer-string)))))
+                   "live compile diagnostic rendering"))
+              (kill-buffer (current-buffer))))
+
+          ;; A protocol-level inspector error must abort only that request.
+          (slynet-e2e--rex '(inspect-for-emacs @[1 2]))
+          (let ((bad-part (slynet-e2e--rex '(inspector-nth-part 99))))
+            (should (and (consp bad-part) (eq (car bad-part) :abort))))
+          (should (equal (slynet-e2e--eval-values "(+ 20 22)") '("42"))))
+      (ignore-errors (slynet-disconnect))
+      (ignore-errors (delete-file source-file))
+      (slynet-e2e--cleanup-process server))))
+
 (provide 'slynet-e2e-tests)
 ;;; slynet-e2e-tests.el ends here

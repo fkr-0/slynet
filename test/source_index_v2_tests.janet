@@ -65,6 +65,21 @@
   (assert= 2 ((fresh 0) :line))
   (assert= "fresh-target" ((fresh 0) :name)))
 
+(deftest p18-source-index-v2-cache-invalidates-same-size-edit {:tags [:phase18 :source-index-v2]}
+  (def root (string (fixture-root) "-same-size-cache"))
+  (def file (write-fixture! root "(defn old-target [] :ok)\n"))
+  (source-index/clear-cache!)
+  (assert= 1 (length (source-index/find-definitions root "old-target")))
+  # Janet 1.40 exposes the file timestamp as :modified. Wait across the
+  # filesystem timestamp boundary, then rewrite with identical byte length so
+  # cache invalidation cannot accidentally pass because :size changed.
+  (os/sleep 1.05)
+  (spit file "(defn new-target [] :ok)\n")
+  (assert= 0 (length (source-index/find-definitions root "old-target")))
+  (def fresh (source-index/find-definitions root "new-target"))
+  (assert= 1 (length fresh))
+  (assert= 1 ((fresh 0) :line)))
+
 (deftest p18-xref-prefers-source-index-v2-facts {:tags [:phase18 :source-index-v2 :xref]}
   (tt/with-test-server [srv]
     (def hits ((srv :emacs-rex!) '(find-definitions-for-emacs "fixture-target") :core nil 1818))

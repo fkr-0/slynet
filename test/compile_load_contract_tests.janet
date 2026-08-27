@@ -68,3 +68,48 @@
              (assert= missing-path (diagnostic :path))
              (assert= :janet-diagnostics (diagnostic :diagnostic-model))
              (assert= false (diagnostic :cl-compiler-note-equivalent)))))})
+
+(register-test
+  {:name "compile multiple strings aggregates success and diagnostics"
+   :tags [:phase5 :compile :diagnostics :compatibility]
+   :covers ["compile-multiple-strings-for-emacs"]
+   :fn (fn []
+         (tt/with-test-server [srv]
+           (def good (plist->table
+                       ((srv :emacs-rex!)
+                         '(compile-multiple-strings-for-emacs @["(+ 1 2)" "(+ 4 5)"] :default)
+                         :core nil 3004)))
+           (assert= true (good :success))
+           (assert= :ok (good :status))
+           (assert= 2 (length (good :results)))
+           (assert= 0 (length (good :diagnostics)))
+           (assert= :emulated (good :support-class))
+           (def mixed (plist->table
+                        ((srv :emacs-rex!)
+                          '(compile-multiple-strings-for-emacs @["(+ 1 2)" "(+ 1"] :default)
+                          :core nil 3005)))
+           (assert= false (mixed :success))
+           (assert= :error (mixed :status))
+           (assert= 1 (length (mixed :diagnostics)))))})
+
+(register-test
+  {:name "compile file if needed validates and optionally loads existing source"
+   :tags [:phase5 :compile :load :compatibility]
+   :covers ["compile-file-if-needed"]
+   :fn (fn []
+         (tt/with-test-server [srv]
+           (def path (string (os/cwd) "/test/fixtures/compile_if_needed.janet"))
+           (def checked (plist->table
+                          ((srv :emacs-rex!) (tuple 'compile-file-if-needed path false)
+                           :core nil 3006)))
+           (assert= true (checked :success))
+           (assert= :ok (checked :status))
+           (assert= nil (checked :loaded))
+           (assert= :validate-source-each-call (checked :compile-strategy))
+           (assert= false (checked :cl-compile-file-cache-equivalent))
+           (def loaded (plist->table
+                         ((srv :emacs-rex!) (tuple 'compile-file-if-needed path true)
+                          :core nil 3007)))
+           (assert= true (loaded :success))
+           (assert-not-nil (loaded :loaded))
+           (assert= :emulated (loaded :support-class))))})

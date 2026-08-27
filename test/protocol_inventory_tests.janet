@@ -118,17 +118,52 @@
          (def text (inventory-text))
          (def ping-record (record-for text "ping"))
          (def restart-record (record-for text "invoke-nth-restart"))
+         (def compiler-macro-record (record-for text "compiler-macroexpand"))
          (def trace-record (record-for text "dialog-trace"))
          (def sticker-record (record-for text "compile-for-stickers"))
-         (assert-true (contains text "schema_version: 5") "schema records explicit test and callable-registration evidence")
+         (assert-true (contains text "schema_version: 6") "schema records stable-subset coverage and registration semantics")
          (assert-true (contains ping-record "support_class: native") "unconstrained tested implementation is native")
          (assert-true (contains ping-record "state_detail: implemented_native_tested") "tested native implementation has precise state")
          (assert-true (contains ping-record "registration_files:\n      - slynet/slynk.janet") "implemented state requires callable registration evidence")
          (assert-true (contains ping-record "test_evidence_kind: explicit_covers_metadata") "direct test evidence is explicit rather than inferred")
          (assert-true (contains restart-record "support_class: emulated") "restart operations remain explicit Janet emulations")
          (assert-true (contains restart-record "state_detail: implemented_emulated_tested") "direct restart coverage is now recorded")
+         (assert-true (contains compiler-macro-record "support_class: emulated") "compiler-macroexpand reflects its explicit Janet emulation")
+         (assert-true (contains compiler-macro-record "state_detail: implemented_emulated_tested") "compiler-macroexpand test coverage agrees with runtime support metadata")
+         (assert-true (contains compiler-macro-record "Common Lisp compiler-macro and lexical environment semantics are not available") "compiler-macroexpand records its operation-specific non-equivalence")
          (assert-true (contains trace-record "state_detail: implemented_native_unwired") "defined trace-dialog code is not mistaken for a callable RPC")
          (assert-true (contains sticker-record "state_detail: missing_unconstrained") "interface-only sticker declarations are not implementations"))})
+
+(register-test
+  {:name "protocol inventory distinguishes registered error and unsupported stubs"
+   :tags [:inventory :phase0 :registration-semantics]
+   :fn (fn []
+         (run-inventory-generator)
+         (def text (inventory-text))
+         (def stream-record (record-for text "make-output-stream"))
+         (def nickname-record (record-for text "package-local-nicknames"))
+         (def action-record (record-for text "inspector-call-nth-action"))
+         (assert-true (contains stream-record "state: registered_stub") "registered Not implemented endpoint is not functional")
+         (assert-true (contains stream-record "registration_semantics: error_stub") "error stub semantics are explicit")
+         (assert-true (contains nickname-record "state_detail: registered_unsupported_stub") "always-unsupported compatibility endpoint is explicit")
+         (assert-true (contains nickname-record "registration_semantics: unsupported_stub") "unsupported stub semantics are explicit")
+         (assert-true (contains action-record "state: implemented") "partially unsupported inspector action dispatcher remains functional")
+         (assert-true (contains action-record "registration_semantics: functional") "functional branch prevents false stub classification"))})
+
+(register-test
+  {:name "protocol inventory stable subset is fully directly covered by surface"
+   :tags [:inventory :phase0 :stable-subset]
+   :fn (fn []
+         (run-inventory-generator)
+         (def text (inventory-text))
+         (def start (string/find "stable_subset_coverage:\n" text))
+         (def finish (string/find "operations:\n" text start))
+         (def audit (string/slice text start finish))
+         (assert-true (contains audit "required_percent: 100") "stable subset threshold is 100 percent per surface")
+         (each surface @["transport" "repl" "completion" "compile_load" "inspector" "xref" "debugger"]
+           (assert-true (contains audit (string "    " surface ":\n")) (string surface " stable coverage emitted")))
+         (assert-false (contains audit "gate: fail") "no release-critical frontend surface is below threshold")
+         (assert-true (contains audit "  gate: pass") "aggregate stable subset gate passes"))})
 
 (register-test
   {:name "protocol inventory maps operations to frontend surfaces"
@@ -327,13 +362,15 @@
            (assert-true (contains rec "    owning_spec: docs/specs/") (string operation " has owning spec"))))})
 
 (register-test
-  {:name "protocol inventory support rationale required for constrained support"
+  {:name "protocol inventory support rationale required for non-native support"
    :tags [:inventory :phase10]
    :fn (fn []
          (run-inventory-generator)
          (def text (inventory-text))
          (each rec (all-records text)
            (def support (record-field rec "support_class"))
+           (def constraint (record-field rec "constraint"))
            (when (or (= support "emulated") (= support "unsupported") (= support "pending_design"))
-             (assert-true (contains rec "    constraint_reason: ") "constrained record has constraint reason")
+             (when (not (= constraint "none"))
+               (assert-true (contains rec "    constraint_reason: ") "cross-cutting constrained record has constraint reason"))
              (assert-true (contains rec "    support_rationale: ") "constrained record has support rationale"))))})

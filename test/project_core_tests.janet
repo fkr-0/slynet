@@ -301,13 +301,15 @@
 (register-test
   {:name "macroexpand and compile-string for emacs"
    :tags [:integration :server :compiler]
-   :covers ["interactive-eval-region" "macroexpand-1-for-emacs" "compile-string-for-emacs"]
+   :covers ["interactive-eval-region" "macroexpand-all" "macroexpand-1-for-emacs" "compile-string-for-emacs"]
    :fn (fn []
          (tt/with-test-server [srv]
                               ((srv :emacs-rex!) '(interactive-eval-region "(defmacro plus2 [x] (tuple '+ x 2))") :core nil 30)
                               (def expanded ((srv :emacs-rex!) '(macroexpand-1-for-emacs "(plus2 3)") :core nil 31))
+                              (def expanded-all ((srv :emacs-rex!) '(macroexpand-all "(plus2 3)") :core nil 63))
                               (def compiled (plist->table ((srv :emacs-rex!) '(compile-string-for-emacs "(def compiled-target 9)\n(+ compiled-target 1)") :core nil 32)))
                               (assert-true (string? expanded))
+                              (assert-true (string? expanded-all))
                               (assert= true (compiled :success))
                               (assert= "10" (compiled :value))))})
 

@@ -100,6 +100,7 @@
   (definterface 'inspect-for-emacs [:value] "Inspect VALUE and return an Emacs-renderable inspector payload.")
   (definterface 'macroexpand-1-for-emacs [:form] "Macroexpand FORM once for Emacs.")
   (definterface 'macroexpand-all-for-emacs [:form] "Macroexpand FORM completely for Emacs.")
+  (definterface 'macroexpand-all [:form] "Macroexpand FORM completely using Janet semantics.")
 
   # From contrib/slynet-apropos.janet
   (definterface 'slynet-apropos [:string-or-pattern :external-only :case-sensitive :package] "Return apropos matches for STRING-OR-PATTERN.")
@@ -166,6 +167,8 @@
   (definterface 'slynk-macroexpand-all [:form] "Macroexpand a form completely.")
   (definterface 'slynk-compiler-macroexpand-1 [:form] "Compiler-macroexpand a form once.")
   (definterface 'slynk-compiler-macroexpand [:form] "Compiler-macroexpand a form.")
+  (definterface 'compiler-macroexpand-1 [:form :&optional :env] "Compiler-macroexpand a form once using Janet expansion semantics.")
+  (definterface 'compiler-macroexpand [:form :&optional :env] "Repeatedly compiler-macroexpand a form using Janet expansion semantics.")
   (definterface 'slynk-expand-1 [:form] "Expand a form once.")
   (definterface 'slynk-expand [:form] "Expand a form.")
   (definterface 'slynk-format-string-expand [:format-string] "Expand a format string.")
@@ -208,6 +211,11 @@
   # xref.lisp
   (definterface 'xref [:type :symbol] "Return cross-reference information.")
   (definterface 'xrefs [:types :symbol] "Return multiple types of cross-reference information.")
+  (definterface 'who-calls [:function-name] "Return static Janet call sites of a function.")
+  (definterface 'who-references [:variable-name] "Return static Janet reference sites of a variable.")
+  (definterface 'who-binds [:variable-name] "Return static Janet binding sites of a name.")
+  (definterface 'who-sets [:variable-name] "Return static Janet set sites of a variable.")
+  (definterface 'list-callers [:function-name] "Return static Janet call sites using the lower-level caller query.")
 
   # slynk-fancy-inspector.lisp
   (definterface 'init-inspector [:form] "Initialize the inspector.")

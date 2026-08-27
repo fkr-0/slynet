@@ -2,4 +2,4 @@
   :description "Janet development environment for Emacs with a SLY/SLYNK-style protocol"
   :jpm-dependencies @[]
   :name "slynet"
-  :version "1.0.7"}
+  :version "1.1.0"}

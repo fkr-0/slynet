@@ -5,7 +5,7 @@ server with a small Emacs client and a SLY/SLYNK-style wire protocol to provide
 an interactive REPL, evaluation, completion, source navigation, inspection,
 diagnostics, and a practical debugger facade.
 
-SLYNET 1.0.7 is a stable release of the documented Janet workflow. It is not a
+SLYNET 1.1.0 is the stable capability-consolidation release of the documented Janet workflow. It is not a
 claim of complete Common Lisp SLY compatibility: operations that cannot preserve
 SLYNK semantics on Janet are classified explicitly as native, emulated,
 workaround, pending-design, or unsupported.
@@ -15,7 +15,7 @@ protocol coverage counts and known gaps, see `docs/RELEASE_STATUS.md`.
 
 ## Support matrix and contract
 
-The support matrix below is the stable 1.0.x compatibility contract.
+The support matrix below is the stable 1.1.x compatibility contract.
 
 | Component | Supported | Notes |
 |---|---|---|
@@ -127,6 +127,14 @@ SLYNET uses the `C-c C-s` prefix while `slynet-mode` is enabled.
 | `C-c C-s s` | `slynet-status` | Show compact connection status. |
 | `C-c C-s h` | `slynet-health` | Open detailed health information. |
 | `C-c C-s e` | `slynet-eval-string` | Evaluate a Janet string. |
+| `C-c C-s l` | `slynet-eval-last-form` | Evaluate the previous complete Janet form. |
+| `C-c C-s R` | `slynet-eval-region` | Evaluate the active region. |
+| `C-c C-s f` | `slynet-eval-definition` | Evaluate the current top-level definition/form. |
+| `C-c C-s B` | `slynet-eval-buffer` | Evaluate the current buffer. |
+| `C-c C-s C` | `slynet-compile-current-file` | Compile the current file and show diagnostics. |
+| `C-c C-s L` | `slynet-load-current-file` | Load the current file and show diagnostics. |
+| `C-c C-s I` | `slynet-interrupt-execution-unit` | Cooperatively interrupt a managed execution unit. |
+| `C-c C-s K` | `slynet-cancel-latest-request` | Cancel the newest pending client-side request. |
 | `C-c C-s m` | `slynet-create-mrepl` | Create or open the MREPL. |
 | `C-c C-s i` | `slynet-inspect-value` | Inspect a Janet value. |
 | `C-c C-s x` | `slynet-find-definitions` | Find source definitions. |
@@ -184,5 +192,6 @@ artifacts. The artifact smoke starts the Janet server from the extracted Janet
 archive and connects/evaluates through the extracted Emacs package, avoiding a
 source-tree-only false green.
 
-See `CONTRIBUTING.md`, `docs/COMPATIBILITY.md`, and `ROADMAP.md` for the current
-engineering contract and post-1.0 roadmap.
+See `CONTRIBUTING.md`, `docs/COMPATIBILITY.md`, `docs/MIGRATING_FROM_SLY.md`,
+and `ROADMAP.md` for the engineering contract, SLY migration guidance, generated
+coverage model, and post-1.0 roadmap.

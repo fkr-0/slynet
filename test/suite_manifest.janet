@@ -27,6 +27,8 @@
     "test/completion_namespace_tests.janet"
     "test/phase25_27_tests.janet"
     "test/phase29_doc_browser_tests.janet"
+    "test/public_api_tests.janet"
+    "test/xref_compatibility_tests.janet"
     "test/client_test.janet"])
 
 (def suites
@@ -35,12 +37,13 @@
     :unit @["test/runner_self_tests.janet" "test/suite_architecture_tests.janet"]
     :contract all-files
     :protocol-inventory @["test/protocol_inventory_tests.janet"]
-    :source-index @["test/source_index_v2_tests.janet"]
+    :source-index @["test/source_index_v2_tests.janet" "test/xref_compatibility_tests.janet"]
     :debugger @["test/debugger_facade_tests.janet" "test/restart_scope_tests.janet"]
     :inspector @["test/inspector_xref_contract_tests.janet" "test/inspector_ranges_tests.janet"]
     :diagnostics @["test/compile_load_contract_tests.janet" "test/diagnostics_source_tests.janet"]
     :completion @["test/completion_namespace_tests.janet"]
     :execution-units @["test/execution_unit_registry_tests.janet" "test/phase21_24_tests.janet"]
+    :public-api @["test/public_api_tests.janet"]
     :integration @["test/server_integration_tests.janet" "test/client_test.janet"]
     :compatibility-boundaries @["test/phase25_28_tests.janet"]})
 
