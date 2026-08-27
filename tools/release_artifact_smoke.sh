@@ -28,6 +28,8 @@ tar -xf "$EMACS_ARCHIVE" -C "$TMP/emacs"
 JANET_ROOT="$TMP/janet/slynet-$VERSION"
 EMACS_ROOT="$TMP/emacs/slynet-$VERSION"
 [ -f "$JANET_ROOT/slynet/cli.janet" ] || { echo "artifact-smoke: Janet CLI missing after extraction" >&2; exit 1; }
+[ -f "$JANET_ROOT/docs/RELEASE_STATUS.md" ] || { echo "artifact-smoke: release status missing from Janet artifact" >&2; exit 1; }
+[ -f "$JANET_ROOT/docs/generated/protocol-inventory.yml" ] || { echo "artifact-smoke: protocol inventory missing from Janet artifact" >&2; exit 1; }
 [ -f "$EMACS_ROOT/slynet.el" ] || { echo "artifact-smoke: Emacs slynet.el missing after extraction" >&2; exit 1; }
 [ -f "$EMACS_ROOT/slynet-client.el" ] || { echo "artifact-smoke: Emacs slynet-client.el missing after extraction" >&2; exit 1; }
 

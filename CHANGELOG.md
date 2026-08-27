@@ -40,6 +40,8 @@ Versioning.
   missing cache entries normally.
 - Clarified that `TASKS.md` and `docs/missing_protocol.md` are historical
   planning inputs, while generated inventory and `ROADMAP.md` are release truth.
+- Made the Janet source artifact self-contained with the documentation and
+  top-level release/security/roadmap files referenced by its bundled README.
 
 ### Fixed
 

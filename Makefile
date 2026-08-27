@@ -84,7 +84,8 @@ protocol-inventory-check:
 package: clean
 	@echo "Building release artifacts for $(VERSION)..."
 	@mkdir -p $(DIST_DIR)/slynet-$(VERSION)
-	@cp -R slynet bundle project.janet LICENSE README.md CHANGELOG.md \
+	@cp -R slynet bundle docs project.janet LICENSE README.md CHANGELOG.md \
+		CONTRIBUTING.md ROADMAP.md SECURITY.md RELEASE_ANNOUNCEMENT.md \
 		$(DIST_DIR)/slynet-$(VERSION)/
 	@tar -C $(DIST_DIR) -czf $(DIST_DIR)/slynet-$(VERSION).tar.gz slynet-$(VERSION)
 	$(ELDEV) $(ELDEV_FLAGS) package --output-dir $(DIST_DIR)
