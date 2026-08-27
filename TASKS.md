@@ -1,6 +1,14 @@
 # Roadmap to a SLY-Equivalent Janet Backend
 
-This document captures the outstanding work required to deliver a Janet backend with practical parity to the Common Lisp SLY/SLYNK stack. Keep the list authoritative—update statuses as progress lands.
+> **Historical planning snapshot.** This checklist is retained for provenance,
+> but it is not current release authority. Use `ROADMAP.md` for current project
+> priorities, `docs/generated/protocol-inventory.yml` for protocol truth, and
+> `docs/RELEASE_STATUS.md` for the audited 1.0.7 works/missing summary.
+
+This document captured the work originally expected for practical parity with
+the Common Lisp SLY/SLYNK stack. Some unchecked entries have since been
+implemented or deliberately reclassified, so do not derive release claims from
+the checkboxes below.
 
 ## 1. Foundational Infrastructure
 - [x] **Runtime separation** — complete the runtime/server split described in `AGENT.md` (file moves, imports, façade modules).

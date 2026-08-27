@@ -93,7 +93,7 @@ export JANET_PATH="$JANET_PATH:$(pwd)"  # Enable `import slynet/...` resolution
 ### Documentation Standards
 - All modules need docstrings for non-obvious functions
 - See `docs/ai-index/documentation-guide.md` for metadata conventions
-- Update `TASKS.md` status when completing SLY parity items
+- Use `ROADMAP.md` for current priorities and `docs/generated/protocol-inventory.yml` for protocol truth; `TASKS.md` is a historical planning snapshot
 
 ## Common Pitfalls to Avoid
 

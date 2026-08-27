@@ -1,29 +1,50 @@
-# SLYNET 1.0.7 — release integrity and Janet development in Emacs
+# SLYNET 1.0.7 — a release-qualified Janet development environment for Emacs
 
-SLYNET 1.0.7 is a patch release of the Janet-native development environment for
-Emacs. It keeps the existing REPL, evaluation, completion/autodoc, source
-navigation, inspection, diagnostics, and debugger-facade workflows while
-hardening the path by which those capabilities are actually packaged and
-started.
+SLYNET 1.0.7 is the first release in this repository whose local release path is
+designed to prove the packaged workflow rather than infer readiness from source
+files. It provides a Janet-native server, a small Emacs client, and a
+SLY/SLYNK-style protocol for interactive Janet development.
 
-The release supports Janet 1.40.x through 1.41.x and Emacs 27.1 through 30.x on
-GNU/Linux and macOS. It deliberately distinguishes Janet-native behavior from
-emulated, workaround, pending-design, and unsupported Common Lisp semantics.
+The supported matrix is Janet 1.40.x through 1.41.x and Emacs 27.1 through 30.x
+on GNU/Linux and macOS. The server is a trusted-localhost development tool; it is
+not an authenticated or sandboxed remote execution service.
 
-Highlights:
+## What works
 
-- fixes direct `janet slynet/cli.janet` invocation so the documented server
-  command is executable and covered by live E2E tests;
-- synchronizes package, Janet runtime, bundle, and Emacs version metadata;
-- makes protocol-warning and generated-inventory checks fail closed in the
-  release gate;
-- verifies the extracted Janet and Emacs artifacts together with a real
-  start/connect/MREPL/eval smoke;
-- produces machine-readable release evidence and SHA-256 artifact hashes;
-- refreshes security and setup guidance and constrains moving CI tooling inputs.
+- direct local server start/stop/reconnect and project-aware Emacs lifecycle;
+- MREPL creation, history, output, evaluation results, and error handling;
+- hardened length-prefixed UTF-8 transport with timeout/cancellation cleanup;
+- simple/flex and namespace-aware completion, arglists, autodoc, and docs;
+- source-index-backed definitions and xref navigation;
+- value inspection and inspector navigation;
+- compile/load/runtime diagnostics with source locations;
+- a practical Janet debugger facade with frame/condition/execution-unit views;
+- extracted-artifact start/connect/MREPL/eval smoke testing, not only source-tree
+  tests;
+- deterministic transport fuzzing, repeated live lifecycle E2E, and
+  machine-readable release evidence with artifact SHA-256 hashes.
 
-This source checkout does not yet have a canonical public repository remote, so
-1.0.7 release preparation remains local. `make publication-verify` is the
-explicit publication gate and will fail until the real repository URL is
-configured and documented. No release-verification command tags, pushes,
-uploads, or publishes the project.
+## What is not claimed
+
+SLYNET is not complete Common Lisp SLY parity. The generated inventory currently
+tracks 249 source protocol operations: 24 are implemented with a direct
+operation-level test mapping, 131 are implemented without such a direct mapping,
+and 94 are still missing. Broader Emacs ERT/E2E tests exercise composed workflows,
+so those inventory numbers are deliberately more conservative than the user-level
+feature list above.
+
+The largest remaining gaps are debugger stepping/resumability, thread/restart
+semantics that Janet cannot represent directly, profiler/tracing instrumentation,
+a stable public Janet embedding API, further daily-editor polish, Windows
+qualification, remote/TRAMP and multi-user operation, and a public package/
+repository installation story. Two CLOS/MOP compatibility operations are
+explicitly unsupported rather than pretending Janet has equivalent semantics.
+
+See `docs/RELEASE_STATUS.md` for the exact coverage table and semantic caveats.
+
+## Publication status
+
+The local release gate is separate from publication. This checkout still has no
+canonical public `origin`, so `make publication-verify` intentionally fails until
+the real repository URL is configured and documented. No release command pushes,
+uploads, deploys, or creates a forge release.

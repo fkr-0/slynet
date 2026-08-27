@@ -915,7 +915,8 @@ This interactive version buttonizes restart actions and frame source metadata."
     ready))
 
 (cl-defun slynet-start-project-server (project-name &key command host port readiness-timeout)
-  "Start a SLYNET server for PROJECT-NAME using COMMAND, HOST, PORT, and READINESS-TIMEOUT."
+  "Start a SLYNET server for PROJECT-NAME.
+Use COMMAND, HOST, PORT, and READINESS-TIMEOUT when supplied."
   (let* ((host (or host slynet-host))
          (port (or port slynet-port))
          (command (or command slynet-server-command))
@@ -1065,7 +1066,8 @@ COMMAND may be a string program name or a list of program plus arguments."
     (list candidates common-prefix)))
 
 (defun slynet-flex-completions-for-pattern (pattern callback &optional package)
-  "Request flex completions for PATTERN and PACKAGE, caching candidates before CALLBACK."
+  "Request flex completions for PATTERN and PACKAGE.
+Cache the candidates before invoking CALLBACK."
   (let ((cached (gethash pattern slynet-completion-cache)))
     (if cached
         (funcall callback cached pattern)

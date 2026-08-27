@@ -10,6 +10,9 @@ claim of complete Common Lisp SLY compatibility: operations that cannot preserve
 SLYNK semantics on Janet are classified explicitly as native, emulated,
 workaround, pending-design, or unsupported.
 
+For an audited feature-by-feature release snapshot, including exact generated
+protocol coverage counts and known gaps, see `docs/RELEASE_STATUS.md`.
+
 ## Support matrix and contract
 
 The support matrix below is the stable 1.0.x compatibility contract.

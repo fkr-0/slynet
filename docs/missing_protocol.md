@@ -1,6 +1,13 @@
 # Missing SLYNET Protocol Messages
 
-This document lists the SLYNK RPC calls that are defined in the original Common Lisp SLYNK but are missing from the Janet SLYNET implementation.
+> **Historical planning snapshot.** This file predates the generated protocol
+> inventory and is no longer release authority. It intentionally contains stale
+> entries for operations that have since been implemented. Use
+> `generated/protocol-inventory.yml` for operation-level truth and
+> `RELEASE_STATUS.md` for the audited human summary.
+
+This document originally listed SLYNK RPC calls that were defined in the Common
+Lisp SLYNK source but missing from the Janet implementation.
 
 See [missing_protocol_definterface.md](./missing_protocol_definterface.md) for the `definterface` sketches.
 

@@ -6,6 +6,10 @@
 
 JANET ?= janet
 ELDEV ?= eldev
+# Reuse Eldev's shared package-archive cache without forcing a network refresh.
+# Missing cache entries are still fetched normally, so fresh CI remains valid while
+# already-prepared developer machines can run the release gate offline.
+ELDEV_FLAGS ?= -S '(setq eldev-global-cache-archive-contents-max-age nil)'
 VERSION := $(shell sed -n 's/.*:version "\([^"]*\)".*/\1/p' project.janet)
 DIST_DIR := dist
 
@@ -15,11 +19,11 @@ lint:
 	@echo "Checking Janet release entrypoints parse and load..."
 	@JANET_PATH="$${JANET_PATH}:$(CURDIR)" $(JANET) -e '(import slynet/init) (import slynet/cli) (print "Janet load lint passed")'
 	@echo "Running Emacs byte-compiler and documentation linters..."
-	$(ELDEV) lint doc re
+	$(ELDEV) $(ELDEV_FLAGS) lint doc re
 
 compile:
 	@echo "Byte-compiling Emacs package through Eldev..."
-	$(ELDEV) compile
+	$(ELDEV) $(ELDEV_FLAGS) compile
 
 test: test-janet
 
@@ -29,11 +33,11 @@ test-janet:
 
 test-emacs:
 	@echo "Running SLYNET Emacs ERT tests through Eldev..."
-	$(ELDEV) test --expect 81
+	$(ELDEV) $(ELDEV_FLAGS) test --expect 81
 
 test-fuzz:
 	@echo "Running extended deterministic transport fuzzing..."
-	SLYNET_FUZZ_CASES=10000 $(ELDEV) test \
+	SLYNET_FUZZ_CASES=10000 $(ELDEV) $(ELDEV_FLAGS) test \
 		slynet-client-frame-parser-property-roundtrip-fragmentation \
 		slynet-client-frame-parser-rejects-fuzzed-prefixes \
 		slynet-client-rejects-invalid-utf8-and-recovers
@@ -43,7 +47,7 @@ test-e2e:
 	@before=$$(pgrep -fc 'janet .*slynet/cli.janet.*--tcp' || true); \
 	for run in 1 2 3; do \
 		echo "E2E run $$run/3"; \
-		$(ELDEV) test slynet-e2e-creates-mrepl-evals-and-closes-live-janet-server \
+		$(ELDEV) $(ELDEV_FLAGS) test slynet-e2e-creates-mrepl-evals-and-closes-live-janet-server \
 			slynet-e2e-repeated-sessions-remain-clean \
 			slynet-start-server-reports-missing-executable; \
 	done; \
@@ -83,7 +87,7 @@ package: clean
 	@cp -R slynet bundle project.janet LICENSE README.md CHANGELOG.md \
 		$(DIST_DIR)/slynet-$(VERSION)/
 	@tar -C $(DIST_DIR) -czf $(DIST_DIR)/slynet-$(VERSION).tar.gz slynet-$(VERSION)
-	$(ELDEV) package --output-dir $(DIST_DIR)
+	$(ELDEV) $(ELDEV_FLAGS) package --output-dir $(DIST_DIR)
 
 release-artifact-smoke: package
 	@echo "Testing extracted Janet and Emacs artifacts together..."

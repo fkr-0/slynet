@@ -7,7 +7,7 @@ Versioning.
 
 ## [Unreleased]
 
-## [1.0.7] - 2026-08-15
+## [1.0.7] - 2026-08-27
 
 ### Added
 
@@ -20,6 +20,9 @@ Versioning.
   sizes and SHA-256 hashes.
 - Added a publication-only verification gate that requires a real canonical
   repository remote instead of accepting placeholder clone instructions.
+- Added an audited release-status document that separates user-visible workflow
+  support from operation-level protocol inventory coverage and records exact
+  implemented/tested/missing counts.
 
 ### Changed
 
@@ -32,6 +35,11 @@ Versioning.
 - Constrained CI Emacs setup to a reviewed action revision and Eldev bootstrap
   to the 1.11.2 release, and made the final CI job run the complete release
   gate rather than packaging source alone.
+- Made Eldev-backed release commands reuse already-cached package archive
+  metadata without forcing a network refresh; fresh environments still fetch
+  missing cache entries normally.
+- Clarified that `TASKS.md` and `docs/missing_protocol.md` are historical
+  planning inputs, while generated inventory and `ROADMAP.md` are release truth.
 
 ### Fixed
 

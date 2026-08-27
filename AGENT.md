@@ -44,10 +44,10 @@ Ensure imports use the new layout, e.g. `(import ./runtime/interfaces :as interf
 - Add docstrings and spec comments for non-obvious code paths; avoid noise comments.
 
 ## Release Checklist
-- Update `TASKS.md` status for any completed SLY parity items.
-- `janet test-runner.janet` must pass (include server tests when relevant).
-- Verify the CLI smoke test (`slynet-client.janet`) can evaluate an expression against the test server.
-- Regenerate or touch `docs/` when interfaces or protocols change.
+- Treat `ROADMAP.md` as project-level planning authority and `docs/generated/protocol-inventory.yml` as operation-level protocol truth. `TASKS.md` and `docs/missing_protocol.md` are retained historical planning snapshots.
+- Run the canonical `make release-verify` gate; do not infer release readiness from individual legacy test commands.
+- Verify the packaged Janet server and packaged Emacs client complete the extracted-artifact start/connect/MREPL/eval smoke.
+- Regenerate protocol inventory through its canonical generator when interfaces or protocol classifications change.
 
 ## Common Pitfalls
 - Forgetting to sync the dynamic interface registry after loading modules. Use `runtime/infrastructure.slynet-sync-rpc-registries!` in tests before dispatching.
