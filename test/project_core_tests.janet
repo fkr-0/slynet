@@ -328,7 +328,7 @@
    :tags [:integration :server :compiler]
    :covers ["compile-file-for-emacs" "load-file"]
    :fn (fn []
-         (def path "/home/user/code/slynet/tmp-slynet-load.janet")
+         (def path (string (os/cwd) "/tmp-slynet-load-" (os/getpid) ".janet"))
          (def f (file/open path :w))
          (file/write f "(def tmp-load-target 10)\n(+ tmp-load-target 1)\n")
          (file/close f)
@@ -337,7 +337,8 @@
                               (def loaded (plist->table ((srv :emacs-rex!) (tuple 'load-file path) :core nil 37)))
                               (assert= true (compiled :success))
                               (assert= true (loaded :success))
-                              (assert= "11" (loaded :value))))})
+                              (assert= "11" (loaded :value)))
+         (try (os/rm path) ([_ _] nil)))})
 
 (register-test
   {:name "debugger minimum loop surfaces state"

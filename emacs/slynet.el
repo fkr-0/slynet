@@ -1372,7 +1372,7 @@ attempting to implement a second Janet reader in Emacs Lisp."
     (slynet-eval-region start end)))
 
 (defun slynet--definition-bounds ()
-  "Return bounds of the current top-level Janet definition/form.
+  "Return bounds of the current outermost Janet definition/form.
 SLYNET follows balanced expression structure from the active syntax table.  It
 does not depend on a mode-specific `beginning-of-defun' regexp knowing Janet's
 `defn', `defmacro', or other top-level forms."
@@ -1400,7 +1400,7 @@ does not depend on a mode-specific `beginning-of-defun' regexp knowing Janet's
                    (error-message-string err))))))
 
 (defun slynet-eval-definition ()
-  "Evaluate the current Janet top-level definition/form."
+  "Evaluate the current outermost Janet definition/form."
   (interactive)
   (pcase-let ((`(,start . ,end) (slynet--definition-bounds)))
     (slynet-eval-region start end)))
