@@ -1375,7 +1375,7 @@ attempting to implement a second Janet reader in Emacs Lisp."
   "Return bounds of the current outermost Janet definition/form.
 SLYNET follows balanced expression structure from the active syntax table.  It
 does not depend on a mode-specific `beginning-of-defun' regexp knowing Janet's
-`defn', `defmacro', or other top-level forms."
+`defn', `defmacro', or other outermost forms."
   (save-excursion
     (condition-case err
         (let* ((state (syntax-ppss))
